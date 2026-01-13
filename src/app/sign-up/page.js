@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
@@ -24,7 +24,6 @@ import { useSignupFlow } from "@/hooks/useSignupFlow";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(null);

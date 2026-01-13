@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -17,7 +17,7 @@ import {
   passwordRequirements,
 } from "@/utils/validation";
 
-export default function ResetPasswordPage() {
+function ResetPasswordPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loader, setLoader] = useState(false);
@@ -281,5 +281,13 @@ export default function ResetPasswordPage() {
       {/* Right - Visual Section */}
       <AuthVisualSection variant="login" />
     </AuthLayout>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <ResetPasswordPageInner />
+    </Suspense>
   );
 }

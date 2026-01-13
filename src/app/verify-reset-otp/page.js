@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { Suspense, useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
 
-export default function VerifyResetOTPPage() {
+function VerifyResetOTPPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [verifying, setVerifying] = useState(false);
@@ -479,5 +479,13 @@ export default function VerifyResetOTPPage() {
         </div>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function VerifyResetOTPPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <VerifyResetOTPPageInner />
+    </Suspense>
   );
 }
