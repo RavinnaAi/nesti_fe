@@ -1,0 +1,20 @@
+# Ignore temporary files
+*.tmp
+*.temp
+.DS_Store
+Thumbs.db
+
+# Keep directories but ignore large files
+*.psd
+*.ai
+*.sketch
+
+# Keep actual assets
+!*.png
+!*.jpg
+!*.jpeg
+!*.gif
+!*.svg
+!*.ico
+!*.webp
+!*.avif
