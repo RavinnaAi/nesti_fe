@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
+import { useGoogleLogin } from "@react-oauth/google";
 import AuthLayout from "@/components/auth/AuthLayout";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthVisualSection from "@/components/auth/AuthVisualSection";
@@ -21,6 +22,11 @@ import {
   passwordRequirements,
 } from "@/utils/validation";
 import { useSignupFlow } from "@/hooks/useSignupFlow";
+import {
+  useCheckEmail,
+  useSignup,
+  useGoogleSignup,
+} from "@/hooks/useAuthApi";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -37,6 +43,26 @@ export default function SignUpPage() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const { saveSignupData } = useSignupFlow();
+  const checkEmailMutation = useCheckEmail();
+  const signupMutation = useSignup();
+  const googleSignupMutation = useGoogleSignup();
+  const isSubmitting =
+    loader || checkEmailMutation.isLoading || signupMutation.isLoading;
+  const googleSignup = useGoogleLogin({
+    flow: "implicit",
+    onSuccess: (tokenResponse) => {
+      googleSignupMutation.mutate(
+        {
+          token: tokenResponse.access_token,
+          token_type: "access_token",
+        },
+        {
+          onSuccess: () => router.push("/dashboard"),
+        }
+      );
+    },
+    onError: () => toast.error("Google signup failed. Please try again."),
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -55,6 +81,25 @@ export default function SignUpPage() {
   const handleRoleChange = (value) => {
     setForm((prev) => ({ ...prev, role: value }));
     setFieldErrors((prev) => ({ ...prev, role: "" }));
+  };
+
+  const handleEmailBlur = async () => {
+    setFocusedField("");
+    const email = form.email.trim().toLowerCase();
+    if (!email || !emailRegex.test(email)) return;
+    try {
+      const res = await checkEmailMutation.mutateAsync(email);
+      if (res?.exists) {
+        const message = "Email already registered. Please log in or use another.";
+        setFieldErrors((prev) => ({ ...prev, email: message }));
+        toast.error(message);
+      } else {
+        setFieldErrors((prev) => ({ ...prev, email: "" }));
+      }
+    } catch (error) {
+      console.error("Email check error:", error);
+      // errors are surfaced via toast in mutation
+    }
   };
 
   const validate = () => {
@@ -90,56 +135,29 @@ export default function SignUpPage() {
 
     setLoader(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/auth/register', {
-      //   method: 'POST',
-      //   body: JSON.stringify({
-      //     firstName: form.firstName.trim(),
-      //     lastName: form.lastName.trim(),
-      //     email: form.email.toLowerCase().trim(),
-      //     password: form.password,
-      //     role: form.role,
-      //     country: form.country,
-      //   }),
-      // });
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Signup:", form);
+      await signupMutation.mutateAsync({
+        first_name: form.firstName.trim(),
+        last_name: form.lastName.trim(),
+        email: form.email.toLowerCase().trim(),
+        password: form.password,
+        role: form.role,
+        country: form.country,
+      });
 
       // Save email to localStorage for verification page
       saveSignupData({ email: form.email });
-
-      // Show success toast
-      toast.success("Registration successful! Please verify your email.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
 
       // Redirect to verify email page
       router.push("/verify-email");
     } catch (err) {
       console.error("Signup error:", err);
-      toast.error("Registration failed. Please try again.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
     } finally {
       setLoader(false);
     }
   };
 
   const handleGoogleSignup = () => {
-    // TODO: Implement Google OAuth
-    console.log("Google signup clicked");
+    googleSignup();
   };
 
   return (
@@ -174,7 +192,7 @@ export default function SignUpPage() {
             value={form.email}
             onChange={handleChange}
             onFocus={() => setFocusedField("email")}
-            onBlur={() => setFocusedField("")}
+            onBlur={handleEmailBlur}
             placeholder="Enter your email"
             icon={Mail}
             focusedField={focusedField}
@@ -212,13 +230,16 @@ export default function SignUpPage() {
 
           {/* Submit Button */}
           <div className="flex flex-col space-y-3 pt-2">
-            <SubmitButton loading={loader}>Create Account</SubmitButton>
+            <SubmitButton loading={isSubmitting}>Create Account</SubmitButton>
           </div>
 
           <Divider />
 
           {/* Google Signup Button */}
-          <GoogleButton onClick={handleGoogleSignup} loading={loader}>
+          <GoogleButton
+            onClick={handleGoogleSignup}
+            loading={googleSignupMutation.isLoading}
+          >
             Sign up with Google
           </GoogleButton>
         </form>

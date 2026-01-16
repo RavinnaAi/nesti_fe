@@ -18,10 +18,7 @@ export default function RoleDropdown({
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(event.target)
-      ) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
       }
     };
@@ -50,9 +47,7 @@ export default function RoleDropdown({
             error
               ? "border-red-400 focus:border-red-500 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-primary/20"
-          } ${
-            value ? "text-text-heading" : "text-text-muted"
-          }`}
+          } ${value ? "text-text-heading" : "text-text-muted"}`}
         >
           {value ? (
             <span className="font-medium">

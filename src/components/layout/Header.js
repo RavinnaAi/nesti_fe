@@ -1,21 +1,41 @@
 "use client";
 
 import Link from "next/link";
-import { useState, useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, CheckCircle2, ArrowRight, X } from "lucide-react";
+import { Bot, ArrowRight, X, User, Settings, LogOut } from "lucide-react";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { logout } from "@/store/authSlice";
 
 export default function Header() {
   const pathname = usePathname();
-  const NAVIGATION_ITEMS = [
-    { label: "Home", href: "/" },
-    { label: "Features", href: "/#features" },
-    { label: "Pricing", href: "/#pricing" },
-    { label: "About", href: "/publicPage/about" },
-    { label: "Contact", href: "/publicPage/contact" },
-  ];
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+  const { user, token } = useAppSelector((state) => state.auth);
+  const isAuthenticated = Boolean(token);
+
+  const NAVIGATION_ITEMS = useMemo(
+    () =>
+      isAuthenticated
+        ? [
+            { label: "Dashboard", href: "/dashboard" },
+            { label: "Leads", href: "/leads" },
+            { label: "Analytics", href: "/analytics" },
+          ]
+        : [
+            { label: "Home", href: "/" },
+            { label: "Features", href: "/#features" },
+            { label: "Pricing", href: "/#pricing" },
+            { label: "About", href: "/publicPage/about" },
+            { label: "Contact", href: "/publicPage/contact" },
+          ],
+    [isAuthenticated]
+  );
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileRef = useRef(null);
 
   // Prevent body scroll when menu is open
   useEffect(() => {
@@ -28,6 +48,37 @@ export default function Header() {
       document.body.style.overflow = "unset";
     };
   }, [isMenuOpen]);
+
+  useEffect(() => {
+    if (!isProfileOpen) return;
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isProfileOpen]);
+
+  const displayName =
+    user?.name ||
+    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+    user?.email ||
+    "User";
+  const displayEmail = user?.email || "";
+  const initials =
+    displayName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("") || "U";
+
+  const handleLogout = () => {
+    dispatch(logout());
+    setIsProfileOpen(false);
+    router.push("/log-in");
+  };
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50">
@@ -73,26 +124,104 @@ export default function Header() {
             </div>
           </div>
 
-          {/* Auth Buttons - Desktop */}
+          {/* Desktop Right Section */}
           <div className="hidden md:flex items-center space-x-3">
-            <Link
-              href="/log-in"
-              className="hidden sm:block relative px-5 py-2.5 text-base font-semibold text-gray-700 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
-            >
-              Login
-            </Link>
-            <Link
-              href="/sign-up"
-              className="group relative bg-primary-dark inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 md:px-8 md:py-3 font-bold text-sm md:text-base text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
-            >
-              <span className="relative z-10 flex items-center gap-2">
-                Get Started
-                <ArrowRight
-                  size={16}
-                  className="relative z-10 group-hover:translate-x-1 transition-transform duration-300"
-                />
-              </span>
-            </Link>
+            {!isAuthenticated ? (
+              <>
+                <Link
+                  href="/log-in"
+                  className="hidden sm:block relative px-5 py-2.5 text-base font-semibold text-gray-700 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
+                >
+                  Login
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="group relative bg-primary-dark inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 md:px-8 md:py-3 font-bold text-sm md:text-base text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
+                >
+                  <span className="relative z-10 flex items-center gap-2">
+                    Get Started
+                    <ArrowRight
+                      size={16}
+                      className="relative z-10 group-hover:translate-x-1 transition-transform duration-300"
+                    />
+                  </span>
+                </Link>
+              </>
+            ) : (
+              <div className="relative" ref={profileRef}>
+                <button
+                  onClick={() => setIsProfileOpen((prev) => !prev)}
+                  className="flex items-center gap-3 bg-background-light border border-border rounded-full hover:shadow-md transition-all"
+                >
+                  <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                    {initials}
+                  </div>
+                  {/* <div className="hidden lg:flex flex-col items-start">
+                    <span className="text-sm font-semibold text-text-heading">
+                      {displayName}
+                    </span>
+                    {displayEmail && (
+                      <span className="text-xs text-text-muted">
+                        {displayEmail}
+                      </span>
+                    )}
+                  </div> */}
+                </button>
+                <AnimatePresence>
+                  {isProfileOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -5 }}
+                      transition={{ duration: 0.15 }}
+                      className="absolute right-0 mt-3 w-auto rounded-2xl border border-gray-100 bg-white shadow-xl shadow-black/10 z-50"
+                    >
+                      <div className="px-4 py-3 border-b border-gray-100">
+                        <div className="text-sm font-semibold text-text-heading">
+                          {displayName}
+                        </div>
+                        {displayEmail && (
+                          <div className="text-xs font-medium text-primary truncate">
+                            {displayEmail}
+                          </div>
+                        )}
+                      </div>
+                      <div className="py-2 space-y-1">
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-xl hover:bg-primary/5 transition-colors"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                            <User size={16} />
+                          </span>
+                          <span className="font-medium">Profile</span>
+                        </Link>
+                        <Link
+                          href="/settings"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-xl hover:bg-primary/5 transition-colors"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                            <Settings size={16} />
+                          </span>
+                          <span className="font-medium">Settings</span>
+                        </Link>
+                        <button
+                          onClick={handleLogout}
+                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                        >
+                          <span className="h-8 w-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                            <LogOut size={16} />
+                          </span>
+                          <span className="font-medium">Logout</span>
+                        </button>
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -239,50 +368,100 @@ export default function Header() {
                 })}
               </div>
 
-              {/* Auth buttons section */}
+              {/* Auth / Profile section */}
               <div className="p-4 pt-6 border-t border-border space-y-3">
-                <motion.div
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{
-                    delay: NAVIGATION_ITEMS.length * 0.1 + 0.1,
-                    type: "spring",
-                    stiffness: 100,
-                  }}
-                >
-                  <Link
-                    href="/log-in"
-                    className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 ${
-                      pathname === "/log-in"
-                        ? "bg-primary text-white shadow-md"
-                        : "bg-background-light text-text-body hover:bg-border border border-border"
-                    }`}
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Login
-                  </Link>
-                </motion.div>
-                <motion.div
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{
-                    delay: NAVIGATION_ITEMS.length * 0.1 + 0.2,
-                    type: "spring",
-                    stiffness: 100,
-                  }}
-                >
-                  <Link
-                    href="/sign-up"
-                    className="group flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-base font-bold text-white bg-gradient-to-r from-primary to-primary-dark shadow-lg hover:shadow-xl transition-all duration-300"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Get Started
-                    <ArrowRight
-                      size={18}
-                      className="group-hover:translate-x-1 transition-transform duration-300"
-                    />
-                  </Link>
-                </motion.div>
+                {!isAuthenticated ? (
+                  <>
+                    <motion.div
+                      initial={{ x: -50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{
+                        delay: NAVIGATION_ITEMS.length * 0.1 + 0.1,
+                        type: "spring",
+                        stiffness: 100,
+                      }}
+                    >
+                      <Link
+                        href="/log-in"
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 ${
+                          pathname === "/log-in"
+                            ? "bg-primary text-white shadow-md"
+                            : "bg-background-light text-text-body hover:bg-border border border-border"
+                        }`}
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Login
+                      </Link>
+                    </motion.div>
+                    <motion.div
+                      initial={{ x: -50, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{
+                        delay: NAVIGATION_ITEMS.length * 0.1 + 0.2,
+                        type: "spring",
+                        stiffness: 100,
+                      }}
+                    >
+                      <Link
+                        href="/sign-up"
+                        className="group flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-base font-bold text-white bg-gradient-to-r from-primary to-primary-dark shadow-lg hover:shadow-xl transition-all duration-300"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Get Started
+                        <ArrowRight
+                          size={18}
+                          className="group-hover:translate-x-1 transition-transform duration-300"
+                        />
+                      </Link>
+                    </motion.div>
+                  </>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-background-light border border-border">
+                      <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                        {initials}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-sm font-semibold text-text-heading">
+                          {displayName}
+                        </span>
+                        {displayEmail && (
+                          <span className="text-xs text-text-muted">
+                            {displayEmail}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Link
+                        href="/profile"
+                        className="flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <User size={18} />
+                        Profile
+                      </Link>
+                      <Link
+                        href="/settings"
+                        className="flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Settings size={18} />
+                        Settings
+                      </Link>
+                      <button
+                        onClick={() => {
+                          setIsMenuOpen(false);
+                          handleLogout();
+                        }}
+                        className="flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      >
+                        <LogOut size={18} />
+                        Logout
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>

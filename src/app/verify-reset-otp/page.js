@@ -1,50 +1,39 @@
 "use client";
 
-import { Suspense, useState, useEffect, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
-import {
-  CheckCircle2,
-  XCircle,
-  Mail,
-  ArrowLeft,
-  Loader2,
-} from "lucide-react";
+import { CheckCircle2, XCircle, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import { useVerifyResetOTP, useForgotPassword } from "@/hooks/useAuthApi";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { setResetOtp } from "@/store/authSlice";
 
-function VerifyResetOTPPageInner() {
+export default function VerifyResetOTPPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const [verifying, setVerifying] = useState(false);
+  const dispatch = useAppDispatch();
+  const resetEmail = useAppSelector((state) => state.auth.resetEmail);
   const [verificationStatus, setVerificationStatus] = useState("idle"); // "idle" | "success" | "error"
   const [errorMessage, setErrorMessage] = useState("");
-  const [resendLoader, setResendLoader] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]); // 6 digits for password reset
   const [email, setEmail] = useState("");
-
   const otpInputRefs = useRef([]);
+  const verifyResetMutation = useVerifyResetOTP();
+  const resendMutation = useForgotPassword();
+  const verifying = verifyResetMutation.isLoading;
 
   useEffect(() => {
-    const emailParam = searchParams.get("email");
-    if (emailParam) {
-      setEmail(emailParam);
-    } else {
-      // Try to get from localStorage (set by forgot password form)
-      if (typeof window !== "undefined") {
-        const storedEmail = localStorage.getItem("resetPasswordEmail");
-        if (storedEmail) {
-          setEmail(storedEmail);
-        } else {
-          // If no email found, redirect to forgot password
-          toast.error("Please request a password reset first.");
-          router.push("/forgot-password");
-        }
-      }
+    if (resetEmail) {
+      setEmail(resetEmail);
+      return;
     }
-  }, [searchParams, router]);
+
+    toast.error("Please request a password reset first.");
+    router.push("/forgot-password");
+  }, [resetEmail, router]);
 
   const getOtpString = () => otp.join("").replace(/\D/g, "");
   const isOtpComplete = () => getOtpString().length === 6;
@@ -53,7 +42,9 @@ function VerifyResetOTPPageInner() {
     const code = getOtpString();
 
     if (!email) {
-      toast.error("Email address missing. Please request a new password reset.");
+      toast.error(
+        "Email address missing. Please request a new password reset."
+      );
       return;
     }
     if (code.length !== 6) {
@@ -61,121 +52,43 @@ function VerifyResetOTPPageInner() {
       return;
     }
 
-    setVerifying(true);
     setVerificationStatus("idle");
     setErrorMessage("");
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-      if (!API_URL) {
-        toast.error("API configuration error. Please contact support.");
-        setVerificationStatus("error");
-        setErrorMessage("API configuration error");
-        return;
-      }
-
-      const fullUrl = `${API_URL}/api/auth/verify-reset-otp`;
-
-      const payload = {
-        email: email.toLowerCase().trim(),
-        otp: code.trim(),
-      };
-
-      const response = await fetch(fullUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      await verifyResetMutation.mutateAsync({
+        email,
+        otp: code,
       });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response:", parseError);
-        throw new Error("Invalid response from server");
-      }
-
-      if (!response.ok || !data?.success) {
-        setVerificationStatus("error");
-        setErrorMessage(
-          data?.detail ||
-            data?.message ||
-            "Verification failed. Please try again."
-        );
-        toast.error(
-          data?.detail || data?.message || "Invalid or expired OTP."
-        );
-        return;
-      }
-
+      dispatch(setResetOtp(code));
       setVerificationStatus("success");
-      toast.success("OTP verified successfully! Redirecting to reset password...");
-
-      // Redirect to reset password page with email and OTP
-      setTimeout(() => {
-        router.push(
-          `/reset-password?email=${encodeURIComponent(email)}&otp=${code}`
-        );
-      }, 1500);
+      router.push(`/reset-password`);
     } catch (error) {
-      console.error("Verify reset OTP error:", error);
       setVerificationStatus("error");
-      setErrorMessage("Verification failed. Please try again.");
-      toast.error("Verification failed. Please try again.");
-    } finally {
-      setVerifying(false);
+      setErrorMessage(
+        error?.message || "Verification failed. Please try again."
+      );
     }
   };
 
   const handleResendOTP = async () => {
     if (!email) {
-      toast.error("Email address missing. Please request a new password reset.");
+      toast.error(
+        "Email address missing. Please request a new password reset."
+      );
       return;
     }
 
-    setResendLoader(true);
     setResendSuccess(false);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-      const fullUrl = `${API_URL}/api/auth/forgot-password`;
-
-      const payload = {
-        email: email.toLowerCase().trim(),
-      };
-
-      const response = await fetch(fullUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response:", parseError);
-        throw new Error("Invalid response from server");
-      }
-
-      if (response.ok && data.success) {
-        setResendSuccess(true);
-        setOtp(["", "", "", "", "", ""]);
-        toast.success("A new OTP has been sent to your email.");
-        // Clear error state
-        setVerificationStatus("idle");
-        setErrorMessage("");
-      } else {
-        toast.error(
-          data?.detail || "Failed to resend OTP. Please try again."
-        );
-      }
+      await resendMutation.mutateAsync(email);
+      setResendSuccess(true);
+      setOtp(["", "", "", "", "", ""]);
+      setVerificationStatus("idle");
+      setErrorMessage("");
     } catch (error) {
-      console.error("Resend OTP error:", error);
-      toast.error("Failed to resend OTP. Please try again.");
-    } finally {
-      setResendLoader(false);
+      // errors handled by mutation toast
     }
   };
 
@@ -353,10 +266,10 @@ function VerifyResetOTPPageInner() {
               </p>
               <button
                 onClick={handleResendOTP}
-                disabled={resendLoader || resendSuccess}
+                disabled={resendMutation.isLoading || resendSuccess}
                 className="text-sm text-primary font-semibold hover:text-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {resendLoader ? (
+                {resendMutation.isLoading ? (
                   <span className="flex items-center gap-2 justify-center">
                     <Loader2 className="animate-spin" size={16} />
                     Sending...
@@ -447,7 +360,9 @@ function VerifyResetOTPPageInner() {
               <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
                 50K+
               </div>
-              <div className="text-xs md:text-sm text-text-body">Properties</div>
+              <div className="text-xs md:text-sm text-text-body">
+                Properties
+              </div>
             </div>
             <div className="text-center border-x border-primary/30">
               <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
@@ -479,13 +394,5 @@ function VerifyResetOTPPageInner() {
         </div>
       </div>
     </AuthLayout>
-  );
-}
-
-export default function VerifyResetOTPPage() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-background" />}>
-      <VerifyResetOTPPageInner />
-    </Suspense>
   );
 }
