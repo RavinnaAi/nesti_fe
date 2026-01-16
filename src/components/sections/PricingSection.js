@@ -1,69 +1,45 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { DollarSign, ArrowRight, Check } from "lucide-react";
+import { useStrapiQuery } from "@/lib/strapi";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { setPlans } from "@/store/pricingSlice";
 
-const plans = [
-  {
-    name: "Basic",
-    price: "$100",
-    period: "/month",
-    description: "Perfect for individual agents starting out",
-    features: [
-      "Up to 100 leads/month",
-      "Basic AI chatbot",
-      "Lead scoring (0-100)",
-      "Email support",
-      "Basic analytics dashboard",
-      "1 user account",
-      "Mobile app access",
-    ],
-    popular: false,
-    gradient: "from-gray-600 to-gray-700",
-  },
-  {
-    name: "Professional",
-    price: "$150",
-    period: "/month",
-    description: "For growing teams and agencies",
-    features: [
-      "Up to 500 leads/month",
-      "Advanced AI chatbot network",
-      "Smart matching algorithm",
-      "Priority email & chat support",
-      "Advanced analytics & insights",
-      "Up to 5 user accounts",
-      "Automated follow-ups",
-      "Custom branding",
-      "API access",
-    ],
-    popular: true,
-    gradient: "from-primary to-primary-dark",
-  },
-  {
-    name: "Premium",
-    price: "$300",
-    period: "/month",
-    description: "Enterprise-grade for top performers",
-    features: [
-      "Unlimited leads",
-      "Full AI assistant network",
-      "Premium matching & routing",
-      "24/7 phone & priority support",
-      "White-label solution",
-      "Unlimited user accounts",
-      "Custom integrations",
-      "Dedicated account manager",
-      "Advanced reporting & BI",
-      "Custom AI training",
-    ],
-    popular: false,
-    gradient: "from-purple-600 to-pink-600",
-  },
-];
+// const plans = [ ...static plans commented out in favor of Strapi data... ];
 
 export default function PricingSection() {
+  const dispatch = useAppDispatch();
+  const storedPlans = useAppSelector((state) => state.pricing.plans);
+  const { data } = useStrapiQuery({
+    path: "/api/subscriptions?populate=*",
+    cache: "force-cache",
+  });
+
+  const plans = useMemo(() => {
+    const entries = data?.data || [];
+    return entries.map((item, index) => ({
+      name: item?.Name || "Plan",
+      price: item?.Price ? `$${item.Price}` : "$0",
+      period: "/month",
+      description: item?.Description || "",
+      features:
+        Array.isArray(item?.Features) && item.Features.length > 0
+          ? item.Features.map((f) => f?.name).filter(Boolean)
+          : [],
+      popular: item?.Popular ? true : false,
+      gradient: "from-primary to-primary-dark",
+    }));
+  }, [data]);
+
+  useEffect(() => {
+    if (plans.length) {
+      dispatch(setPlans(plans));
+    }
+  }, [plans, dispatch]);
+
   return (
     <section
       id="pricing"
@@ -110,7 +86,7 @@ export default function PricingSection() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 max-w-6xl mx-auto">
-          {plans.map((plan, i) => (
+          {(plans.length ? plans : storedPlans).map((plan, i) => (
             <motion.div
               key={`plan-${plan.name}`}
               initial={{ opacity: 0, y: 20 }}
@@ -134,7 +110,7 @@ export default function PricingSection() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true, margin: "0px" }}
                   transition={{ duration: 0.3 }}
-                  className="absolute -top-5 left-1/2 transform -translate-x-1/2 px-6 py-2 rounded-full text-xs font-bold text-white shadow-lg bg-gradient-to-r from-primary to-primary-dark"
+                  className="absolute -top-5 left-1/2 transform !-translate-x-1/2 px-6 py-2 rounded-full text-xs font-bold text-white shadow-lg bg-gradient-to-r from-primary to-primary-dark"
                   suppressHydrationWarning
                 >
                   Most Popular
@@ -159,7 +135,10 @@ export default function PricingSection() {
 
                 <ul className="space-y-4 mb-10 text-left">
                   {plan.features.map((feature, idx) => (
-                    <li key={`feature-${plan.name}-${idx}`} className="flex items-start gap-3">
+                    <li
+                      key={`feature-${plan.name}-${idx}`}
+                      className="flex items-start gap-3"
+                    >
                       <Check
                         size={20}
                         className="mt-0.5 flex-shrink-0 text-primary"

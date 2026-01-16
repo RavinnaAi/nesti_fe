@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { User, Lock, CreditCard, Code2, Building } from "lucide-react";
 import PersonalInfo from "@/components/settings/PersonalInfo";
@@ -21,6 +21,18 @@ const tabs = [
 export default function SettingsPage() {
   const { isAuthenticated } = useAuthGuard();
   const [activeTab, setActiveTab] = useState("personal");
+  const [stickyTop, setStickyTop] = useState("0");
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const isScrolled = typeof window !== "undefined" && window.scrollY > 0;
+      setStickyTop(isScrolled ? "15%" : "0");
+    };
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
   const ActiveComponent = useMemo(() => {
     switch (activeTab) {
       case "personal":
@@ -52,7 +64,10 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Tabs */}
         <div className="lg:col-span-3 relative">
-          <div className="rounded-2xl border border-border bg-white shadow-sm p-2 space-y-1 sticky top-[15%]">
+          <div
+            className="rounded-2xl border border-border transition-all duration-800 bg-white shadow-sm p-2 space-y-1 sticky"
+            style={{ top: stickyTop }}
+          >
             {tabs.map((tab) => {
               const isActive = tab.id === activeTab;
               const Icon = tab.icon;
