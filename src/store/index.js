@@ -4,12 +4,14 @@ import { configureStore } from "@reduxjs/toolkit";
 import { useDispatch, useSelector } from "react-redux";
 import authReducer from "./authSlice";
 import profileReducer from "./profileSlice";
+import pricingReducer from "./pricingSlice";
 
 export const makeStore = () =>
   configureStore({
     reducer: {
       auth: authReducer,
       profile: profileReducer,
+    pricing: pricingReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });
