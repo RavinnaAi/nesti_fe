@@ -6,6 +6,7 @@ export default function AuthFooter({ text, linkText, href }) {
       {text}{" "}
       <Link
         href={href}
+        prefetch={false}
         className="text-primary font-semibold hover:text-primary-dark hover:underline cursor-pointer transition-all duration-200"
       >
         {linkText}

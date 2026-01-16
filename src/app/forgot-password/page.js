@@ -13,14 +13,20 @@ import FormField from "@/components/auth/FormField";
 import SubmitButton from "@/components/auth/SubmitButton";
 import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
+import { useForgotPassword } from "@/hooks/useAuthApi";
+import { useAppDispatch } from "@/store";
+import { setResetEmail } from "@/store/authSlice";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [email, setEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
+  const forgotPasswordMutation = useForgotPassword();
+  const isSubmitting = loader || forgotPasswordMutation.isLoading;
 
   const validate = () => {
     const errs = {};
@@ -40,25 +46,8 @@ export default function ForgotPasswordPage() {
 
     setLoader(true);
     try {
-      // TODO: Replace with actual API call
-      // const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-      // const response = await fetch(`${API_URL}/api/auth/forgot-password`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({
-      //     email: email.toLowerCase().trim(),
-      //   }),
-      // });
-      // const data = await response.json();
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Forgot password:", email);
-
-      // Store email in localStorage for OTP verification page
-      if (typeof window !== "undefined") {
-        localStorage.setItem("resetPasswordEmail", email.toLowerCase().trim());
-      }
+      await forgotPasswordMutation.mutateAsync(email);
+      dispatch(setResetEmail(email.toLowerCase().trim()));
 
       setEmailSent(true);
       toast.success(
@@ -74,11 +63,9 @@ export default function ForgotPasswordPage() {
       );
 
       // Redirect to OTP verification page after a short delay
-      setTimeout(() => {
-        router.push(
-          `/verify-reset-otp?email=${encodeURIComponent(email.toLowerCase().trim())}`
-        );
-      }, 2000);
+      // setTimeout(() => {
+      router.push("/verify-reset-otp");
+      // }, 2000);
     } catch (error) {
       console.error("Forgot password error:", error);
       toast.error("Something went wrong. Please try again.", {
@@ -101,6 +88,7 @@ export default function ForgotPasswordPage() {
         {/* Back Button */}
         <Link
           href="/log-in"
+          prefetch={false}
           className="inline-flex items-center gap-2 text-sm text-text-body hover:text-primary transition-colors duration-200"
         >
           <ArrowLeft size={16} />
@@ -138,7 +126,7 @@ export default function ForgotPasswordPage() {
             />
 
             <div className="flex flex-col space-y-3 pt-2">
-              <SubmitButton loading={loader}>
+              <SubmitButton loading={isSubmitting}>
                 Send Reset Instructions
               </SubmitButton>
             </div>
@@ -157,7 +145,9 @@ export default function ForgotPasswordPage() {
               whileTap={{ scale: 0.98 }}
               onClick={() =>
                 router.push(
-                  `/verify-reset-otp?email=${encodeURIComponent(email.toLowerCase().trim())}`
+                  `/verify-reset-otp?email=${encodeURIComponent(
+                    email.toLowerCase().trim()
+                  )}`
                 )
               }
               className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
@@ -168,9 +158,6 @@ export default function ForgotPasswordPage() {
             <button
               onClick={() => {
                 setEmailSent(false);
-                if (typeof window !== "undefined") {
-                  localStorage.removeItem("resetPasswordEmail");
-                }
               }}
               className="w-full text-sm text-text-body hover:text-primary transition-colors duration-200"
             >

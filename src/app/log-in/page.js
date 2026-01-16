@@ -14,17 +14,38 @@ import Divider from "@/components/auth/Divider";
 import GoogleButton from "@/components/auth/GoogleButton";
 import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
+import { toast } from "react-toastify";
+import { useLogin, useGoogleLogin as useGoogleAuth } from "@/hooks/useAuthApi";
+import { useGoogleLogin } from "@react-oauth/google";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [loader, setLoader] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
     email: "",
     password: "",
   });
   const [fieldErrors, setFieldErrors] = useState({});
+  const loginMutation = useLogin();
+  const googleLoginMutation = useGoogleAuth();
+  
+  const googleLogin = useGoogleLogin({
+    flow: "implicit",
+    onSuccess: (tokenResponse) => {
+      googleLoginMutation.mutate(
+        {
+          token: tokenResponse.access_token,
+          token_type: "access_token",
+        },
+        {
+          onSuccess: () => router.push("/dashboard"),
+        }
+      );
+    },
+    onError: () => toast.error("Google login failed. Please try again."),
+  });
+  const isSubmitting =
+    loginMutation.isLoading || googleLoginMutation.isLoading;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,31 +72,19 @@ export default function LoginPage() {
     setFieldErrors(errs);
     if (errs.email || errs.password) return;
 
-    setLoader(true);
     try {
-      // TODO: Replace with actual API call
-      // const response = await fetch('/api/auth/login', {
-      //   method: 'POST',
-      //   body: JSON.stringify({ email: form.email.trim(), password: form.password }),
-      // });
-      // Handle response...
-      
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-      console.log("Login:", form);
-      
-      // Redirect on success
-      // router.push("/settings");
+      await loginMutation.mutateAsync({
+        email: form.email.trim(),
+        password: form.password,
+      });
+      router.push("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
-    } finally {
-      setLoader(false);
     }
   };
 
   const handleGoogleLogin = () => {
-    // TODO: Implement Google OAuth
-    console.log("Google login clicked");
+    googleLogin();
   };
 
   return (
@@ -121,6 +130,7 @@ export default function LoginPage() {
           <div className="text-right">
             <Link
               href="/forgot-password"
+              prefetch={false}
               className="text-sm text-primary hover:text-primary-dark hover:underline cursor-pointer transition-all duration-200 font-semibold"
             >
               Forgot Password?
@@ -129,13 +139,16 @@ export default function LoginPage() {
 
           {/* Submit Button */}
           <div className="flex flex-col space-y-3 pt-2">
-            <SubmitButton loading={loader}>Sign In</SubmitButton>
+            <SubmitButton loading={isSubmitting}>Sign In</SubmitButton>
           </div>
 
           <Divider />
 
           {/* Google Login Button */}
-          <GoogleButton onClick={handleGoogleLogin} loading={loader}>
+          <GoogleButton
+            onClick={handleGoogleLogin}
+            loading={googleLoginMutation.isLoading}
+          >
             Sign in with Google
           </GoogleButton>
         </form>

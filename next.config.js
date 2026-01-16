@@ -20,13 +20,6 @@ const nextConfig = {
   },
 
   images: {
-    domains: [
-      "localhost",
-      "127.0.0.1",
-      "images.unsplash.com",
-      "logo.clearbit.com",
-      "img.logo.dev",
-    ],
     remotePatterns: [
       {
         protocol: "http",
@@ -45,10 +38,6 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "logo.clearbit.com",
-      },
-      {
-        protocol: "https",
-        hostname: "img.logo.dev",
       },
       {
         protocol: "https",

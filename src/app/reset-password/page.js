@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
@@ -16,10 +16,15 @@ import {
   checkPasswordStrength,
   passwordRequirements,
 } from "@/utils/validation";
+import { useResetPassword } from "@/hooks/useAuthApi";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { clearResetEmail, clearResetOtp } from "@/store/authSlice";
 
 function ResetPasswordPageInner() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const dispatch = useAppDispatch();
+  const resetEmail = useAppSelector((state) => state.auth.resetEmail);
+  const resetOtp = useAppSelector((state) => state.auth.resetOtp);
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
@@ -31,32 +36,37 @@ function ResetPasswordPageInner() {
     confirmPassword: "",
   });
   const [fieldErrors, setFieldErrors] = useState({});
+  const resetMutation = useResetPassword();
+  const isSubmitting = loader || resetMutation.isLoading;
 
-  useEffect(() => {
-    const emailParam = searchParams.get("email");
-    const otpParam = searchParams.get("otp") || searchParams.get("code");
+  // useEffect(() => {
+  //   const effectiveEmail = resetEmail;
+  //   const effectiveOtp = resetOtp;
 
-    if (emailParam && otpParam) {
-      setEmail(emailParam);
-      setOtp(otpParam);
-    } else {
-      toast.error(
-        "Invalid or missing reset information. Please verify your OTP first.",
-        {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        }
-      );
-      // Redirect to verify OTP page
-      setTimeout(() => {
-        router.push("/verify-reset-otp");
-      }, 2000);
-    }
-  }, [searchParams, router]);
+  //   if (effectiveEmail) {
+  //     setEmail(effectiveEmail);
+  //   }
+
+  //   if (!effectiveEmail || !effectiveOtp) {
+  //     toast.error(
+  //       "Invalid or missing reset information. Please verify your OTP first.",
+  //       {
+  //         position: "top-right",
+  //         autoClose: 5000,
+  //         hideProgressBar: false,
+  //         closeOnClick: true,
+  //         pauseOnHover: true,
+  //         draggable: true,
+  //       }
+  //     );
+  //     setTimeout(() => {
+  //       router.push("/verify-reset-otp");
+  //     }, 2000);
+  //     return;
+  //   }
+
+  //   setOtp(effectiveOtp);
+  // }, [resetEmail, resetOtp, router]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -97,7 +107,7 @@ function ResetPasswordPageInner() {
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
 
-    if (!email || !otp) {
+    if (!resetEmail || !resetOtp) {
       toast.error("Missing reset information. Please verify your OTP first.", {
         position: "top-right",
         autoClose: 5000,
@@ -113,74 +123,20 @@ function ResetPasswordPageInner() {
     setLoader(true);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-      if (!API_URL) {
-        toast.error("API configuration error. Please contact support.");
-        return;
-      }
-
-      const fullUrl = `${API_URL}/api/auth/reset-password`;
-
-      const payload = {
-        email: email.toLowerCase().trim(),
-        otp: otp.trim(),
+      await resetMutation.mutateAsync({
+        email,
+        otp,
         newPassword: form.password,
-      };
-
-      const response = await fetch(fullUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
       });
+      setResetSuccess(true);
+      dispatch(clearResetEmail());
+      dispatch(clearResetOtp());
 
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response:", parseError);
-        throw new Error("Invalid response from server");
-      }
-
-      if (response.ok && data.success) {
-        setResetSuccess(true);
-        toast.success(
-          data.message || "Your password has been reset successfully!",
-          {
-            position: "top-right",
-            autoClose: 5000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-          }
-        );
-
-        // Clear stored email from localStorage
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("resetPasswordEmail");
-        }
-
-        // Redirect to login after 3 seconds
-        setTimeout(() => {
-          router.push("/log-in");
-        }, 3000);
-      } else {
-        throw new Error(data?.detail || data?.message || "Failed to reset password");
-      }
+      // setTimeout(() => {
+      router.push("/log-in");
+      // }, 3000);
     } catch (error) {
-      console.error("Reset password error:", error);
-      toast.error(
-        error?.message || "Something went wrong. Please try again.",
-        {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        }
-      );
+      // errors already handled by mutation toast
     } finally {
       setLoader(false);
     }
@@ -233,7 +189,7 @@ function ResetPasswordPageInner() {
             />
 
             <div className="flex flex-col space-y-3 pt-2">
-              <SubmitButton loading={loader} disabled={!email || !otp}>
+              <SubmitButton loading={isSubmitting} disabled={!email || !otp}>
                 Reset Password
               </SubmitButton>
             </div>

@@ -17,21 +17,23 @@ import {
 import AuthLayout from "@/components/auth/AuthLayout";
 import AuthHeader from "@/components/auth/AuthHeader";
 import { useSignupFlow } from "@/hooks/useSignupFlow";
+import { useVerifyEmail, useResendVerification } from "@/hooks/useAuthApi";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const [verifying, setVerifying] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState(
     "idle" // "idle" | "success" | "error"
   );
   const [errorMessage, setErrorMessage] = useState("");
-  const [resendLoader, setResendLoader] = useState(false);
   const [resendSuccess, setResendSuccess] = useState(false);
   const [otp, setOtp] = useState(["", "", "", "", ""]);
   const [email, setEmail] = useState("");
 
   const otpInputRefs = useRef([]);
   const { getEmail, clearSignupData } = useSignupFlow();
+  const verifyEmailMutation = useVerifyEmail();
+  const resendMutation = useResendVerification();
+  const verifying = verifyEmailMutation.isLoading;
 
   useEffect(() => {
     const storedEmail = getEmail();
@@ -39,7 +41,7 @@ export default function VerifyEmailPage() {
       setEmail(storedEmail);
     } else {
       // If no email found, redirect to signup
-      toast.error("Please sign up first.");
+      // toast.error("Please sign up first.");
       router.push("/sign-up");
     }
   }, [getEmail, router]);
@@ -59,69 +61,25 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    setVerifying(true);
     setVerificationStatus("idle");
     setErrorMessage("");
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-
-      if (!API_URL) {
-        toast.error("API configuration error. Please contact support.");
-        setVerificationStatus("error");
-        setErrorMessage("API configuration error");
-        return;
-      }
-
-      const fullUrl = `${API_URL}/api/auth/verify-email`;
-
-      const payload = {
-        email: email.toLowerCase().trim(),
-        token: code.trim(),
-      };
-
-      const response = await fetch(fullUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+      await verifyEmailMutation.mutateAsync({
+        email,
+        token: code,
       });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response:", parseError);
-        throw new Error("Invalid response from server");
-      }
-
-      if (!response.ok || !data?.success) {
-        setVerificationStatus("error");
-        setErrorMessage(
-          data?.detail ||
-            data?.message ||
-            "Verification failed. Please try again."
-        );
-        toast.error(
-          data?.detail || data?.message || "Invalid or expired OTP."
-        );
-        return;
-      }
-
       setVerificationStatus("success");
-      toast.success("Your email has been verified successfully!");
-
       // Clear signup data after successful verification
       clearSignupData();
 
       // Redirect to login after a moment
-      setTimeout(() => router.push("/log-in"), 2000);
+      router.push("/log-in");
     } catch (error) {
-      console.error("Email verification error:", error);
       setVerificationStatus("error");
-      setErrorMessage("Verification failed. Please try again.");
-      toast.error("Verification failed. Please try again.");
-    } finally {
-      setVerifying(false);
+      setErrorMessage(
+        error?.message || "Verification failed. Please try again."
+      );
     }
   };
 
@@ -131,48 +89,12 @@ export default function VerifyEmailPage() {
       return;
     }
 
-    setResendLoader(true);
     setResendSuccess(false);
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
-      const fullUrl = `${API_URL}/api/auth/resend-verification`;
-
-      const payload = {
-        email: email.toLowerCase().trim(),
-      };
-
-      const response = await fetch(fullUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      let data;
-      try {
-        data = await response.json();
-      } catch (parseError) {
-        console.error("Failed to parse response:", parseError);
-        throw new Error("Invalid response from server");
-      }
-
-      if (!response.ok || !data?.success) {
-        toast.error(
-          data?.detail ||
-            data?.message ||
-            "Failed to resend verification code. Please try again."
-        );
-        return;
-      }
-
-      toast.success(
-        data?.message || "Please check your email for the verification code."
-      );
+      await resendMutation.mutateAsync(email);
       setResendSuccess(true);
     } catch (error) {
-      console.error("Resend verification error:", error);
-      toast.error("Failed to resend verification code. Please try again.");
-    } finally {
-      setResendLoader(false);
+      // errors handled via mutation toast
     }
   };
 
@@ -266,7 +188,10 @@ export default function VerifyEmailPage() {
                   We sent a 5-digit code to {email || "your email"}.
                 </p>
 
-                <div className="flex gap-3 justify-center" onPaste={handlePaste}>
+                <div
+                  className="flex gap-3 justify-center"
+                  onPaste={handlePaste}
+                >
                   {[0, 1, 2, 3, 4].map((index) => (
                     <input
                       key={index}
@@ -308,10 +233,10 @@ export default function VerifyEmailPage() {
                 <button
                   type="button"
                   onClick={handleResendVerification}
-                  disabled={resendLoader}
+                  disabled={resendMutation.isLoading}
                   className="text-primary font-semibold hover:text-primary-dark hover:underline cursor-pointer transition-all duration-200 disabled:opacity-50"
                 >
-                  {resendLoader ? "Sending..." : "Resend"}
+                  {resendMutation.isLoading ? "Sending..." : "Resend"}
                 </button>
               </p>
             </form>
@@ -333,8 +258,8 @@ export default function VerifyEmailPage() {
 
               <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
                 <p className="text-sm text-green-700 text-center">
-                  Your email has been successfully verified! You can now log
-                  in to your account.
+                  Your email has been successfully verified! You can now log in
+                  to your account.
                 </p>
               </div>
 
@@ -375,11 +300,11 @@ export default function VerifyEmailPage() {
                   <motion.button
                     whileHover={{ scale: 1.02, y: -2 }}
                     whileTap={{ scale: 0.98 }}
-                    disabled={resendLoader}
+                    disabled={resendMutation.isLoading}
                     onClick={handleResendVerification}
                     className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
-                    {resendLoader ? (
+                    {resendMutation.isLoading ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
                     ) : (
                       "Resend Verification Email"
@@ -533,7 +458,9 @@ export default function VerifyEmailPage() {
               <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
                 50K+
               </div>
-              <div className="text-xs md:text-sm text-text-body">Properties</div>
+              <div className="text-xs md:text-sm text-text-body">
+                Properties
+              </div>
             </div>
             <div className="text-center border-x border-primary/30">
               <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
