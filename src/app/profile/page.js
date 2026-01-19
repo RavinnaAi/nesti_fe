@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { User, CreditCard, Briefcase, BarChart3 } from "lucide-react";
 import { useAppSelector } from "@/store";
@@ -19,7 +19,7 @@ const tabs = [
   { id: "subscription", label: "Subscription", icon: CreditCard },
 ];
 
-export default function ProfilePage() {
+function ProfilePageContent() {
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email");
   const normalizedEmail = emailParam?.toLowerCase().trim() || "";
@@ -296,5 +296,13 @@ export default function ProfilePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ProfilePage() {
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-text-muted">Loading...</div>}>
+      <ProfilePageContent />
+    </Suspense>
   );
 }
