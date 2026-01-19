@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
     googleSignup: "/auth/google-signup",
     login: "/auth/login",
     profile: "/auth/profile",
+    publicProfile: "/auth/public-profile",
     resendVerification: "/auth/resend-verification",
     resetPassword: "/auth/reset-password",
     signup: "/auth/signup",

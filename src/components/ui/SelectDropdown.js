@@ -51,13 +51,20 @@ export default function SelectDropdown({
           {label} {required && <span className="text-red-500">*</span>}
         </label>
       )}
-      <div className={`relative ${disabled ? "!cursor-not-allowed !bg-gray-100" : ""}`} ref={dropdownRef}>
+      <div
+        className={`relative ${
+          disabled ? "!cursor-not-allowed !bg-gray-100" : ""
+        }`}
+        ref={dropdownRef}
+      >
         <button
           type="button"
-          onClick={() => !disabled ? setIsOpen((prev) => !prev) : null}
+          onClick={() => (!disabled ? setIsOpen((prev) => !prev) : null)}
           onFocus={onFocus}
           onBlur={onBlur}
-          className={`w-full ${disabled ? "!cursor-not-allowed !bg-gray-100" : ""} h-14 border-2 rounded-xl px-4 pr-12 transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-center ${
+          className={`w-full ${
+            disabled ? "!cursor-not-allowed !bg-gray-100" : ""
+          } h-14 border-2 rounded-xl px-4 pr-12 transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-center ${
             error
               ? "border-red-400 focus:border-red-500 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-primary/20"
@@ -93,7 +100,7 @@ export default function SelectDropdown({
         </div>
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-2 bg-white border-2 border-border rounded-xl shadow-xl overflow-hidden">
+          <div className="absolute z-50 max-h-[250px] overflow-y-auto w-full mt-2 bg-white border-2 border-border rounded-xl shadow-xl overflow-hidden">
             {options.map((opt, index) => {
               const IconComponent = opt.icon;
               const isSelected = value === opt.value;
