@@ -250,3 +250,19 @@ export function useProfileQuery() {
     },
   });
 }
+
+export function usePublicProfile(email) {
+  const normalized = email?.toLowerCase().trim();
+  return useQuery({
+    queryKey: ["public-profile", normalized],
+    enabled: Boolean(normalized),
+    queryFn: () =>
+      apiClient({
+        url: `${API_ENDPOINTS.auth.publicProfile}?email=${encodeURIComponent(
+          normalized
+        )}`,
+        method: "GET",
+      }),
+    onError: toastError,
+  });
+}

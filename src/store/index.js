@@ -5,13 +5,15 @@ import { useDispatch, useSelector } from "react-redux";
 import authReducer from "./authSlice";
 import profileReducer from "./profileSlice";
 import pricingReducer from "./pricingSlice";
+import selectedPlanReducer from "./selectedPlanSlice";
 
 export const makeStore = () =>
   configureStore({
     reducer: {
       auth: authReducer,
       profile: profileReducer,
-    pricing: pricingReducer,
+      pricing: pricingReducer,
+      selectedPlan: selectedPlanReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });

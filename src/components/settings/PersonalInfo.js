@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { User, Mail, Phone } from "lucide-react";
 import { toast } from "react-toastify";
 import FormField from "@/components/auth/FormField";
 import SubmitButton from "@/components/auth/SubmitButton";
-import { useAppSelector } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
 import { useSavePersonalInfo } from "@/hooks/useProfileApi";
+import { setPersonalInfo } from "@/store/profileSlice";
 
 const validatePersonalInfo = (form) => {
   const errors = {};
@@ -28,6 +29,7 @@ const validatePersonalInfo = (form) => {
 
 export default function PersonalInfo() {
   const storedPersonal = useAppSelector((state) => state.profile.personalInfo);
+  const dispatch = useAppDispatch();
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
     firstName: "",
@@ -35,12 +37,17 @@ export default function PersonalInfo() {
     email: "",
     phone: "",
   });
+  const [profileImage, setProfileImage] = useState("");
+  const fileInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const savePersonalInfo = useSavePersonalInfo();
 
   useEffect(() => {
     if (storedPersonal) {
       setForm((prev) => ({ ...prev, ...storedPersonal }));
+      if (storedPersonal.profileImage) {
+        setProfileImage(storedPersonal.profileImage);
+      }
     }
   }, [storedPersonal]);
 
@@ -76,18 +83,58 @@ export default function PersonalInfo() {
     }
   };
 
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    const THREE_MB = 3 * 1024 * 1024;
+    if (file.size > THREE_MB) {
+      toast.error("Image must be under 3MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result;
+      setProfileImage(dataUrl);
+      dispatch(setPersonalInfo({ profileImage: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-2xl bg-background-light border border-border shadow-sm" />
+        <div className="h-24 w-24 rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+          {profileImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={profileImage}
+              alt="Profile"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <User className="text-text-muted" size={32} />
+          )}
+        </div>
         <div className="space-y-2">
           <button
             type="button"
             className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
+            onClick={() => fileInputRef.current?.click()}
           >
             <User size={16} />
             Change Photo
           </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleImageChange}
+          />
           <div className="text-xs text-text-muted">
             JPG, PNG or WEBP. Max 2MB
           </div>

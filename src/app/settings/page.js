@@ -2,13 +2,24 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { User, Lock, CreditCard, Code2, Building } from "lucide-react";
+import {
+  User,
+  Lock,
+  CreditCard,
+  Code2,
+  Building,
+  Copy,
+  Share2,
+} from "lucide-react";
 import PersonalInfo from "@/components/settings/PersonalInfo";
 import ChangePassword from "@/components/settings/ChangePassword";
 import SubscriptionInfo from "@/components/settings/SubscriptionInfo";
 import ChatbotEmbed from "@/components/settings/ChatbotEmbed";
 import BusinessInformation from "@/components/settings/BusinessInformation";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import SidebarTabs from "@/components/ui/SidebarTabs";
+import { toast } from "react-toastify";
+import { useAppSelector } from "@/store";
 
 const tabs = [
   { id: "personal", label: "Personal Information", icon: User },
@@ -53,6 +64,7 @@ export default function SettingsPage() {
   const Content = ActiveComponent;
 
   const activeMeta = tabs.find((t) => t.id === activeTab);
+  const { user } = useAppSelector((state) => state.auth);
   const ActiveIcon = activeMeta?.icon;
 
   if (!isAuthenticated) {
@@ -64,37 +76,16 @@ export default function SettingsPage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Tabs */}
         <div className="lg:col-span-3 relative">
-          <div
-            className="rounded-2xl border border-border transition-all duration-800 bg-white shadow-sm p-2 space-y-1 sticky"
-            style={{ top: stickyTop }}
-          >
-            {tabs.map((tab) => {
-              const isActive = tab.id === activeTab;
-              const Icon = tab.icon;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-                    isActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-text-heading hover:bg-primary/5"
-                  }`}
-                >
-                  <span
-                    className={`h-9 w-9 rounded-xl flex items-center justify-center ${
-                      isActive
-                        ? "bg-primary/15 text-primary"
-                        : "bg-background-light"
-                    }`}
-                  >
-                    <Icon size={16} />
-                  </span>
-                  <span className="text-left">{tab.label}</span>
-                </button>
-              );
-            })}
-          </div>
+          <SidebarTabs
+            tabs={tabs}
+            activeId={activeTab}
+            onChange={setActiveTab}
+            stickyTop={stickyTop}
+            activeClassName="bg-primary-dark text-white"
+            inactiveClassName="text-text-heading hover:bg-primary/5"
+            activeIconClassName="bg-white/20 text-white"
+            inactiveIconClassName="bg-background-light"
+          />
         </div>
 
         {/* Content */}
@@ -104,13 +95,53 @@ export default function SettingsPage() {
               <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
                 {ActiveIcon ? <ActiveIcon size={18} /> : null}
               </div>
-              <div>
+              <div className="flex-1">
                 <div className="text-xl font-bold text-text-heading">
                   {activeMeta?.label || "Profile Information"}
                 </div>
                 <div className="text-sm text-text-body">
                   Manage your account preferences
                 </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const link =
+                      (typeof window !== "undefined"
+                        ? window.location.origin
+                        : "") + `/profile?email=${user?.email}`;
+                    try {
+                      await navigator.clipboard.writeText(link);
+                      toast.success("Link copied to clipboard");
+                    } catch (err) {
+                      toast.error("Failed to copy link");
+                    }
+                  }}
+                  className="h-10 w-10 rounded-full bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
+                  aria-label="Copy public link"
+                >
+                  <Copy size={16} className="text-text-heading" />
+                </button>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    const link =
+                      (typeof window !== "undefined"
+                        ? window.location.origin
+                        : "") + `/profile?email=${user?.email}`;
+                    try {
+                      await navigator.clipboard.writeText(link);
+                      toast.success("Share link copied to clipboard");
+                    } catch (err) {
+                      toast.error("Failed to copy link");
+                    }
+                  }}
+                  className="h-10 w-10 rounded-full bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
+                  aria-label="Share"
+                >
+                  <Share2 size={16} className="text-text-heading" />
+                </button>
               </div>
             </div>
 

@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import { useAppSelector } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { setSelectedPlan } from "@/store/selectedPlanSlice";
+import { useRouter } from "next/navigation";
 
 export default function SubscriptionInfo() {
+  const dispatch = useAppDispatch();
   const { plans } = useAppSelector((state) => state.pricing);
+  const router = useRouter();
 
   const activePlan = useMemo(() => {
     if (!plans?.length) return null;
@@ -53,6 +57,10 @@ export default function SubscriptionInfo() {
           {plans?.map((plan) => (
             <div
               key={`plan-${plan?.name}`}
+              onClick={() => {
+                dispatch(setSelectedPlan(plan));
+                router.push("/checkout");
+              }}
               className={`group cursor-pointer flex items-start justify-between rounded-lg border px-3 py-3 text-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${
                 plan?.popular
                   ? "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"

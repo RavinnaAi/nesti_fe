@@ -47,6 +47,10 @@ h6 {
   .text-balance {
     text-wrap: balance;
   }
+
+  .primary-gradient {
+    @apply bg-gradient-to-br from-primary/50 via-primary-dark/10 to-white shadow-inner;
+  }
   
   .scrollbar-hide {
     -ms-overflow-style: none;
