@@ -38,7 +38,9 @@ export default function PersonalInfo() {
     phone: "",
   });
   const [profileImage, setProfileImage] = useState("");
+  const [coverImage, setCoverImage] = useState("");
   const fileInputRef = useRef(null);
+  const coverInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
   const savePersonalInfo = useSavePersonalInfo();
 
@@ -47,6 +49,9 @@ export default function PersonalInfo() {
       setForm((prev) => ({ ...prev, ...storedPersonal }));
       if (storedPersonal.profileImage) {
         setProfileImage(storedPersonal.profileImage);
+      }
+      if (storedPersonal.coverImage) {
+        setCoverImage(storedPersonal.coverImage);
       }
     }
   }, [storedPersonal]);
@@ -71,6 +76,8 @@ export default function PersonalInfo() {
       fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
+      profile_image: profileImage,
+      cover_image: coverImage,
     };
 
     setLoading(true);
@@ -100,6 +107,27 @@ export default function PersonalInfo() {
       const dataUrl = reader.result;
       setProfileImage(dataUrl);
       dispatch(setPersonalInfo({ profileImage: dataUrl }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCoverChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file.");
+      return;
+    }
+    const THREE_MB = 3 * 1024 * 1024;
+    if (file.size > THREE_MB) {
+      toast.error("Image must be under 3MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result;
+      setCoverImage(dataUrl);
+      dispatch(setPersonalInfo({ coverImage: dataUrl }));
     };
     reader.readAsDataURL(file);
   };
@@ -140,6 +168,74 @@ export default function PersonalInfo() {
           </div>
         </div>
       </div>
+
+      <div className="flex items-center gap-4">
+        <div className="h-24 w-24 rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+          {coverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={coverImage}
+              alt="cover"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <User className="text-text-muted" size={32} />
+          )}
+        </div>
+        <div className="space-y-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
+            onClick={() => coverInputRef.current?.click()}
+          >
+            <User size={16} />
+            Change Cover
+          </button>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverChange}
+          />
+          <div className="text-xs text-text-muted">
+            JPG, PNG or WEBP. Max 3MB
+          </div>
+        </div>
+      </div>
+
+      {/* <div className="space-y-2">
+        <div className="h-24 w-full rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+          {coverImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={coverImage}
+              alt="Cover"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <User className="text-text-muted" size={32} />
+          )}
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
+            onClick={() => coverInputRef.current?.click()}
+          >
+            <User size={16} />
+            Change Cover
+          </button>
+          <input
+            ref={coverInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleCoverChange}
+          />
+          <div className="text-xs text-text-muted">JPG, PNG or WEBP. Max 3MB</div>
+        </div>
+      </div> */}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField

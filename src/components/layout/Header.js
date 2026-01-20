@@ -6,7 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Bot, ArrowRight, X, User, Settings, LogOut } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { logout } from "@/store/authSlice";
+import { logoutAndClearAll } from "@/store/actions";
 
 export default function Header() {
   const pathname = usePathname();
@@ -75,7 +75,7 @@ export default function Header() {
       .join("") || "U";
 
   const handleLogout = () => {
-    dispatch(logout());
+    dispatch(logoutAndClearAll());
     setIsProfileOpen(false);
     router.push("/log-in");
   };

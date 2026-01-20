@@ -71,6 +71,7 @@ function ProfilePageContent() {
       location: apiProfessional?.location || "",
       role: apiUser?.role || apiProfessional?.professional_type || "",
       profileImage: apiProfessional?.img_url || apiUser?.img_url || "",
+      coverImage: apiProfessional?.cover_image || apiUser?.cover_image || "",
     };
   }, [personalInfo, apiUser, apiProfessional]);
 
@@ -205,6 +206,15 @@ function ProfilePageContent() {
   const activeMeta = tabs.find((t) => t.id === activeTab);
   const ActiveIcon = activeMeta?.icon;
 
+  const heroStyle = resolvedPersonal?.coverImage
+    ? {
+      backgroundImage: `url(${resolvedPersonal.coverImage})`,
+      backgroundSize: "cover",
+      backgroundPosition: "center",
+    }
+    : {};
+
+
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
@@ -212,16 +222,24 @@ function ProfilePageContent() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="relative overflow-hidden rounded-3xl bg-primary-dark/20 text-white p-6 md:p-8 shadow-lg shadow-primary/10 "
+          className={`relative overflow-hidden rounded-3xl ${resolvedPersonal?.coverImage ? "text-white" : "bg-primary-dark/20 text-white"
+            } p-6 md:p-8 shadow-lg shadow-primary/10 `}
+          style={heroStyle}
         >
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
             <div className="flex items-center gap-4">
+
               <div className="relative">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white shadow-md shadow-primary/20 border border-primary/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
-                  {resolvedPersonal?.profileImage ? (
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
+                  {resolvedPersonal?.profileImage ||
+                    apiProfile?.professionalProfile?.profile_image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={resolvedPersonal.profileImage}
+                      src={
+                        resolvedPersonal?.profileImage ||
+                        apiProfile?.professionalProfile?.profile_image
+                      }
                       alt="Profile avatar"
                       className="w-full h-full object-cover"
                     />
@@ -233,11 +251,12 @@ function ProfilePageContent() {
                   Active
                 </span>
               </div>
+
               <div className="space-y-1">
-                <h1 className="text-3xl font-bold text-text-heading">
+                <h1 className="text-3xl text-white/80 font-bold">
                   {displayFullName || "Your Profile"}
                 </h1>
-                <p className="text-text-body text-sm">
+                <p className="text-white/80 text-sm">
                   A quick view of your personal, business, and subscription
                   details.
                 </p>
