@@ -54,7 +54,7 @@ export default function BusinessCard({ businessInfo }) {
       <InfoGrid
         items={[
           {
-            label: "Client Rating",
+            label: "Profile Rating",
             value: businessInfo?.clientRating,
             icon: Star,
           },

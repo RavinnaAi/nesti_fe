@@ -102,7 +102,7 @@ export default function StyleMetricsStep({
           focusedField={focusedField}
         />
         <FormField
-          label="Client Rating"
+          label="Profile Rating"
           name="clientRating"
           value={form.clientRating}
           onChange={handleChange}

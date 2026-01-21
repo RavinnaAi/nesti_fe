@@ -4,7 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { loginSuccess, logout, updateProfile } from "@/store/authSlice";
+import { loginSuccess, updateProfile } from "@/store/authSlice";
+import { logoutAndClearAll } from "@/store/actions";
 
 const toastError = (error) =>
   toast.error(error?.message || "Something went wrong. Please try again.");
@@ -245,7 +246,7 @@ export function useProfileQuery() {
       toastError(error);
       // optional auto logout on unauthorized
       if (error?.message?.toLowerCase().includes("unauthorized")) {
-        dispatch(logout());
+        dispatch(logoutAndClearAll());
       }
     },
   });

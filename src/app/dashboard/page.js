@@ -21,6 +21,7 @@ import { motion } from "framer-motion";
 export default function DashboardPage() {
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const coverImage = useAppSelector((state) => state.profile.personalInfo?.coverImage);
   const { isAuthenticated, profile } = useAuthGuard();
   const activeUser = profile?.user || profile?.data || user;
   const [leadType, setLeadType] = useState("buyers");
@@ -60,6 +61,19 @@ export default function DashboardPage() {
     return null;
   }
 
+  const heroStyle = coverImage
+    ? {
+      backgroundImage: `
+  linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
+  url(${coverImage})
+`,
+      backgroundSize: 'cover',
+      backgroundPosition: 'center',
+      backgroundRepeat: 'no-repeat',
+
+    }
+    : {};
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
       <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
@@ -68,19 +82,35 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary/60 via-primary-dark/30 to-primary/20 text-white shadow-xl p-6 md:p-8"
+          className={`relative flex items-center gap-4 overflow-hidden rounded-3xl ${coverImage ? "text-white" : "bg-gradient-to-br from-primary/60 via-primary-dark/30 to-primary/20 text-white"
+            } shadow-xl p-6 md:p-8`}
+          style={heroStyle}
         >
+          <div className="relative">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
+              {profile?.user?.profileImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profile?.user?.profileImage}
+                  alt="Profile avatar"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                (profile?.personalInfo?.firstName || "N").slice(0, 1).toUpperCase()
+              )}
+            </div>
+          </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-2">
-              <div className="inline-flex items-center text-text-heading gap-2 rounded-lg bg-white/30 px-3 py-1 text-xs font-semibold">
+              <div className="inline-flex items-center text-text-heading gap-2 rounded-lg bg-white/80 px-3 py-1 text-xs font-semibold">
                 <ShieldCheck size={14} />
                 Secure workspace
               </div>
-              <h1 className="text-3xl font-bold">
+              <h1 className="text-3xl text-white/80 font-bold">
                 Welcome back
                 {activeUser?.firstName ? `, ${activeUser.firstName}` : "!"}
               </h1>
-              <p className="text-text-muted text-sm md:text-base">
+              <p className="text-white/80 text-sm md:text-base">
                 Track your pipeline, nurture hot leads, and close faster.
               </p>
             </div>
@@ -121,11 +151,10 @@ export default function DashboardPage() {
               <button
                 key={type}
                 onClick={() => setLeadType(type)}
-                className={`px-4 py-2 text-sm font-semibold transition-all ${
-                  leadType === type
-                    ? "bg-primary-dark text-white"
-                    : "text-text-heading hover:bg-background-light"
-                }`}
+                className={`px-4 py-2 text-sm font-semibold transition-all ${leadType === type
+                  ? "bg-primary-dark text-white"
+                  : "text-text-heading hover:bg-background-light"
+                  }`}
               >
                 {type === "buyers" ? "Buyer Leads" : "Seller Leads"}
               </button>
@@ -136,11 +165,10 @@ export default function DashboardPage() {
               <button
                 key={status}
                 onClick={() => setLeadStatus(status)}
-                className={`px-4 py-2 text-sm font-semibold transition-all ${
-                  leadStatus === status
-                    ? "bg-primary-dark text-white"
-                    : "text-text-heading hover:bg-background-light"
-                }`}
+                className={`px-4 py-2 text-sm font-semibold transition-all ${leadStatus === status
+                  ? "bg-primary-dark text-white"
+                  : "text-text-heading hover:bg-background-light"
+                  }`}
               >
                 {status === "active" ? "Active" : "Closed"}
               </button>
@@ -195,6 +223,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-    </div>
+    </div >
   );
 }

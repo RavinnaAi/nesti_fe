@@ -349,6 +349,7 @@ export default function BusinessInformation() {
                     <SubmitButton
                       loading={loading}
                       onClick={handleSubmit}
+                      type="button"
                       className="!w-auto px-6 py-2 rounded-lg bg-primary !h-auto text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
                     >
                       Save changes

@@ -1,21 +1,63 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedPlan } from "@/store/selectedPlanSlice";
+import { setPlans } from "@/store/pricingSlice";
 import { useRouter } from "next/navigation";
+import { useStrapiQuery } from "@/lib/strapi";
 
 export default function SubscriptionInfo() {
   const dispatch = useAppDispatch();
   const { plans } = useAppSelector((state) => state.pricing);
   const router = useRouter();
 
-  const activePlan = useMemo(() => {
-    if (!plans?.length) return null;
-    return plans.find((p) => p.popular) || plans[0];
-  }, [plans]);
+  const { data, isLoading } = useStrapiQuery({
+    path: "/api/subscriptions?populate=*",
+    cache: "force-cache",
+  });
 
-  if (!plans?.length) {
+  const strapiPlans = useMemo(() => {
+    const entries = data?.data || [];
+    return entries.map((item) => ({
+      name: item?.Name || "Plan",
+      price: item?.Price ? `$${item.Price}` : "$0",
+      period: "/month",
+      description: item?.Description || "",
+      features:
+        Array.isArray(item?.Features) && item.Features.length > 0
+          ? item.Features.map((f) => f?.name).filter(Boolean)
+          : [],
+      popular: item?.Popular ? true : false,
+      gradient: "from-primary to-primary-dark",
+    }));
+  }, [data]);
+
+  useEffect(() => {
+    if (!plans?.length && strapiPlans.length) {
+      dispatch(setPlans(strapiPlans));
+    }
+  }, [plans?.length, strapiPlans, dispatch]);
+
+  const effectivePlans = plans?.length ? plans : strapiPlans;
+
+  const activePlan = useMemo(() => {
+    if (!effectivePlans?.length) return null;
+    return effectivePlans.find((p) => p.popular) || effectivePlans[0];
+  }, [effectivePlans]);
+
+  if (isLoading && !effectivePlans.length) {
+    return (
+      <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+        <div className="text-sm font-semibold text-text-heading mb-1">
+          Subscription
+        </div>
+        <div className="text-sm text-text-body">Loading plans...</div>
+      </div>
+    );
+  }
+
+  if (!effectivePlans?.length) {
     return (
       <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
         <div className="text-sm font-semibold text-text-heading mb-1">
@@ -54,7 +96,7 @@ export default function SubscriptionInfo() {
           Available Plans
         </div>
         <div className="grid grid-cols-1 space-y-3 gap-3">
-          {plans?.map((plan) => (
+          {effectivePlans?.map((plan) => (
             <div
               key={`plan-${plan?.name}`}
               onClick={() => {
