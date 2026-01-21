@@ -177,7 +177,7 @@ function ProfilePageContent() {
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <StatusCard
-                title="Client Rating"
+                title="Profile Rating"
                 value={`${rating.toFixed(1) || "0.0"}`}
                 percent={ratingPercent}
                 accent="#10b981"

@@ -1,0 +1,230 @@
+"use client";
+
+import { apiClient, API_ENDPOINTS } from "@/lib/api";
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+const AUTH_STORAGE_KEY = "nesti_auth_state";
+
+const getStoredAuthToken = () => {
+  if (typeof window === "undefined") return "";
+  try {
+    const stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
+    if (!stored) return "";
+    const parsed = JSON.parse(stored);
+    return parsed?.token || "";
+  } catch (_err) {
+    return "";
+  }
+};
+
+const defaultSessionKey = "chatbot_session_id";
+const defaultVisitorKey = "chatbot_visitor_id";
+
+const parseJson = async (response) => {
+  try {
+    return await response.json();
+  } catch (_err) {
+    return null;
+  }
+};
+
+const apiErrorMessage = (json) =>
+  json?.detail || json?.message || json?.error || "Request failed. Please try again.";
+
+export const getOrCreateSessionId = (key = defaultSessionKey) => {
+  if (typeof window === "undefined") return "";
+  const existing = localStorage.getItem(key);
+  if (existing) return existing;
+  const sid = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  localStorage.setItem(key, sid);
+  return sid;
+};
+
+export const getVisitorId = (key = defaultVisitorKey) => {
+  if (typeof window === "undefined") return "";
+  return localStorage.getItem(key) || "";
+};
+
+export const setVisitorId = (val, key = defaultVisitorKey) => {
+  if (typeof window === "undefined" || !val) return;
+  localStorage.setItem(key, val);
+};
+
+export async function resolveEmbedToken(token) {
+  const response = await fetch(`${API_BASE}${API_ENDPOINTS.embed.resolve(token)}`, {
+    method: "GET",
+    cache: "no-store",
+  });
+  const json = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(json) || "Invalid or inactive chatbot link.");
+  }
+  return json;
+}
+
+export async function sendChatMessage({
+  message,
+  sessionId,
+  embedToken,
+  visitorId,
+  agentType,
+  channel = "web",
+}) {
+  const payload = {
+    id: sessionId,
+    message,
+    embedToken,
+    visitorId: visitorId || undefined,
+    agentType: agentType || undefined,
+    channel,
+  };
+
+  const response = await fetch(`${API_BASE}/api/chat`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  const json = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(json));
+  }
+  return json;
+}
+
+export async function clearChatSession(sessionId) {
+  const response = await fetch(`${API_BASE}/api/chat/clear/${sessionId}`, {
+    method: "DELETE",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    const json = await parseJson(response);
+    throw new Error(apiErrorMessage(json));
+  }
+  return true;
+}
+
+const buildQueryString = (params = {}) => {
+  const entries = Object.entries(params).filter(([, val]) => val !== undefined && val !== null && val !== "");
+  if (!entries.length) return "";
+  const query = new URLSearchParams(entries);
+  return `?${query.toString()}`;
+};
+
+export async function fetchConversations({ token, embedId, start, end } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ embed_id: embedId, start, end });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.conversations}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchConversationMessages({ token, conversationId }) {
+  if (!conversationId) return [];
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.conversationMessages(conversationId),
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchReferrals({ token }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.referrals,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function createReferral({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.referrals,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
+export async function updateReferral({ token, id, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.referral(id),
+    method: "PATCH",
+    data: payload,
+    token: authToken,
+  });
+}
+
+export async function sendNurtureEmail({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.nurtureSend,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
+export async function fetchNurtureLogs({ token }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.nurtureLogs,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function runMortgageCalculator({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.calculators.mortgage,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
+export async function runClosingCalculator({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.calculators.closing,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
+export async function fetchCalculatorRuns({ token, type } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ type });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.calculators.runs}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchAnalyticsSummary({ token, start, end } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ start, end });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.analytics.summary}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchAnalyticsFunnel({ token, start, end } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ start, end });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.analytics.funnel}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}

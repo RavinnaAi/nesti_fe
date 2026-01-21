@@ -17,6 +17,30 @@ export const API_ENDPOINTS = {
     verifyEmail: "/auth/verify-email",
     verifyResetOTP: "/auth/verify-reset-otp",
   },
+  embed: {
+    list: "/api/embed/list",
+    generate: "/api/embed/generate",
+    update: (id) => `/api/embed/${id}`,
+    remove: (id) => `/api/embed/${id}`,
+    resolve: (token) => `/api/embed/resolve/${token}`,
+  },
+  chat: {
+    conversations: "/api/chat/conversations",
+    conversationMessages: (id) => `/api/chat/conversations/${id}/messages`,
+    referrals: "/api/chat/referrals",
+    referral: (id) => `/api/chat/referrals/${id}`,
+    nurtureSend: "/api/chat/nurture/send",
+    nurtureLogs: "/api/chat/nurture/logs",
+    calculators: {
+      mortgage: "/api/chat/calculators/mortgage",
+      closing: "/api/chat/calculators/closing",
+      runs: "/api/chat/calculators/runs",
+    },
+    analytics: {
+      summary: "/chat/analytics/summary",
+      funnel: "/chat/analytics/funnel",
+    },
+  },
 };
 
 export async function apiClient({ url, method = "GET", data, token }) {
