@@ -25,6 +25,7 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
+  console.log("Nesti AI - AI Intelligence Platform for Real Estate ", process.env.NEXT_PUBLIC_API_URL);
   return (
     <html lang="en">
       <body
