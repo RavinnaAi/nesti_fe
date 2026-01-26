@@ -18,6 +18,8 @@ export const logoutAndClearAll = () => (dispatch) => {
   dispatch(clearSelectedPlan());
 
   if (typeof window !== "undefined") {
+    sessionStorage.clear();
+    localStorage.clear();
     SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
     LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
   }

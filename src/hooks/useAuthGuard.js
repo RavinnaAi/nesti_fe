@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useProfileQuery } from "@/hooks/useAuthApi";
 import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
+import { logoutAndClearAll } from "@/store/actions";
 
 export function useAuthGuard() {
   const router = useRouter();
@@ -17,6 +18,17 @@ export function useAuthGuard() {
       router.replace("/log-in");
     }
   }, [token, router]);
+
+  useEffect(() => {
+    if (!token || !profileQuery.isError) return;
+    const status = profileQuery.error?.status;
+    const message = profileQuery.error?.message?.toLowerCase?.() || "";
+    const shouldLogout =
+      status === 401 || status === 403 || status === 404 || message.includes("not found");
+    if (!shouldLogout) return;
+    dispatch(logoutAndClearAll());
+    router.replace("/log-in");
+  }, [token, profileQuery.isError, profileQuery.error, dispatch, router]);
 
   useEffect(() => {
     const profile = profileQuery.data?.user || profileQuery.data?.data;

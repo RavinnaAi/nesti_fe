@@ -19,6 +19,7 @@ module.exports = {
           DEFAULT: '#FFFFFF',
           light: '#FAFAFA',
           lighter: '#F8F8F8',
+          lighter2: '#F5F5F5',
         },
         // Text colors
         text: {

@@ -18,7 +18,7 @@ import { useEffect, useRef, useState } from "react";
  */
 export default function SelectDropdown({
   label,
-  className,
+  className = "",
   disabled,
   placeholder = "Select an option",
   options = [],
@@ -28,6 +28,7 @@ export default function SelectDropdown({
   onBlur,
   error,
   required = false,
+  size = "default", // "default" (h-14) or "small" (h-10)
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -64,7 +65,7 @@ export default function SelectDropdown({
           onBlur={onBlur}
           className={`w-full ${
             disabled ? "!cursor-not-allowed !bg-gray-100" : ""
-          } h-14 border-2 rounded-xl px-4 pr-12 transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-center ${
+          } ${size === "small" ? "h-10 text-xs px-3 pr-10" : "h-14 px-4 pr-12"} border-2 rounded-xl transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-center ${
             error
               ? "border-red-400 focus:border-red-500 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-primary/20"
@@ -100,7 +101,7 @@ export default function SelectDropdown({
         </div>
 
         {isOpen && (
-          <div className="absolute z-50 max-h-[250px] overflow-y-auto w-full mt-2 bg-white border-2 border-border rounded-xl shadow-xl overflow-hidden">
+          <div className={`absolute z-50 max-h-[250px] min-w-[250px] overflow-y-auto w-full mt-2 bg-white border-2 border-border rounded-xl shadow-xl overflow-hidden ${className}`}>
             {options.map((opt, index) => {
               const IconComponent = opt.icon;
               const isSelected = value === opt.value;
@@ -128,7 +129,7 @@ export default function SelectDropdown({
                     </div>
                   ) : null}
                   <span
-                    className={`font-medium transition-colors duration-150
+                    className={`font-medium transition-colors text-sm duration-150
                        ${
                          isSelected
                            ? "text-primary-dark"

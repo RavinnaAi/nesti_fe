@@ -1,6 +1,6 @@
 "use client";
 
-import { BarChart2, Layers, Star, Award, MapPin } from "lucide-react";
+import { Award, MapPin } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 
 const buttonClasses = (active) =>
@@ -79,39 +79,7 @@ export default function StyleMetricsStep({
         ])}
       </div>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <FormField
-          label="Transactions This Year"
-          name="transactionsThisYear"
-          value={form.transactionsThisYear}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("transactionsThisYear")}
-          onBlur={() => setFocusedField("")}
-          placeholder="Number of transactions this year"
-          icon={BarChart2}
-          focusedField={focusedField}
-        />
-        <FormField
-          label="Total Career Transactions"
-          name="careerTransactions"
-          value={form.careerTransactions}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("careerTransactions")}
-          onBlur={() => setFocusedField("")}
-          placeholder="Total career transactions"
-          icon={Layers}
-          focusedField={focusedField}
-        />
-        <FormField
-          label="Profile Rating"
-          name="clientRating"
-          value={form.clientRating}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("clientRating")}
-          onBlur={() => setFocusedField("")}
-          placeholder="e.g. 4.8 / 5"
-          icon={Star}
-          focusedField={focusedField}
-        />
+        {/* Transactions + rating fields removed */}
         <FormField
           label="Awards or Recognitions"
           name="awards"

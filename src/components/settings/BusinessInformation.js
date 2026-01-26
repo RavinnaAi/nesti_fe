@@ -68,9 +68,9 @@ export default function BusinessInformation() {
     salesApproach: "",
     energyStyle: "",
     personalityTag: "",
-    transactionsThisYear: "",
-    careerTransactions: "",
-    clientRating: "",
+    // transactionsThisYear: "",
+    // careerTransactions: "",
+    // clientRating: "",
     awards: "",
     testimonial: "",
     targetNeighborhoods: "",
@@ -128,8 +128,9 @@ export default function BusinessInformation() {
     if (e?.preventDefault) e.preventDefault();
     setLoading(true);
     try {
+      const { transactionsThisYear, careerTransactions, clientRating, ...rest } = form;
       const payload = {
-        ...form,
+        ...rest,
         specializations,
         communicationChannels,
         preferredClients,
@@ -191,8 +192,9 @@ export default function BusinessInformation() {
   const stepProps = steps[activeStep]?.props || {};
 
   const handleNext = () => {
+    const { transactionsThisYear, careerTransactions, clientRating, ...rest } = form;
     const payload = {
-      ...form,
+      ...rest,
       specializations,
       communicationChannels,
       preferredClients,
