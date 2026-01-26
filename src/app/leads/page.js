@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Filter, RefreshCw } from "lucide-react";
+import { Filter, RefreshCw, CheckCircle2, XCircle, Users, DollarSign, Scale } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
@@ -21,6 +21,7 @@ import {
 import LeadListItem from "@/components/leads/LeadListItem";
 import MessageBubble from "@/components/leads/MessageBubble";
 import LeadActionSection from "@/components/leads/LeadActionSection";
+import SelectDropdown from "@/components/ui/SelectDropdown";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -33,17 +34,35 @@ const normalizeList = (data) => {
 const getConversationId = (conversation) =>
   conversation?.id || conversation?.conversation_id || conversation?.conversationId;
 
-const getConversationMeta = (conversation) => ({
-  intent:
-    conversation?.intent ||
-    conversation?.lead_intent ||
-    conversation?.intent_label ||
-    "Unknown",
-  leadScore: conversation?.lead_score ?? conversation?.leadScore ?? "—",
-  leadGrade: conversation?.lead_grade ?? conversation?.leadGrade ?? "—",
-  channel: conversation?.channel || conversation?.source || "web",
-  qualified: conversation?.is_qualified ?? conversation?.isQualified ?? false,
-});
+const getConversationMeta = (conversation) => {
+  // Check for matched status in multiple possible fields
+  let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
+  if (isMatched === null) {
+    const matchStatus = conversation?.match_status;
+    if (matchStatus === "matched" || matchStatus === true) {
+      isMatched = true;
+    } else {
+      isMatched = conversation?.meta?.is_matched ??
+        conversation?.meta?.matched ??
+        conversation?.metadata?.is_matched ??
+        conversation?.metadata?.matched ??
+        null;
+    }
+  }
+
+  return {
+    intent:
+      conversation?.intent ||
+      conversation?.lead_intent ||
+      conversation?.intent_label ||
+      "Unknown",
+    leadScore: conversation?.lead_score ?? conversation?.leadScore ?? "—",
+    leadGrade: conversation?.lead_grade ?? conversation?.leadGrade ?? "—",
+    channel: conversation?.channel || conversation?.source || "web",
+    qualified: conversation?.is_qualified ?? conversation?.isQualified ?? false,
+    isMatched,
+  };
+};
 
 const matchesSearch = (conversation, term) => {
   if (!term) return true;
@@ -69,6 +88,21 @@ const matchesSearch = (conversation, term) => {
   return haystack.includes(needle);
 };
 
+const extractMeta = (value) => {
+  if (!value) return {};
+  return value?.meta || value?.metadata || value?.data?.meta || {};
+};
+
+const extractMessageMeta = (message) => {
+  if (!message) return {};
+  return message?.meta || message?.message_meta || message?.metadata || message?.data?.meta || {};
+};
+
+const formatMetaEntries = (meta) => {
+  if (!meta || typeof meta !== "object") return [];
+  return Object.entries(meta).filter(([, value]) => value !== undefined && value !== null);
+};
+
 export default function LeadsPage() {
   const { isAuthenticated } = useAuthGuard();
   const { token } = useAppSelector((state) => state.auth);
@@ -78,6 +112,7 @@ export default function LeadsPage() {
   const [intentFilter, setIntentFilter] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
+  const [matchFilter, setMatchFilter] = useState("");
 
   const [referralForm, setReferralForm] = useState({
     target_vertical: "realtor",
@@ -118,9 +153,11 @@ export default function LeadsPage() {
       if (intentFilter && String(meta.intent) !== intentFilter) return false;
       if (gradeFilter && String(meta.leadGrade) !== gradeFilter) return false;
       if (channelFilter && String(meta.channel) !== channelFilter) return false;
+      if (matchFilter === "matched" && meta.isMatched !== true) return false;
+      if (matchFilter === "mismatched" && meta.isMatched !== false) return false;
       return matchesSearch(conversation, searchTerm);
     });
-  }, [conversations, intentFilter, gradeFilter, channelFilter, searchTerm]);
+  }, [conversations, intentFilter, gradeFilter, channelFilter, matchFilter, searchTerm]);
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => getConversationId(conversation) === selectedId),
@@ -134,6 +171,15 @@ export default function LeadsPage() {
   });
 
   const messages = useMemo(() => normalizeList(messagesQuery.data), [messagesQuery.data]);
+
+  const conversationMeta = useMemo(() => extractMeta(selectedConversation), [selectedConversation]);
+  const messageMeta = useMemo(() => {
+    const latestWithMeta = [...messages].reverse().find((msg) => {
+      const meta = extractMessageMeta(msg);
+      return Object.keys(meta || {}).length > 0;
+    });
+    return extractMessageMeta(latestWithMeta);
+  }, [messages]);
 
   const referralsQuery = useQuery({
     queryKey: ["chat-referrals", token],
@@ -309,43 +355,52 @@ export default function LeadsPage() {
                 placeholder="Search by name, email, phone, city..."
                 className="w-full h-10 rounded-xl border border-border/60 bg-background-light/50 px-3 text-sm focus:outline-none"
               />
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                <select
+              <div className="flex align-middle flex-wrap gap-2">
+                <SelectDropdown
+                  placeholder="Intent"
                   value={intentFilter}
-                  onChange={(event) => setIntentFilter(event.target.value)}
-                  className="h-10 rounded-xl border border-border/60 bg-white text-xs px-2"
-                >
-                  <option value="">Intent</option>
-                  {intents.map((intent) => (
-                    <option key={intent} value={intent}>
-                      {intent}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  onChange={setIntentFilter}
+                  options={[
+                    { value: "", label: "All Intents" },
+                    ...intents.map((intent) => ({ value: intent, label: intent })),
+                  ]}
+                  className="!w-auto"
+                  size="small"
+                />
+                <SelectDropdown
+                  placeholder="Grade"
                   value={gradeFilter}
-                  onChange={(event) => setGradeFilter(event.target.value)}
-                  className="h-10 rounded-xl border border-border/60 bg-white text-xs px-2"
-                >
-                  <option value="">Grade</option>
-                  {grades.map((grade) => (
-                    <option key={grade} value={grade}>
-                      {grade}
-                    </option>
-                  ))}
-                </select>
-                <select
+                  onChange={setGradeFilter}
+                  options={[
+                    { value: "", label: "All Grades" },
+                    ...grades.map((grade) => ({ value: grade, label: grade })),
+                  ]}
+                  className="!w-auto"
+                  size="small"
+                />
+                <SelectDropdown
+                  placeholder="Channel"
                   value={channelFilter}
-                  onChange={(event) => setChannelFilter(event.target.value)}
-                  className="h-10 rounded-xl border border-border/60 bg-white text-xs px-2"
-                >
-                  <option value="">Channel</option>
-                  {channels.map((channel) => (
-                    <option key={channel} value={channel}>
-                      {channel}
-                    </option>
-                  ))}
-                </select>
+                  onChange={setChannelFilter}
+                  options={[
+                    { value: "", label: "All Channels" },
+                    ...channels.map((channel) => ({ value: channel, label: channel })),
+                  ]}
+                  className="!w-auto"
+                  size="small"
+                />
+                <SelectDropdown
+                  placeholder="Match Status"
+                  value={matchFilter}
+                  onChange={setMatchFilter}
+                  options={[
+                    { value: "", label: "All Leads" },
+                    { value: "matched", label: "Matched" },
+                    { value: "mismatched", label: "Mismatched" },
+                  ]}
+                  className="!w-auto"
+                  size="small"
+                />
               </div>
             </div>
 
@@ -388,16 +443,63 @@ export default function LeadsPage() {
               </div>
               {selectedConversation ? (
                 <>
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                    {Object.entries(getConversationMeta(selectedConversation)).map(([key, value]) => (
-                      <span
-                        key={key}
-                        className="px-2 py-1 rounded-full bg-background-light border border-border/60"
-                      >
-                        {key}: {String(value)}
+                  <div className="flex flex-wrap items-center gap-2 text-xs">
+                    {getConversationMeta(selectedConversation).isMatched === true ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">
+                        <CheckCircle2 size={14} />
+                        Matched Lead
                       </span>
-                    ))}
+                    ) : getConversationMeta(selectedConversation).isMatched === false ? (
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-semibold">
+                        <XCircle size={14} />
+                        Mismatched Lead
+                      </span>
+                    ) : null}
+                    {Object.entries(getConversationMeta(selectedConversation))
+                      .filter(([key]) => key !== "isMatched")
+                      .map(([key, value]) => (
+                        <span
+                          key={key}
+                          className="px-2 py-1 rounded-full bg-background-light border border-border/60 text-text-muted"
+                        >
+                          {String(key).charAt(0).toUpperCase() + String(key).slice(1)}: {String(value)}
+                        </span>
+                      ))}
                   </div>
+                  {formatMetaEntries(conversationMeta).length > 0 ? (
+                    <div>
+                      <div className="text-xs font-semibold text-text-heading mb-1">
+                        Conversation meta
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                        {formatMetaEntries(conversationMeta).map(([key, value]) => (
+                          <span
+                            key={`meta-${key}`}
+                            className="px-2 py-1 rounded-full bg-white border border-border"
+                          >
+                            {String(key)}: {String(value)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+                  {formatMetaEntries(messageMeta).length > 0 ? (
+                    <div>
+                      <div className="text-xs font-semibold text-text-heading mb-1">
+                        Latest message meta
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                        {formatMetaEntries(messageMeta).map(([key, value]) => (
+                          <span
+                            key={`message-meta-${key}`}
+                            className="px-2 py-1 rounded-full bg-white border border-border"
+                          >
+                            {String(key)}: {String(value)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="h-[360px] overflow-y-auto rounded-xl border border-border/60 bg-background-light/40 p-4 space-y-3">
                     {messagesQuery.isLoading ? (
                       <div className="text-sm text-text-muted">Loading messages...</div>
@@ -423,17 +525,19 @@ export default function LeadsPage() {
                 subtitle="Connect this lead to another professional."
               >
                 <div className="grid grid-cols-2 gap-2">
-                  <select
+                  <SelectDropdown
+                    placeholder="Select vertical"
                     value={referralForm.target_vertical}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, target_vertical: event.target.value }))
+                    onChange={(value) =>
+                      setReferralForm((prev) => ({ ...prev, target_vertical: value }))
                     }
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
-                  >
-                    <option value="realtor">Realtor</option>
-                    <option value="mortgage">Mortgage Broker</option>
-                    <option value="lawyer">Real Estate Lawyer</option>
-                  </select>
+                    options={[
+                      { value: "realtor", label: "Realtor", icon: Users },
+                      { value: "mortgage", label: "Mortgage Broker", icon: DollarSign },
+                      { value: "lawyer", label: "Real Estate Lawyer", icon: Scale },
+                    ]}
+                    size="small"
+                  />
                   <input
                     type="text"
                     value={referralForm.target_user_id}
@@ -479,11 +583,10 @@ export default function LeadsPage() {
                         key={referral?.id}
                         type="button"
                         onClick={() => setActiveReferralId(String(referral?.id))}
-                        className={`w-full text-left rounded-xl border px-3 py-2 ${
-                          String(referral?.id) === String(activeReferralId)
-                            ? "border-primary bg-primary/5"
-                            : "border-border"
-                        }`}
+                        className={`w-full text-left rounded-xl border px-3 py-2 ${String(referral?.id) === String(activeReferralId)
+                          ? "border-primary bg-primary/5"
+                          : "border-border"
+                          }`}
                       >
                         <div className="font-semibold text-text-heading">
                           {referral?.target_vertical || "Referral"}

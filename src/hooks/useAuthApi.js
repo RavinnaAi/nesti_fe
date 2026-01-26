@@ -244,8 +244,13 @@ export function useProfileQuery() {
     },
     onError: (error) => {
       toastError(error);
-      // optional auto logout on unauthorized
-      if (error?.message?.toLowerCase().includes("unauthorized")) {
+      const status = error?.status;
+      const message = error?.message?.toLowerCase?.() || "";
+      if (status === 401 || status === 403 || status === 404) {
+        dispatch(logoutAndClearAll());
+        return;
+      }
+      if (message.includes("unauthorized") || message.includes("not found")) {
         dispatch(logoutAndClearAll());
       }
     },

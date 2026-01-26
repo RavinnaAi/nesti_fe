@@ -1,4 +1,4 @@
-import { Flame, BadgeCheck, MessageCircle } from "lucide-react";
+import { Flame, BadgeCheck, MessageCircle, CheckCircle2, XCircle } from "lucide-react";
 
 const getLeadMeta = (conversation) => {
   const leadScore = conversation?.lead_score ?? conversation?.leadScore ?? conversation?.score ?? null;
@@ -6,7 +6,23 @@ const getLeadMeta = (conversation) => {
   const intent = conversation?.intent ?? conversation?.lead_intent ?? conversation?.intent_label ?? null;
   const channel = conversation?.channel ?? conversation?.source ?? null;
   const qualified = conversation?.is_qualified ?? conversation?.isQualified ?? null;
-  return { leadScore, leadGrade, intent, channel, qualified };
+  
+  // Check for matched status in multiple possible fields
+  let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
+  if (isMatched === null) {
+    const matchStatus = conversation?.match_status;
+    if (matchStatus === "matched" || matchStatus === true) {
+      isMatched = true;
+    } else {
+      isMatched = conversation?.meta?.is_matched ?? 
+                  conversation?.meta?.matched ??
+                  conversation?.metadata?.is_matched ??
+                  conversation?.metadata?.matched ??
+                  null;
+    }
+  }
+  
+  return { leadScore, leadGrade, intent, channel, qualified, isMatched };
 };
 
 export default function LeadListItem({ conversation, active, onSelect }) {
@@ -28,7 +44,7 @@ export default function LeadListItem({ conversation, active, onSelect }) {
     conversation?.city ||
     "No contact info";
 
-  const { leadScore, leadGrade, intent, channel, qualified } = getLeadMeta(conversation);
+  const { leadScore, leadGrade, intent, channel, qualified, isMatched } = getLeadMeta(conversation);
 
   return (
     <button
@@ -37,6 +53,8 @@ export default function LeadListItem({ conversation, active, onSelect }) {
       className={`w-full text-left rounded-2xl border px-4 py-3 transition ${
         active
           ? "border-primary bg-primary/5 shadow-sm"
+          : isMatched === false
+          ? "border-red-200 bg-red-50/50 hover:border-red-300"
           : "border-border bg-white hover:border-primary/40 hover:bg-background-light/40"
       }`}
     >
@@ -46,6 +64,17 @@ export default function LeadListItem({ conversation, active, onSelect }) {
           <div className="text-xs text-text-muted mt-1">{subtitle}</div>
         </div>
         <div className="flex items-center gap-2 text-xs">
+          {isMatched === true ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 border border-green-200 px-2 py-0.5">
+              <CheckCircle2 size={12} />
+              Matched
+            </span>
+          ) : isMatched === false ? (
+            <span className="inline-flex items-center gap-1 rounded-full bg-red-50 text-red-700 border border-red-200 px-2 py-0.5">
+              <XCircle size={12} />
+              Mismatched
+            </span>
+          ) : null}
           {leadGrade ? (
             <span className="inline-flex items-center gap-1 rounded-full bg-green-50 text-green-700 border border-green-100 px-2 py-0.5">
               <Flame size={12} />

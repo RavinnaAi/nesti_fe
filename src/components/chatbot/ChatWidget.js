@@ -24,6 +24,7 @@ export default function ChatWidget({
   title = "Real Estate Assistant",
   subtitle = "Online • Ready to help",
   inlineMode = false,
+  initialGreeting = "Hello! How can I help with your real estate journey today?",
 }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [messages, setMessages] = useState([]);
@@ -40,6 +41,17 @@ export default function ChatWidget({
     const vid = getVisitorId();
     if (vid) setVisitorIdState(vid);
   }, []);
+
+  useEffect(() => {
+    if (!initialGreeting || messages.length) return;
+    setMessages([
+      {
+        role: "assistant",
+        content: initialGreeting,
+        timestamp: new Date(),
+      },
+    ]);
+  }, [initialGreeting, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,66 +118,71 @@ export default function ChatWidget({
   const disabledSend = !input.trim() || loading || !embedToken;
 
   const header = (
-    <div className="bg-primary text-white p-4 flex items-center justify-between">
+    <div className="bg-white border-b border-border px-5 py-4 flex items-center justify-between">
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-          <MessageCircle size={20} />
+        <div className="w-10 h-10 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
+          <MessageCircle size={18} />
         </div>
         <div>
-          <h3 className="font-semibold">{title}</h3>
-          <p className="text-xs opacity-90">{subtitle}</p>
+          <h3 className="font-semibold text-text-heading">{title}</h3>
+          <p className="text-xs text-text-muted">{subtitle}</p>
         </div>
       </div>
-      <button
-        onClick={() => setIsOpen(false)}
-        className="p-2 hover:bg-white/10 rounded-lg transition"
-        aria-label="Close chat"
-      >
-        <X size={20} />
-      </button>
+      <div className="flex items-center gap-2">
+        <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+          <span className="w-2 h-2 rounded-full bg-emerald-500" />
+          Online
+        </span>
+        <button
+          onClick={() => setIsOpen(false)}
+          className="p-2 hover:bg-background-light rounded-lg transition text-text-heading"
+          aria-label="Close chat"
+        >
+          <X size={18} />
+        </button>
+      </div>
     </div>
   );
 
   const body = (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-background">
-      {!messages.length && !loading ? (
-        <div className="text-center text-text-muted py-8">
-          <MessageCircle size={48} className="mx-auto mb-4 opacity-30" />
-          <p className="text-sm">
-            Hi! I&apos;m your real estate assistant.
-            <br />
-            How can I help you today?
-          </p>
-        </div>
-      ) : null}
+    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-background-light">
 
-      {messages.map((msg, idx) => (
-        <div
-          key={`${msg.role}-${idx}-${msg.timestamp?.toString?.() || ""}`}
-          className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
-        >
+      {messages.map((msg, idx) => {
+        const isUser = msg.role === "user";
+        return (
           <div
-            className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-              msg.role === "user"
+            key={`${msg.role}-${idx}-${msg.timestamp?.toString?.() || ""}`}
+            className={`flex ${isUser ? "justify-end" : "justify-start"} items-end gap-2`}
+          >
+            {!isUser && (
+              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <MessageCircle size={14} />
+              </div>
+            )}
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${isUser
                 ? "bg-primary text-white"
                 : "bg-white border border-border text-text-heading"
-            }`}
-          >
-            <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-            <p
-              className={`text-[10px] mt-1 ${
-                msg.role === "user" ? "text-white/70" : "text-text-muted"
-              }`}
+                }`}
             >
-              {formatTime(msg.timestamp || new Date())}
-            </p>
+              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+              <p
+                className={`text-[10px] mt-1 ${isUser ? "text-white/70" : "text-text-muted"
+                  }`}
+              >
+                {formatTime(msg.timestamp || new Date())}
+              </p>
+            </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {loading && (
-        <div className="flex justify-start">
-          <div className="bg-white border border-border rounded-2xl px-4 py-3 flex items-center gap-2">
+        <div className="flex justify-start items-center gap-2">
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+            <MessageCircle size={14} />
+          </div>
+          <div className="bg-white border border-border rounded-2xl px-4 py-3 flex items-center gap-2 shadow-sm">
             <Loader2 size={16} className="animate-spin text-primary" />
             <span className="text-sm text-text-muted">Typing...</span>
           </div>
@@ -180,7 +197,7 @@ export default function ChatWidget({
 
   const footer = (
     <div className="p-4 border-t border-border bg-white">
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <input
           type="text"
           value={input}
@@ -188,12 +205,12 @@ export default function ChatWidget({
           onKeyPress={handleKeyPress}
           placeholder={embedToken ? "Type your message..." : "Embed token missing"}
           disabled={loading || !embedToken}
-          className="flex-1 px-4 py-2 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50"
+          className="flex-1 px-4 py-2 border border-border rounded-xl bg-background-light focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50"
         />
         <button
           onClick={handleSend}
           disabled={disabledSend}
-          className="px-4 py-2 bg-primary text-white rounded-lg hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+          className="px-4 py-2 bg-primary text-white rounded-xl hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-sm"
           aria-label="Send message"
         >
           {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
@@ -226,11 +243,10 @@ export default function ChatWidget({
 
       {isOpen && (
         <div
-          className={`${
-            inlineMode
-              ? "relative w-full h-[600px] max-h-[70vh]"
-              : "fixed bottom-6 right-6 w-96 max-w-[96vw] h-[600px] max-h-[80vh] z-50"
-          } bg-white rounded-2xl shadow-2xl flex flex-col border border-border overflow-hidden`}
+          className={`${inlineMode
+            ? "relative w-full h-[600px] max-h-[70vh]"
+            : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[80vh] z-50"
+            } bg-transparent rounded-3xl shadow-2xl flex flex-col border border-border overflow-hidden`}
         >
           {header}
           {body}

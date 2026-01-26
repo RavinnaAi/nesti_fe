@@ -2,49 +2,59 @@
 
 const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
+function withBaseUrl(endpoint) {
+  if (typeof endpoint === "function") {
+    return (...args) => `${BASE_URL}${endpoint(...args)}`;
+  }
+  return `${BASE_URL}${endpoint}`;
+}
+
 export const API_ENDPOINTS = {
   auth: {
-    checkEmail: "/auth/check-email",
-    forgotPassword: "/auth/forgot-password",
-    google: "/auth/google",
-    googleSignup: "/auth/google-signup",
-    login: "/auth/login",
-    profile: "/auth/profile",
-    publicProfile: "/auth/public-profile",
-    resendVerification: "/auth/resend-verification",
-    resetPassword: "/auth/reset-password",
-    signup: "/auth/signup",
-    verifyEmail: "/auth/verify-email",
-    verifyResetOTP: "/auth/verify-reset-otp",
+    checkEmail: withBaseUrl("/auth/check-email"),
+    forgotPassword: withBaseUrl("/auth/forgot-password"),
+    google: withBaseUrl("/auth/google"),
+    googleSignup: withBaseUrl("/auth/google-signup"),
+    login: withBaseUrl("/auth/login"),
+    profile: withBaseUrl("/auth/profile"),
+    publicProfile: withBaseUrl("/auth/public-profile"),
+    resendVerification: withBaseUrl("/auth/resend-verification"),
+    resetPassword: withBaseUrl("/auth/reset-password"),
+    signup: withBaseUrl("/auth/signup"),
+    verifyEmail: withBaseUrl("/auth/verify-email"),
+    verifyResetOTP: withBaseUrl("/auth/verify-reset-otp"),
   },
   embed: {
-    list: "/api/embed/list",
-    generate: "/api/embed/generate",
-    update: (id) => `/api/embed/${id}`,
-    remove: (id) => `/api/embed/${id}`,
-    resolve: (token) => `/api/embed/resolve/${token}`,
+    list: withBaseUrl("/api/embed/list"),
+    generate: withBaseUrl("/api/embed/generate"),
+    update: withBaseUrl((id) => `/api/embed/${id}`),
+    remove: withBaseUrl((id) => `/api/embed/${id}`),
+    resolve: withBaseUrl((token) => `/api/embed/resolve/${token}`),
   },
   chat: {
-    conversations: "/api/chat/conversations",
-    conversationMessages: (id) => `/api/chat/conversations/${id}/messages`,
-    referrals: "/api/chat/referrals",
-    referral: (id) => `/api/chat/referrals/${id}`,
-    nurtureSend: "/api/chat/nurture/send",
-    nurtureLogs: "/api/chat/nurture/logs",
+    conversations: withBaseUrl("/api/chat/conversations"),
+    conversationMessages: withBaseUrl((id) => `/api/chat/conversations/${id}/messages`),
+    referrals: withBaseUrl("/api/chat/referrals"),
+    referral: withBaseUrl((id) => `/api/chat/referrals/${id}`),
+    nurtureSend: withBaseUrl("/api/chat/nurture/send"),
+    nurtureLogs: withBaseUrl("/api/chat/nurture/logs"),
     calculators: {
-      mortgage: "/api/chat/calculators/mortgage",
-      closing: "/api/chat/calculators/closing",
-      runs: "/api/chat/calculators/runs",
+      mortgage: withBaseUrl("/api/chat/calculators/mortgage"),
+      closing: withBaseUrl("/api/chat/calculators/closing"),
+      runs: withBaseUrl("/api/chat/calculators/runs"),
     },
     analytics: {
-      summary: "/chat/analytics/summary",
-      funnel: "/chat/analytics/funnel",
+      summary: withBaseUrl("/chat/analytics/summary"),
+      funnel: withBaseUrl("/chat/analytics/funnel"),
     },
   },
 };
 
 export async function apiClient({ url, method = "GET", data, token }) {
-  const fullUrl = `${BASE_URL}${url}`;
+  // url can be either a base-relative string ("/route") or an absolute url
+  // If user passes a full url, don't prepend BASE_URL.
+  const isAbsolute = url.startsWith("http://") || url.startsWith("https://");
+  const fullUrl = isAbsolute ? url : `${BASE_URL}${url}`;
   const headers = {
     "Content-Type": "application/json",
   };
@@ -72,7 +82,9 @@ export async function apiClient({ url, method = "GET", data, token }) {
       json?.message ||
       json?.error ||
       "Request failed. Please try again.";
-    throw new Error(message);
+    const error = new Error(message);
+    error.status = response.status;
+    throw error;
   }
 
   return json || {};

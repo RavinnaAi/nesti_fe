@@ -122,36 +122,38 @@ export default function ChatbotEmbed() {
 
   return (
     <div className="space-y-5">
-      <div className="rounded-xl border border-border bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-end gap-3">
-        <div className="flex-1">
-          <div className="text-sm font-semibold text-text-heading mb-1">
-            Generate New Embed Link
+      {!embeds.length ? (
+        <div className="rounded bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-end gap-3">
+          <div className="flex-1">
+            <div className="text-sm font-semibold text-text-heading mb-1">
+              Generate New Embed Link
+            </div>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              placeholder="Optional name, e.g. 'Website Chatbot'"
+              className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
+            />
           </div>
-          <input
-            type="text"
-            value={newName}
-            onChange={(e) => setNewName(e.target.value)}
-            placeholder="Optional name, e.g. 'Website Chatbot'"
-            className="w-full rounded-lg border border-border px-3 py-2 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20"
-          />
+          <button
+            type="button"
+            onClick={() => generateMutation.mutate(newName.trim())}
+            disabled={generateMutation.isLoading}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:brightness-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {generateMutation.isLoading ? (
+              <>
+                <RefreshCw className="h-4 w-4 animate-spin" /> Generating...
+              </>
+            ) : (
+              "Generate Link"
+            )}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => generateMutation.mutate(newName.trim())}
-          disabled={generateMutation.isLoading}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:brightness-95 transition disabled:opacity-60 disabled:cursor-not-allowed"
-        >
-          {generateMutation.isLoading ? (
-            <>
-              <RefreshCw className="h-4 w-4 animate-spin" /> Generating...
-            </>
-          ) : (
-            "Generate Link"
-          )}
-        </button>
-      </div>
+      ) : null}
 
-      <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+      <div className="rounded bg-white p-4 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <div className="text-sm font-semibold text-text-heading">Your Embed Links</div>
           <button
@@ -190,7 +192,7 @@ export default function ChatbotEmbed() {
               return (
                 <div
                   key={`embed-${embed?.id || tokenValue}`}
-                  className="rounded-lg border border-border bg-background-light/60 p-3 flex flex-col gap-3"
+                  className=" flex flex-col gap-3"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
@@ -214,8 +216,8 @@ export default function ChatbotEmbed() {
                           })
                         }
                         className={`inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border transition ${active
-                            ? "border-green-200 text-green-700 bg-green-50"
-                            : "border-border text-text-heading bg-white"
+                          ? "border-green-200 text-green-700 bg-green-50"
+                          : "border-border text-text-heading bg-white"
                           }`}
                       >
                         {active ? <Pause className="h-4 w-4" /> : <Play className="h-4 w-4" />}
@@ -246,21 +248,7 @@ export default function ChatbotEmbed() {
                         )}
                         Copy link
                       </button>
-                      <a
-                        href={publicUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border border-primary text-primary hover:bg-primary/5 transition"
-                      >
-                        Open
-                      </a>
-                      <button
-                        type="button"
-                        onClick={() => setPreviewToken(tokenValue)}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border border-border text-text-heading hover:bg-background-light transition"
-                      >
-                        Preview
-                      </button>
+                      {/* Open + preview disabled */}
                     </div>
                   </div>
 
@@ -274,15 +262,15 @@ export default function ChatbotEmbed() {
                       </pre>
                       <button
                         type="button"
+                        style={{ height: "-webkit-fill-available" }}
                         onClick={() => handleCopy(codeSnippet, `code-${tokenValue}`)}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border border-border hover:bg-background-light transition self-start"
+                        className="inline-flex items-center h-full justify-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border border-border hover:bg-background-light transition self-start"
                       >
                         {copiedKey === `code-${tokenValue}` ? (
                           <Check className="h-4 w-4 text-green-600" />
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
-                        Copy code
                       </button>
                     </div>
                   </div>
@@ -297,6 +285,7 @@ export default function ChatbotEmbed() {
                         </pre>
                         <button
                           type="button"
+                          style={{ height: "-webkit-fill-available" }}
                           onClick={() => handleCopy(providedSnippet, `provided-${tokenValue}`)}
                           className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border border-border hover:bg-background-light transition self-start"
                         >
@@ -305,7 +294,6 @@ export default function ChatbotEmbed() {
                           ) : (
                             <Copy className="h-4 w-4" />
                           )}
-                          Copy provided
                         </button>
                       </div>
                     </div>
@@ -320,6 +308,7 @@ export default function ChatbotEmbed() {
                       </pre>
                       <button
                         type="button"
+                        style={{ height: "-webkit-fill-available" }}
                         onClick={() => handleCopy(iframeSnippet, `iframe-${tokenValue}`)}
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-semibold border border-border hover:bg-background-light transition self-start"
                       >
@@ -328,7 +317,6 @@ export default function ChatbotEmbed() {
                         ) : (
                           <Copy className="h-4 w-4" />
                         )}
-                        Copy iframe
                       </button>
                     </div>
                   </div>
@@ -340,8 +328,8 @@ export default function ChatbotEmbed() {
       </div>
 
       {previewToken && (
-        <div className="rounded-xl border border-primary/40 bg-white shadow-lg p-4 space-y-3">
-          <div className="flex items-center justify-between">
+        <div className="rounded bg-primary-dark/10 shadow-lg p-4 space-y-3">
+          <div className="flex items-center justify-between ">
             <div>
               <div className="text-sm font-semibold text-text-heading">Live Preview</div>
               <div className="text-xs text-text-muted">
@@ -356,7 +344,7 @@ export default function ChatbotEmbed() {
               Close preview
             </button>
           </div>
-          <div className="relative w-full min-h-[480px] bg-background-light rounded-xl border border-border overflow-hidden">
+          <div className="relative w-full min-h-[480px] bg-transparent rounded overflow-hidden">
             <ChatWidget
               embedToken={previewToken}
               defaultOpen
