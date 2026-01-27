@@ -487,7 +487,7 @@ export default function LeadsPage() {
                     <div>
                       <div className="text-xs font-semibold text-text-heading mb-1">
                         Latest message meta
-                      </div>
+                      </div>                      
                       <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
                         {formatMetaEntries(messageMeta).map(([key, value]) => (
                           <span
