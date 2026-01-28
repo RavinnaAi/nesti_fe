@@ -21,6 +21,7 @@ import {
 import LeadListItem from "@/components/leads/LeadListItem";
 import MessageBubble from "@/components/leads/MessageBubble";
 import LeadActionSection from "@/components/leads/LeadActionSection";
+import LeadScoreCard from "@/components/leads/LeadScoreCard";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 
 const normalizeList = (data) => {
@@ -441,6 +442,20 @@ export default function LeadsPage() {
                   {selectedConversation ? "Latest messages and lead metadata" : "Select a lead to view messages"}
                 </p>
               </div>
+
+              {selectedConversation && (
+                <LeadScoreCard
+                  score={getConversationMeta(selectedConversation).leadScore}
+                  grade={getConversationMeta(selectedConversation).leadGrade}
+                  breakdown={{
+                    timeline: extractMeta(selectedConversation).timeline_score || 0,
+                    budget: extractMeta(selectedConversation).budget_score || 0,
+                    engagement: extractMeta(selectedConversation).engagement_score || 0
+                  }}
+                  reasons={extractMeta(selectedConversation).lead_reasons || []}
+                />
+              )}
+
               {selectedConversation ? (
                 <>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -487,7 +502,7 @@ export default function LeadsPage() {
                     <div>
                       <div className="text-xs font-semibold text-text-heading mb-1">
                         Latest message meta
-                      </div>                      
+                      </div>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
                         {formatMetaEntries(messageMeta).map(([key, value]) => (
                           <span

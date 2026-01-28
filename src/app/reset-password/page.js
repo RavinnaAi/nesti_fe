@@ -28,8 +28,7 @@ function ResetPasswordPageInner() {
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [resetSuccess, setResetSuccess] = useState(false);
-  const [email, setEmail] = useState("");
-  const [otp, setOtp] = useState("");
+
   const [passwordStrength, setPasswordStrength] = useState(null);
   const [form, setForm] = useState({
     password: "",
@@ -124,8 +123,8 @@ function ResetPasswordPageInner() {
 
     try {
       await resetMutation.mutateAsync({
-        email,
-        otp,
+        email: resetEmail,
+        otp: resetOtp,
         newPassword: form.password,
       });
       setResetSuccess(true);
@@ -189,7 +188,7 @@ function ResetPasswordPageInner() {
             />
 
             <div className="flex flex-col space-y-3 pt-2">
-              <SubmitButton loading={isSubmitting} disabled={!email || !otp}>
+              <SubmitButton loading={isSubmitting} disabled={!resetEmail || !resetOtp}>
                 Reset Password
               </SubmitButton>
             </div>
