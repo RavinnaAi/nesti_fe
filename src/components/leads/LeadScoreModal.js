@@ -21,8 +21,8 @@ export default function LeadScoreModal({ score, grade, reasons = [], breakdown =
                     <div className="text-center space-y-2">
                         <div className="text-4xl font-bold text-text-heading">{score}</div>
                         <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${grade === "Hot" ? "bg-green-100 text-green-700" :
-                                grade === "Warm" ? "bg-yellow-100 text-yellow-700" :
-                                    "bg-gray-100 text-gray-700"
+                            grade === "Warm" ? "bg-yellow-100 text-yellow-700" :
+                                "bg-gray-100 text-gray-700"
                             }`}>
                             {grade} Lead
                         </div>
@@ -54,7 +54,7 @@ export default function LeadScoreModal({ score, grade, reasons = [], breakdown =
 
                     <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                         <p className="text-xs text-blue-800 leading-relaxed">
-                            <strong>Tip:</strong> Ask specifically about their timeline ("When are you looking to move?") or budget ("Have you been pre-approved?") to improve this score accuracy.
+                            <strong>Tip:</strong> Ask specifically about their timeline (&quot;When are you looking to move?&quot;) or budget (&quot;Have you been pre-approved?&quot;) to improve this score accuracy.
                         </p>
                     </div>
                 </div>

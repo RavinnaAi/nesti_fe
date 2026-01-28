@@ -6,7 +6,7 @@ const getLeadMeta = (conversation) => {
   const intent = conversation?.intent ?? conversation?.lead_intent ?? conversation?.intent_label ?? null;
   const channel = conversation?.channel ?? conversation?.source ?? null;
   const qualified = conversation?.is_qualified ?? conversation?.isQualified ?? null;
-  
+
   // Check for matched status in multiple possible fields
   let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
   if (isMatched === null) {
@@ -14,14 +14,14 @@ const getLeadMeta = (conversation) => {
     if (matchStatus === "matched" || matchStatus === true) {
       isMatched = true;
     } else {
-      isMatched = conversation?.meta?.is_matched ?? 
-                  conversation?.meta?.matched ??
-                  conversation?.metadata?.is_matched ??
-                  conversation?.metadata?.matched ??
-                  null;
+      isMatched = conversation?.meta?.is_matched ??
+        conversation?.meta?.matched ??
+        conversation?.metadata?.is_matched ??
+        conversation?.metadata?.matched ??
+        null;
     }
   }
-  
+
   return { leadScore, leadGrade, intent, channel, qualified, isMatched };
 };
 
@@ -50,13 +50,12 @@ export default function LeadListItem({ conversation, active, onSelect }) {
     <button
       type="button"
       onClick={() => onSelect(id)}
-      className={`w-full text-left rounded-2xl border px-4 py-3 transition ${
-        active
+      className={`w-full text-left rounded-2xl border px-4 py-3 transition ${active
           ? "border-primary bg-primary/5 shadow-sm"
           : isMatched === false
-          ? "border-red-200 bg-red-50/50 hover:border-red-300"
-          : "border-border bg-white hover:border-primary/40 hover:bg-background-light/40"
-      }`}
+            ? "border-red-200 bg-red-50/50 hover:border-red-300"
+            : "border-border bg-white hover:border-primary/40 hover:bg-background-light/40"
+        }`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -92,7 +91,16 @@ export default function LeadListItem({ conversation, active, onSelect }) {
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
         {intent ? <span className="px-2 py-0.5 rounded-full bg-background-light">{intent}</span> : null}
         {leadScore !== null && leadScore !== undefined ? (
-          <span className="px-2 py-0.5 rounded-full bg-background-light">Score {leadScore}</span>
+          <span
+            className={`px-2 py-0.5 rounded-full ${Number(leadScore) >= 70
+                ? "bg-green-100 text-green-700"
+                : Number(leadScore) >= 40
+                  ? "bg-yellow-100 text-yellow-700"
+                  : "bg-red-100 text-red-700"
+              }`}
+          >
+            Score {leadScore}
+          </span>
         ) : null}
         {channel ? (
           <span className="px-2 py-0.5 rounded-full bg-background-light">
