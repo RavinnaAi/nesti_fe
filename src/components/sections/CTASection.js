@@ -28,7 +28,7 @@ export default function CTASection() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-10">
             <Link
               href="#onboarding"
-              className="group relative rounded-xl px-10 py-4 text-base font-bold transition-all duration-300 shadow-md hover:shadow-xl hover:scale-105 flex items-center gap-2 bg-white text-primary border-2 border-transparent hover:border-primary/50 overflow-hidden focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary"
+              className="group relative rounded-md px-10 py-4 text-base font-bold transition-all duration-300 shadow-md hover:shadow-xl hover:scale-105 flex items-center gap-2 bg-white text-primary border-2 border-transparent hover:border-primary/50 overflow-hidden focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary"
             >
               {/* Glow on hover */}
               <div className="absolute inset-0 bg-primary/20 opacity-0 group-hover:opacity-30 blur-xl transition-opacity duration-300 -z-10"></div>
@@ -45,7 +45,7 @@ export default function CTASection() {
 
             <Link
               href="#features"
-              className="group relative rounded-xl px-10 py-4 text-base font-semibold transition-all border-2 border-white/50 hover:bg-white/10 hover:border-white/70 flex items-center gap-2 text-white backdrop-blur-sm hover:scale-[1.02] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary"
+              className="group relative rounded-md px-10 py-4 text-base font-semibold transition-all border-2 border-white/50 hover:bg-white/10 hover:border-white/70 flex items-center gap-2 text-white backdrop-blur-sm hover:scale-[1.02] hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-white focus:ring-offset-2 focus:ring-offset-primary"
             >
               <span className="flex items-center gap-2">
                 Learn More

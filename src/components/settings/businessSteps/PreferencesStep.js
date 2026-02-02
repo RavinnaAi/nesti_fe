@@ -3,10 +3,9 @@
 import { useMemo } from "react";
 
 const buttonClasses = (active) =>
-  `px-3 py-2 rounded-lg border text-sm font-semibold transition-all ${
-    active
-      ? "border-primary bg-primary/10 text-primary shadow-sm"
-      : "border-border bg-background-light/60 text-text-heading hover:border-primary"
+  `px-3 py-2 rounded-md border text-sm font-semibold transition-all ${active
+    ? "border-primary bg-primary/10 text-primary shadow-sm"
+    : "border-border bg-background-light/60 text-text-heading hover:border-primary"
   }`;
 
 export default function PreferencesStep({
@@ -126,7 +125,7 @@ export default function PreferencesStep({
             onFocus={() => setFocusedField("testimonial")}
             onBlur={() => setFocusedField("")}
             rows={4}
-            className="w-full rounded-xl border-2 border-border bg-background-light/50 px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+            className="w-full rounded-md border-2 border-border bg-background-light/50 px-4 py-3 text-sm focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
             placeholder="Client testimonial or success story"
           />
         </div>

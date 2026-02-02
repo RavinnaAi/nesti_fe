@@ -206,7 +206,7 @@ function ResetPasswordPageInner() {
               </motion.div>
             </div>
 
-            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-700 text-center">
                 Your password has been successfully reset. You can now log in
                 with your new password.
@@ -217,7 +217,7 @@ function ResetPasswordPageInner() {
               whileHover={{ scale: 1.02, y: -2 }}
               whileTap={{ scale: 0.98 }}
               onClick={() => router.push("/log-in")}
-              className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+              className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
             >
               Go to Login
             </motion.button>

@@ -17,7 +17,7 @@ export default function GoogleButton({
       type="button"
       disabled={disabled || loading}
       onClick={onClick}
-      className={`h-14 w-full bg-background border-2 border-border rounded-xl flex justify-center items-center cursor-pointer hover:border-primary hover:shadow-lg hover:bg-background-light/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 ${className}`}
+      className={`h-14 w-full bg-background border-2 border-border rounded-md flex justify-center items-center cursor-pointer hover:border-primary hover:shadow-lg hover:bg-background-light/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 ${className}`}
     >
       <div className="flex items-center space-x-3">
         <svg className="h-5 w-5" viewBox="0 0 24 24">

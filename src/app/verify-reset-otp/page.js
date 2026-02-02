@@ -187,7 +187,7 @@ export default function VerifyResetOTPPage() {
 
         {/* Email Display */}
         {email && (
-          <div className="flex items-center gap-2 p-3 bg-background-light/50 rounded-lg border border-border">
+          <div className="flex items-center gap-2 p-3 bg-background-light/50 rounded-md border border-border">
             <Mail className="text-primary" size={18} />
             <span className="text-sm text-text-heading">{email}</span>
           </div>
@@ -223,13 +223,12 @@ export default function VerifyResetOTPPage() {
                     onKeyDown={(e) => handleOTPKeyDown(index, e)}
                     onPaste={index === 0 ? handlePaste : undefined}
                     disabled={verifying}
-                    className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-xl transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 ${
-                      verificationStatus === "error"
+                    className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 ${verificationStatus === "error"
                         ? "border-red-300 bg-red-50"
                         : digit
-                        ? "border-primary bg-primary/5"
-                        : "border-border bg-background-light/50"
-                    } disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary`}
+                          ? "border-primary bg-primary/5"
+                          : "border-border bg-background-light/50"
+                      } disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary`}
                     aria-label={`Digit ${index + 1}`}
                   />
                 ))}
@@ -237,7 +236,7 @@ export default function VerifyResetOTPPage() {
 
               {/* Error Message */}
               {verificationStatus === "error" && errorMessage && (
-                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
                   <XCircle className="text-red-500" size={18} />
                   <span className="text-sm text-red-700">{errorMessage}</span>
                 </div>
@@ -249,7 +248,7 @@ export default function VerifyResetOTPPage() {
                 whileTap={{ scale: 0.98 }}
                 type="submit"
                 disabled={!isOtpComplete() || verifying}
-                className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {verifying ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -291,7 +290,7 @@ export default function VerifyResetOTPPage() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ delay: 0.3, type: "spring", stiffness: 200 }}
-              className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center"
+              className="w-20 h-20 bg-green-100 rounded-md flex items-center justify-center"
             >
               <CheckCircle2 className="text-green-600" size={40} />
             </motion.div>
@@ -323,12 +322,12 @@ export default function VerifyResetOTPPage() {
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl"
+            className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-md blur-3xl"
           />
           <motion.div
             animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-full blur-3xl"
+            className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-md blur-3xl"
           />
         </div>
 
@@ -384,12 +383,12 @@ export default function VerifyResetOTPPage() {
           <motion.div
             animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-20 right-10 w-20 h-20 bg-background/40 backdrop-blur-sm rounded-2xl shadow-lg hidden lg:block"
+            className="absolute top-20 right-10 w-20 h-20 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
           />
           <motion.div
             animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
             transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-32 left-10 w-16 h-16 bg-background/40 backdrop-blur-sm rounded-xl shadow-lg hidden lg:block"
+            className="absolute bottom-32 left-10 w-16 h-16 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
           />
         </div>
       </div>

@@ -44,7 +44,7 @@ export default function OnboardingSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <UserCheck size={16} aria-hidden="true" />
               Choose Your Path
             </span>
@@ -90,12 +90,12 @@ export default function OnboardingSection() {
               >
                 <Link
                   href={type.path}
-                  className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-2xl"
+                  className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
                   aria-label={`Get started as ${type.title}`}
                 >
-                  <div className="group relative rounded-2xl p-8 border border-border bg-background shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
+                  <div className="group relative rounded-md p-8 border border-border bg-background shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
                     <div
-                      className={`w-16 h-16 rounded-xl bg-gradient-to-br ${type.gradient} p-4 mb-6 group-hover:scale-110 transition-transform duration-300 shadow-md group-hover:shadow-lg`}
+                      className={`w-16 h-16 rounded-md bg-gradient-to-br ${type.gradient} p-4 mb-6 group-hover:scale-110 transition-transform duration-300 shadow-md group-hover:shadow-lg`}
                     >
                       <IconComponent className="w-full h-full text-white" aria-hidden="true" />
                     </div>

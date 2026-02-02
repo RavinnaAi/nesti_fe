@@ -27,13 +27,12 @@ export default function FormField({
       <div className="relative">
         {Icon && (
           <div
-            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200 ${
-              focusedField === name
-                ? "text-primary"
-                : error
+            className={`absolute left-4 top-1/2 -translate-y-1/2 transition-colors duration-200 ${focusedField === name
+              ? "text-primary"
+              : error
                 ? "text-red-500"
                 : "text-text-muted"
-            }`}
+              }`}
           >
             <Icon size={20} />
           </div>
@@ -46,13 +45,11 @@ export default function FormField({
           onFocus={onFocus}
           disabled={disabled}
           onBlur={onBlur}
-          className={`w-full ${disabled ? "!cursor-not-allowed !bg-gray-100" : ""} h-14 border-2 rounded-xl transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${
-            Icon ? "pl-12 pr-4" : "px-4"
-          } ${
-            error
+          className={`w-full ${disabled ? "!cursor-not-allowed !bg-gray-100" : ""} h-14 border-2 rounded-md transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${Icon ? "pl-12 pr-4" : "px-4"
+            } ${error
               ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20"
-          } ${className}`}
+            } ${className}`}
           placeholder={placeholder}
           autoComplete={autoComplete}
         />

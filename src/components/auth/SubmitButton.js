@@ -18,7 +18,7 @@ export default function SubmitButton({
       disabled={disabled || loading}
       type={type}
       onClick={onClick}
-      className={`h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 ${className}`}
+      className={`h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 ${className}`}
     >
       {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : children}
     </motion.button>

@@ -28,7 +28,7 @@ export const InfoGrid = ({ items }) => (
     {items.map(({ label, value, icon: Icon }) => (
       <div
         key={label}
-        className="flex items-start gap-3 rounded-xl border border-border/70 bg-background-light/60 px-4 py-3 shadow-sm shadow-primary/10"
+        className="flex items-start gap-3 rounded-md border border-border/70 bg-background-light/60 px-4 py-3 shadow-sm shadow-primary/10"
       >
         {Icon ? <Icon size={18} className="text-primary mt-0.5" /> : null}
         <div className="space-y-1">
@@ -55,7 +55,7 @@ export const ChipList = ({ label, items }) => {
         {items.map((item) => (
           <span
             key={`${label}-${item}`}
-            className="px-3 py-1 rounded-lg text-xs font-semibold bg-primary-dark text-white shadow-sm shadow-primary/20"
+            className="px-3 py-1 rounded-md text-xs font-semibold bg-primary-dark text-white shadow-sm shadow-primary/20"
           >
             {item}
           </span>

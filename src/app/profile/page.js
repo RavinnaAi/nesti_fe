@@ -222,7 +222,7 @@ function ProfilePageContent() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className={`relative overflow-hidden rounded-3xl ${resolvedPersonal?.coverImage ? "text-white" : "bg-primary-dark/20 text-white"
+          className={`relative overflow-hidden rounded-md ${resolvedPersonal?.coverImage ? "text-white" : "bg-primary-dark/20 text-white"
             } p-6 md:p-8 shadow-lg shadow-primary/10 `}
           style={heroStyle}
         >
@@ -231,7 +231,7 @@ function ProfilePageContent() {
             <div className="flex items-center gap-4">
 
               <div className="relative">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
                   {resolvedPersonal?.profileImage ||
                     apiProfile?.professionalProfile?.profile_image ? (
                     // eslint-disable-next-line @next/next/no-img-element
@@ -247,7 +247,7 @@ function ProfilePageContent() {
                     (displayFullName || "N").slice(0, 1).toUpperCase()
                   )}
                 </div>
-                <span className="absolute -bottom-1 -right-1 px-2 py-1 rounded-full bg-white shadow-sm text-[11px] font-semibold text-primary border border-primary/10">
+                <span className="absolute -bottom-1 -right-1 px-2 py-1 rounded-md bg-white shadow-sm text-[11px] font-semibold text-primary border border-primary/10">
                   Active
                 </span>
               </div>
@@ -264,7 +264,7 @@ function ProfilePageContent() {
             </div>
             <div className="flex flex-wrap gap-3">
               {resolvedBusiness?.professionalType ? (
-                <span className="px-3 py-1 bg-primary text-white rounded-full text-primary text-xs font-semibold border border-primary/20">
+                <span className="px-3 py-1 bg-primary text-white rounded-md text-primary text-xs font-semibold border border-primary/20">
                   {resolvedBusiness?.professionalType?.toUpperCase()}
                 </span>
               ) : null}
@@ -287,9 +287,9 @@ function ProfilePageContent() {
           </div>
 
           <div className="lg:col-span-9">
-            <div className="rounded-2xl border border-border bg-white shadow-sm p-6 space-y-6">
+            <div className="rounded-md border border-border bg-white shadow-sm p-6 space-y-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+                <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
                   {ActiveIcon ? <ActiveIcon size={18} /> : null}
                 </div>
                 <div>

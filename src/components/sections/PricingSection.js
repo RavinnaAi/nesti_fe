@@ -54,7 +54,7 @@ export default function PricingSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <DollarSign size={14} />
               Transparent Pricing
             </span>
@@ -97,11 +97,10 @@ export default function PricingSection() {
                 y: -8,
                 transition: { duration: 0.3 },
               }}
-              className={`relative flex flex-col rounded-3xl p-10 border bg-background transition-all duration-300 ${
-                plan.popular
-                  ? "shadow-xl md:scale-105 border-2 border-primary"
-                  : "shadow-sm border-border hover:border-primary/50"
-              }`}
+              className={`relative flex flex-col rounded-md p-10 border bg-background transition-all duration-300 ${plan.popular
+                ? "shadow-xl md:scale-105 border-2 border-primary"
+                : "shadow-sm border-border hover:border-primary/50"
+                }`}
               suppressHydrationWarning
             >
               {plan.popular && (
@@ -110,7 +109,7 @@ export default function PricingSection() {
                   whileInView={{ opacity: 1, scale: 1 }}
                   viewport={{ once: true, margin: "0px" }}
                   transition={{ duration: 0.3 }}
-                  className="absolute -top-5 left-1/2 transform !-translate-x-1/2 px-6 py-2 rounded-full text-xs font-bold text-white shadow-lg bg-gradient-to-r from-primary to-primary-dark"
+                  className="absolute -top-5 left-1/2 transform !-translate-x-1/2 px-6 py-2 rounded-md text-xs font-bold text-white shadow-lg bg-gradient-to-r from-primary to-primary-dark"
                   suppressHydrationWarning
                 >
                   Most Popular
@@ -154,11 +153,10 @@ export default function PricingSection() {
 
               <Link
                 href="/sign-up"
-                className={`group relative block w-full rounded-xl py-4 text-center font-bold text-base transition-all mt-auto overflow-hidden ${
-                  plan.popular
-                    ? "text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:scale-[1.02] bg-gradient-to-r from-primary to-primary-dark"
-                    : "border-2 border-border text-text-heading hover:bg-background-light hover:shadow-md hover:-translate-y-0.5 hover:border-primary/50"
-                }`}
+                className={`group relative block w-full rounded-md py-4 text-center font-bold text-base transition-all mt-auto overflow-hidden ${plan.popular
+                  ? "text-white shadow-lg hover:shadow-xl hover:-translate-y-0.5 hover:scale-[1.02] bg-gradient-to-r from-primary to-primary-dark"
+                  : "border-2 border-border text-text-heading hover:bg-background-light hover:shadow-md hover:-translate-y-0.5 hover:border-primary/50"
+                  }`}
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   Start Free Trial

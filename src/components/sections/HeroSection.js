@@ -40,7 +40,7 @@ export default function HeroSection() {
     <section className="relative min-h-[90vh] md:min-h-[95vh] flex items-center overflow-hidden bg-gradient-to-br from-white via-background-light/30 to-white">
       {/* Subtle Background Pattern */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-full blur-3xl opacity-5 bg-primary" />
+        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-md blur-3xl opacity-5 bg-primary" />
       </div>
 
       <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 md:px-8 lg:px-12 relative z-10">
@@ -52,7 +52,7 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border border-primary bg-primary/10 text-primary"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary"
               suppressHydrationWarning
             >
               <Sparkles size={14} />
@@ -98,7 +98,7 @@ export default function HeroSection() {
             >
               <Link
                 href="#start"
-                className="group relative inline-flex items-center justify-center gap-2 rounded-xl px-10 py-5 text-base font-bold text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] overflow-hidden bg-gradient-to-r from-primary to-primary-dark"
+                className="group relative inline-flex items-center justify-center gap-2 rounded-md px-10 py-5 text-base font-bold text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] overflow-hidden bg-gradient-to-r from-primary to-primary-dark"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   Start Free Trial
@@ -112,7 +112,7 @@ export default function HeroSection() {
 
               <Link
                 href="/log-in"
-                className="group relative inline-flex items-center justify-center px-10 py-5 text-base font-semibold rounded-xl text-text-heading bg-background border-2 border-border shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-primary/50 hover:bg-background-light"
+                className="group relative inline-flex items-center justify-center px-10 py-5 text-base font-semibold rounded-md text-text-heading bg-background border-2 border-border shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-primary/50 hover:bg-background-light"
               >
                 <span className="flex items-center gap-2">
                   Watch Demo
@@ -138,7 +138,7 @@ export default function HeroSection() {
                   {professionalImages.map((imageUrl, i) => (
                     <div
                       key={`professional-${i}`}
-                      className="relative w-10 h-10 rounded-full border-2 border-white shadow-md overflow-hidden"
+                      className="relative w-10 h-10 rounded-md border-2 border-white shadow-md overflow-hidden"
                     >
                       <Image
                         src={imageUrl}
@@ -208,10 +208,10 @@ export default function HeroSection() {
                     viewport={{ once: true, margin: "0px" }}
                     transition={{ duration: 0.3, delay: 0.4 + i * 0.1 }}
                     whileHover={{ scale: 1.05, y: -4 }}
-                    className="bg-background rounded-2xl p-6 border border-border shadow-sm hover:shadow-md transition-all duration-300"
+                    className="bg-background rounded-md p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300"
                     suppressHydrationWarning
                   >
-                    <div className="w-12 h-12 rounded-xl grid place-items-center mb-4 bg-primary/10 text-primary">
+                    <div className="w-12 h-12 rounded-md grid place-items-center mb-4 bg-primary/10 text-primary">
                       <IconComponent size={24} />
                     </div>
                     <div className="text-3xl md:text-4xl font-black mb-1 text-primary-dark">

@@ -133,7 +133,7 @@ export default function ForgotPasswordPage() {
           </form>
         ) : (
           <div className="space-y-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md">
               <p className="text-sm text-green-700">
                 If an account exists with <strong>{email}</strong>, you will
                 receive an email with password reset instructions shortly.
@@ -150,7 +150,7 @@ export default function ForgotPasswordPage() {
                   )}`
                 )
               }
-              className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+              className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
             >
               Verify OTP
             </motion.button>

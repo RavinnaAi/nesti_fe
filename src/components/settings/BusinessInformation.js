@@ -228,7 +228,7 @@ export default function BusinessInformation() {
         <button
           type="button"
           onClick={openModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
         >
           Add / Edit Information
         </button>
@@ -248,7 +248,7 @@ export default function BusinessInformation() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.96, y: 12 }}
               transition={{ duration: 0.18 }}
-              className="w-full max-w-5xl h-[70vh] flex flex-col rounded-2xl bg-white shadow-2xl border border-border overflow-hidden"
+              className="w-full max-w-5xl h-[70vh] flex flex-col rounded-md bg-white shadow-2xl border border-border overflow-hidden"
             >
               <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-primary-light/20">
                 <div>
@@ -265,7 +265,7 @@ export default function BusinessInformation() {
                 <button
                   type="button"
                   onClick={closeModal}
-                  className="p-2 rounded-lg hover:bg-primary-dark transition text-text-heading hover:text-white"
+                  className="p-2 rounded-md hover:bg-primary-dark transition text-text-heading hover:text-white"
                   aria-label="Close"
                 >
                   <X size={18} />
@@ -308,7 +308,7 @@ export default function BusinessInformation() {
 
               <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-primary-light/20">
                 <div className="flex items-center gap-2 text-xs text-text-muted">
-                  <span className="h-2 w-2 rounded-full bg-primary" />
+                  <span className="h-2 w-2 rounded-md bg-primary" />
                   Progress autosaves after each step.
                 </div>
                 <div className="flex gap-3">
@@ -325,7 +325,7 @@ export default function BusinessInformation() {
                       whileTap={{ scale: 0.98 }}
                       type="button"
                       onClick={handleBack}
-                      className={`h-auto w-auto px-5 py-2 hover:bg-gradient-to-r hover:text-white hover:from-primary hover:to-primary-dark !bg-transparent rounded-xl border border-primary-dark flex flex-col justify-center items-center cursor-pointer text-primary-dark font-semibold hover:shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 `}
+                      className={`h-auto w-auto px-5 py-2 hover:bg-gradient-to-r hover:text-white hover:from-primary hover:to-primary-dark !bg-transparent rounded-md border border-primary-dark flex flex-col justify-center items-center cursor-pointer text-primary-dark font-semibold hover:shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 `}
                     >
                       Back
                     </motion.button>
@@ -343,7 +343,7 @@ export default function BusinessInformation() {
                       whileTap={{ scale: 0.98 }}
                       type="button"
                       onClick={handleNext}
-                      className={`h-auto w-auto !py-2 px-5 bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 `}
+                      className={`h-auto w-auto !py-2 px-5 bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 `}
                     >
                       Next
                     </motion.button>
@@ -352,7 +352,7 @@ export default function BusinessInformation() {
                       loading={loading}
                       onClick={handleSubmit}
                       type="button"
-                      className="!w-auto px-6 py-2 rounded-lg bg-primary !h-auto text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
+                      className="!w-auto px-6 py-2 rounded-md bg-primary !h-auto text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
                     >
                       Save changes
                     </SubmitButton>

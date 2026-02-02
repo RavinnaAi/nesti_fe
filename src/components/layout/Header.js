@@ -19,17 +19,17 @@ export default function Header() {
     () =>
       isAuthenticated
         ? [
-            { label: "Dashboard", href: "/dashboard" },
-            { label: "Leads", href: "/leads" },
-            { label: "Analytics", href: "/analytics" },
-          ]
+          { label: "Dashboard", href: "/dashboard" },
+          { label: "Leads", href: "/leads" },
+          { label: "Analytics", href: "/analytics" },
+        ]
         : [
-            { label: "Home", href: "/" },
-            { label: "Features", href: "/#features" },
-            { label: "Pricing", href: "/#pricing" },
-            { label: "About", href: "/publicPage/about" },
-            { label: "Contact", href: "/publicPage/contact" },
-          ],
+          { label: "Home", href: "/" },
+          { label: "Features", href: "/#features" },
+          { label: "Pricing", href: "/#pricing" },
+          { label: "About", href: "/publicPage/about" },
+          { label: "Contact", href: "/publicPage/contact" },
+        ],
     [isAuthenticated]
   );
 
@@ -87,7 +87,7 @@ export default function Header() {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-3 group">
             <motion.div
-              className="h-12 w-12 rounded-2xl grid place-items-center transition-all group-hover:scale-110 shadow-lg bg-gradient-to-br from-primary to-primary-dark text-white"
+              className="h-12 w-12 rounded-md grid place-items-center transition-all group-hover:scale-110 shadow-lg bg-gradient-to-br from-primary to-primary-dark text-white"
               whileHover={{ rotate: 10 }}
             >
               <Bot size={24} />
@@ -111,11 +111,10 @@ export default function Header() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${
-                      isActive
-                        ? "text-text-body bg-primary/10 font-semibold"
-                        : "text-text-body"
-                    }`}
+                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${isActive
+                      ? "text-text-body bg-primary/10 font-semibold"
+                      : "text-text-body"
+                      }`}
                   >
                     {item.label}
                   </Link>
@@ -130,13 +129,13 @@ export default function Header() {
               <>
                 <Link
                   href="/log-in"
-                  className="hidden sm:block relative px-5 py-2.5 text-base font-semibold text-gray-700 rounded-lg bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
+                  className="hidden sm:block relative px-5 py-2.5 text-base font-semibold text-gray-700 rounded-md bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
                 >
                   Login
                 </Link>
                 <Link
                   href="/sign-up"
-                  className="group relative bg-primary-dark inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl px-6 py-2.5 md:px-8 md:py-3 font-bold text-sm md:text-base text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
+                  className="group relative bg-primary-dark inline-flex items-center justify-center gap-2 overflow-hidden rounded-md px-6 py-2.5 md:px-8 md:py-3 font-bold text-sm md:text-base text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     Get Started
@@ -151,9 +150,9 @@ export default function Header() {
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((prev) => !prev)}
-                  className="flex items-center gap-3 bg-background-light border border-border rounded-full hover:shadow-md transition-all"
+                  className="flex items-center gap-3 bg-background-light rounded-md hover:shadow-md transition-all"
                 >
-                  <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                  <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                     {initials}
                   </div>
                   {/* <div className="hidden lg:flex flex-col items-start">
@@ -174,7 +173,7 @@ export default function Header() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-3 w-auto rounded-2xl border border-gray-100 bg-white shadow-xl shadow-black/10 z-50"
+                      className="absolute right-0 mt-3 w-auto rounded-md border border-gray-100 bg-white shadow-xl shadow-black/10 z-50"
                     >
                       <div className="px-4 py-3 border-b border-gray-100">
                         <div className="text-sm font-semibold text-text-heading">
@@ -189,29 +188,29 @@ export default function Header() {
                       <div className="py-2 space-y-1">
                         <Link
                           href="/profile"
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-xl hover:bg-primary/5 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-md hover:bg-primary/5 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                          <span className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
                             <User size={16} />
                           </span>
                           <span className="font-medium">Profile</span>
                         </Link>
                         <Link
                           href="/settings"
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-xl hover:bg-primary/5 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-md hover:bg-primary/5 transition-colors"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <span className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
+                          <span className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
                             <Settings size={16} />
                           </span>
                           <span className="font-medium">Settings</span>
                         </Link>
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 rounded-xl hover:bg-red-50 transition-colors"
+                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 rounded-md hover:bg-red-50 transition-colors"
                         >
-                          <span className="h-8 w-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center">
+                          <span className="h-8 w-8 rounded-md bg-red-100 text-red-600 flex items-center justify-center">
                             <LogOut size={16} />
                           </span>
                           <span className="font-medium">Logout</span>
@@ -310,7 +309,7 @@ export default function Header() {
               {/* Menu header */}
               <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
                 <div className="flex items-center gap-3">
-                  <div className="h-10 w-10 rounded-xl grid place-items-center bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg">
+                  <div className="h-10 w-10 rounded-md grid place-items-center bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg">
                     <Bot size={20} />
                   </div>
                   <div className="flex flex-col">
@@ -322,7 +321,7 @@ export default function Header() {
                 </div>
                 <motion.button
                   onClick={() => setIsMenuOpen(false)}
-                  className="p-2 rounded-lg text-text-body hover:text-primary hover:bg-background-light transition-colors"
+                  className="p-2 rounded-md text-text-body hover:text-primary hover:bg-background-light transition-colors"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                 >
@@ -347,17 +346,16 @@ export default function Header() {
                     >
                       <Link
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl text-base font-medium transition-all duration-200 ${
-                          isActive
-                            ? "bg-primary text-white shadow-md"
-                            : "text-text-body hover:bg-primary/10 hover:text-primary"
-                        }`}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-all duration-200 ${isActive
+                          ? "bg-primary text-white shadow-md"
+                          : "text-text-body hover:bg-primary/10 hover:text-primary"
+                          }`}
                         onClick={() => setIsMenuOpen(false)}
                       >
                         {isActive && (
                           <motion.div
                             layoutId="activeIndicator"
-                            className="w-1.5 h-1.5 rounded-full bg-white"
+                            className="w-1.5 h-1.5 rounded-md bg-white"
                             transition={{ type: "spring", stiffness: 300 }}
                           />
                         )}
@@ -383,11 +381,10 @@ export default function Header() {
                     >
                       <Link
                         href="/log-in"
-                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-base font-semibold transition-all duration-200 ${
-                          pathname === "/log-in"
-                            ? "bg-primary text-white shadow-md"
-                            : "bg-background-light text-text-body hover:bg-border border border-border"
-                        }`}
+                        className={`flex items-center justify-center gap-2 px-4 py-3 rounded-md text-base font-semibold transition-all duration-200 ${pathname === "/log-in"
+                          ? "bg-primary text-white shadow-md"
+                          : "bg-background-light text-text-body hover:bg-border border border-border"
+                          }`}
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Login
@@ -404,7 +401,7 @@ export default function Header() {
                     >
                       <Link
                         href="/sign-up"
-                        className="group flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-base font-bold text-white bg-gradient-to-r from-primary to-primary-dark shadow-lg hover:shadow-xl transition-all duration-300"
+                        className="group flex items-center justify-center gap-2 px-4 py-3 rounded-md text-base font-bold text-white bg-gradient-to-r from-primary to-primary-dark shadow-lg hover:shadow-xl transition-all duration-300"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Get Started
@@ -417,8 +414,8 @@ export default function Header() {
                   </>
                 ) : (
                   <div className="space-y-3">
-                    <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-background-light border border-border">
-                      <div className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center font-semibold">
+                    <div className="flex items-center gap-3 px-4 py-3 rounded-md bg-background-light border border-border">
+                      <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                         {initials}
                       </div>
                       <div className="flex flex-col">
@@ -435,7 +432,7 @@ export default function Header() {
                     <div className="flex flex-col gap-2">
                       <Link
                         href="/profile"
-                        className="flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <User size={18} />
@@ -443,7 +440,7 @@ export default function Header() {
                       </Link>
                       <Link
                         href="/settings"
-                        className="flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <Settings size={18} />
@@ -454,7 +451,7 @@ export default function Header() {
                           setIsMenuOpen(false);
                           handleLogout();
                         }}
-                        className="flex items-center gap-2 px-4 py-3 rounded-xl text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
+                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 transition-colors"
                       >
                         <LogOut size={18} />
                         Logout

@@ -20,9 +20,9 @@ export default function LeadScoreModal({ score, grade, reasons = [], breakdown =
                 <div className="p-6 space-y-6">
                     <div className="text-center space-y-2">
                         <div className="text-4xl font-bold text-text-heading">{score}</div>
-                        <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${grade === "Hot" ? "bg-green-100 text-green-700" :
-                            grade === "Warm" ? "bg-yellow-100 text-yellow-700" :
-                                "bg-gray-100 text-gray-700"
+                        <div className={`inline-block px-3 py-1 rounded-full text-sm font-medium ${String(grade).toLowerCase() === "hot" ? "bg-red-200 text-red-700 border border-red-200" :
+                                String(grade).toLowerCase() === "warm" ? "bg-yellow-200 text-yellow-700 border border-yellow-200" :
+                                    "bg-blue-200 text-blue-700 border border-blue-200"
                             }`}>
                             {grade} Lead
                         </div>
@@ -52,11 +52,12 @@ export default function LeadScoreModal({ score, grade, reasons = [], breakdown =
                         </div>
                     </div>
 
-                    <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
+                    {/* <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100">
                         <p className="text-xs text-blue-800 leading-relaxed">
                             <strong>Tip:</strong> Ask specifically about their timeline (&quot;When are you looking to move?&quot;) or budget (&quot;Have you been pre-approved?&quot;) to improve this score accuracy.
                         </p>
-                    </div>
+                    </div> */}
+
                 </div>
 
                 <div className="p-4 bg-gray-50 border-t border-border flex justify-end">

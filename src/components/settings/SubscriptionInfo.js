@@ -76,7 +76,7 @@ export default function SubscriptionInfo() {
 
   if (isLoading && !effectivePlans.length) {
     return (
-      <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+      <div className="rounded-md border border-border bg-white p-4 shadow-sm">
         <div className="text-sm font-semibold text-text-heading mb-1">
           Subscription
         </div>
@@ -87,7 +87,7 @@ export default function SubscriptionInfo() {
 
   if (!effectivePlans?.length) {
     return (
-      <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+      <div className="rounded-md border border-border bg-white p-4 shadow-sm">
         <div className="text-sm font-semibold text-text-heading mb-1">
           Subscription
         </div>
@@ -119,7 +119,7 @@ export default function SubscriptionInfo() {
         </div>
       </div> */}
 
-      <div className="rounded-xl flex flex-col gap-6 pb-8 ">
+      <div className="rounded-md flex flex-col gap-6 pb-8 ">
         <div className="text-lg font-semibold mb-2 text-primary-dark">
           Available Plans
         </div>
@@ -131,14 +131,14 @@ export default function SubscriptionInfo() {
                 dispatch(setSelectedPlan(plan));
                 router.push("/checkout");
               }}
-              className={`group cursor-pointer w-full md:flex-1 md:min-w-[32%] shadow-inner rounded-lg relative py-8 flex flex-col justify-center items-center gap-3 border p-2 text-sm transition-all duration-200 ${plan?.popular
+              className={`group cursor-pointer w-full md:flex-1 md:min-w-[32%] shadow-inner rounded-md relative py-8 flex flex-col justify-center items-center gap-3 border p-2 text-sm transition-all duration-200 ${plan?.popular
                 ? "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"
                 : "border-border/60 bg-white hover:bg-primary-dark/80 text-text-body hover:border-primary-dark/50"
                 }`}
             >
 
               <div className="flex items-center flex-col gap-1 justify-center">
-                <div className={`text-sm px-5 py-1 rounded-full font-semibold min-w-[120px] text-center absolute -top-3.5 left-1/2 shadow-inner -translate-x-1/2 ${plan?.popular ? "bg-background-lighter2 text-primary-dark" : "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"
+                <div className={`text-sm px-5 py-1 rounded-md font-semibold min-w-[120px] text-center absolute -top-3.5 left-1/2 shadow-inner -translate-x-1/2 ${plan?.popular ? "bg-background-lighter2 text-primary-dark" : "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"
                   }`}>{plan?.name}</div>
                 <div
                   className={`text-xs ${plan?.popular ? "text-white" : "text-text-muted group-hover:text-white"
@@ -193,7 +193,7 @@ export default function SubscriptionInfo() {
                   </ul>
                 )}
               </div>
-              <div className={`text-sm px-5 py-1 rounded-full font-semibold min-w-[150px] text-center absolute -bottom-3.5 left-1/2 shadow-inner -translate-x-1/2 ${plan?.popular ? "bg-background-lighter2 text-primary-dark" : "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"
+              <div className={`text-sm px-5 py-1 rounded-md font-semibold min-w-[150px] text-center absolute -bottom-3.5 left-1/2 shadow-inner -translate-x-1/2 ${plan?.popular ? "bg-background-lighter2 text-primary-dark" : "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"
                 }`}>
                 <div
                   className={`font-semibold ${plan?.popular ? "text-primary-dark" : "text-white"

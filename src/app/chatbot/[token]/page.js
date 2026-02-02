@@ -39,7 +39,7 @@ export default function ChatbotByTokenPage({ params }) {
   if (status === "error") {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <div className="max-w-md rounded-xl border border-border bg-white shadow-sm p-6 text-center space-y-3">
+        <div className="max-w-md rounded-md border border-border bg-white shadow-sm p-6 text-center space-y-3">
           <div className="text-lg font-semibold text-text-heading">Link not available</div>
           <p className="text-sm text-text-body">
             {error || "This link is not working anymore. Please contact the sender."}

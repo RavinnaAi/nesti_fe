@@ -20,7 +20,7 @@ export default function CustomToastContainer() {
       draggable
       pauseOnHover
       theme="light"
-      toastClassName="!rounded-lg !shadow-lg"
+      toastClassName="!rounded-md !shadow-lg"
       progressClassName={"!bg-gradient-to-r !from-[#3EB87F] !to-[#2ea869]"}
       style={{
         "--toastify-color-success": "#3EB87F",

@@ -13,7 +13,7 @@ export default function SidebarTabs({
 }) {
   return (
     <div
-      className={`rounded-2xl border border-border transition-all duration-800 bg-white shadow-sm p-2 space-y-1 sticky ${containerClassName}`}
+      className={`rounded-md border border-border transition-all duration-800 bg-white shadow-sm p-2 space-y-1 sticky ${containerClassName}`}
       style={{ top: stickyTop }}
     >
       {tabs.map((tab) => {
@@ -23,14 +23,12 @@ export default function SidebarTabs({
           <button
             key={tab.id}
             onClick={() => onChange?.(tab.id)}
-            className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
-              isActive ? activeClassName : inactiveClassName
-            }`}
+            className={`w-full flex items-center gap-3 px-4 py-3 rounded-md text-sm font-semibold transition-all duration-200 ${isActive ? activeClassName : inactiveClassName
+              }`}
           >
             <span
-              className={`h-9 w-9 rounded-xl flex items-center justify-center ${
-                isActive ? activeIconClassName : inactiveIconClassName
-              }`}
+              className={`h-9 w-9 rounded-md flex items-center justify-center ${isActive ? activeIconClassName : inactiveIconClassName
+                }`}
             >
               {Icon ? <Icon size={16} /> : null}
             </span>

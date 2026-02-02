@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AnimatePresence } from "framer-motion";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Filter, RefreshCw, CheckCircle2, XCircle, Users, DollarSign, Scale } from "lucide-react";
+import { Filter, RefreshCw, CheckCircle2, XCircle, Users, DollarSign, Scale, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
@@ -23,6 +24,7 @@ import MessageBubble from "@/components/leads/MessageBubble";
 import LeadActionSection from "@/components/leads/LeadActionSection";
 import LeadScoreCard from "@/components/leads/LeadScoreCard";
 import SelectDropdown from "@/components/ui/SelectDropdown";
+import LeadMetaModal from "@/components/leads/LeadMetaModal";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -114,6 +116,7 @@ export default function LeadsPage() {
   const [gradeFilter, setGradeFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
   const [matchFilter, setMatchFilter] = useState("");
+  const [metaModal, setMetaModal] = useState(null); // { title, data }
 
   const [referralForm, setReferralForm] = useState({
     target_vertical: "realtor",
@@ -336,7 +339,7 @@ export default function LeadsPage() {
           <button
             type="button"
             onClick={() => conversationsQuery.refetch()}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-lg px-3 py-2 hover:bg-primary/5 transition"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
           >
             <RefreshCw size={14} /> Refresh
           </button>
@@ -344,7 +347,7 @@ export default function LeadsPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           <div className="lg:col-span-4 space-y-4">
-            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm space-y-3">
+            <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-3">
               <div className="flex items-center gap-2 text-xs text-text-muted">
                 <Filter size={14} />
                 Filter leads
@@ -354,7 +357,7 @@ export default function LeadsPage() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search by name, email, phone, city..."
-                className="w-full h-10 rounded-xl border border-border/60 bg-background-light/50 px-3 text-sm focus:outline-none"
+                className="w-full h-10 rounded-md border border-border/60 bg-background-light/50 px-3 text-sm focus:outline-none"
               />
               <div className="flex align-middle flex-wrap gap-2">
                 <SelectDropdown
@@ -407,15 +410,15 @@ export default function LeadsPage() {
 
             <div className="space-y-3">
               {conversationsQuery.isLoading ? (
-                <div className="rounded-2xl border border-border bg-white p-4 text-sm text-text-muted">
+                <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
                   Loading conversations...
                 </div>
               ) : conversationsQuery.isError ? (
-                <div className="rounded-2xl border border-border bg-white p-4 text-sm text-red-600">
+                <div className="rounded-md border border-border bg-white p-4 text-sm text-red-600">
                   Failed to load conversations.
                 </div>
               ) : filteredConversations.length === 0 ? (
-                <div className="rounded-2xl border border-border bg-white p-4 text-sm text-text-muted">
+                <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
                   No conversations found.
                 </div>
               ) : (
@@ -435,24 +438,23 @@ export default function LeadsPage() {
           </div>
 
           <div className="lg:col-span-8 space-y-6">
-            <div className="rounded-2xl border border-border bg-white shadow-sm p-5 space-y-4">
+            <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
               <div>
                 <div className="text-sm font-semibold text-text-heading">Conversation</div>
                 <p className="text-xs text-text-muted">
                   {selectedConversation ? "Latest messages and lead metadata" : "Select a lead to view messages"}
                 </p>
               </div>
-
               {selectedConversation && (
                 <LeadScoreCard
                   score={getConversationMeta(selectedConversation).leadScore}
                   grade={getConversationMeta(selectedConversation).leadGrade}
                   breakdown={{
-                    timeline: extractMeta(selectedConversation).timeline_score || 0,
-                    budget: extractMeta(selectedConversation).budget_score || 0,
-                    engagement: extractMeta(selectedConversation).engagement_score || 0
+                    timeline: (messageMeta?.ai_metadata?.score_updates?.timeline_score ?? extractMeta(selectedConversation).timeline_score) || 0,
+                    budget: (messageMeta?.ai_metadata?.score_updates?.budget_score ?? extractMeta(selectedConversation).budget_score) || 0,
+                    engagement: (messageMeta?.ai_metadata?.score_updates?.engagement_score ?? extractMeta(selectedConversation).engagement_score) || 0
                   }}
-                  reasons={extractMeta(selectedConversation).lead_reasons || []}
+                  reasons={extractMeta(selectedConversation).lead_reasons || extractMeta(selectedConversation).all_reasons || []}
                 />
               )}
 
@@ -460,62 +462,57 @@ export default function LeadsPage() {
                 <>
                   <div className="flex flex-wrap items-center gap-2 text-xs">
                     {getConversationMeta(selectedConversation).isMatched === true ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-green-50 text-green-700 border border-green-200 font-semibold">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 font-semibold shadow-sm">
                         <CheckCircle2 size={14} />
                         Matched Lead
                       </span>
                     ) : getConversationMeta(selectedConversation).isMatched === false ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full bg-red-50 text-red-700 border border-red-200 font-semibold">
+                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 font-semibold shadow-sm">
                         <XCircle size={14} />
                         Mismatched Lead
                       </span>
                     ) : null}
                     {Object.entries(getConversationMeta(selectedConversation))
-                      .filter(([key]) => key !== "isMatched")
+                      .filter(([key]) => key !== "isMatched" && getConversationMeta(selectedConversation)[key] !== "—")
                       .map(([key, value]) => (
                         <span
                           key={key}
-                          className="px-2 py-1 rounded-full bg-background-light border border-border/60 text-text-muted"
+                          className="flex align-middle items-center gap-1"
                         >
-                          {String(key).charAt(0).toUpperCase() + String(key).slice(1)}: {String(value)}
+                          <span className="text-text-muted font-normal ">{String(key).replace(/_/g, ' ')}:</span>
+                          <span className="px-3 py-1 rounded bg-primary/80 border border-primary/20  text-white font-medium">{String(value).replace(/_/g, ' ')}</span>
                         </span>
                       ))}
                   </div>
                   {formatMetaEntries(conversationMeta).length > 0 ? (
-                    <div>
-                      <div className="text-xs font-semibold text-text-heading mb-1">
-                        Conversation meta
+                    <div className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/10">
+                      <div className="text-xs font-bold text-text-heading flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                        Conversation Metadata
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                        {formatMetaEntries(conversationMeta).map(([key, value]) => (
-                          <span
-                            key={`meta-${key}`}
-                            className="px-2 py-1 rounded-full bg-white border border-border"
-                          >
-                            {String(key)}: {String(value)}
-                          </span>
-                        ))}
-                      </div>
+                      <button
+                        onClick={() => setMetaModal({ title: "Conversation Metadata", data: conversationMeta })}
+                        className="p-1.5 rounded-md bg-white border border-primary/20 text-primary hover:bg-primary/5 transition-colors shadow-sm"
+                      >
+                        <Info size={14} />
+                      </button>
                     </div>
                   ) : null}
                   {formatMetaEntries(messageMeta).length > 0 ? (
-                    <div>
-                      <div className="text-xs font-semibold text-text-heading mb-1">
-                        Latest message meta
+                    <div className="flex items-center justify-between p-3 rounded-md bg-indigo-50 border border-indigo-100/50">
+                      <div className="text-xs font-bold text-indigo-700/80 flex items-center gap-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
+                        Latest AI Message Insights
                       </div>
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
-                        {formatMetaEntries(messageMeta).map(([key, value]) => (
-                          <span
-                            key={`message-meta-${key}`}
-                            className="px-2 py-1 rounded-full bg-white border border-border"
-                          >
-                            {String(key)}: {String(value)}
-                          </span>
-                        ))}
-                      </div>
+                      <button
+                        onClick={() => setMetaModal({ title: "Latest AI Message Insights", data: messageMeta })}
+                        className="p-1.5 rounded-md bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors shadow-sm"
+                      >
+                        <Info size={14} />
+                      </button>
                     </div>
                   ) : null}
-                  <div className="h-[360px] overflow-y-auto rounded-xl border border-border/60 bg-background-light/40 p-4 space-y-3">
+                  <div className="h-[360px] overflow-y-auto rounded-md border border-border/60 bg-background-light/40 p-4 space-y-3">
                     {messagesQuery.isLoading ? (
                       <div className="text-sm text-text-muted">Loading messages...</div>
                     ) : messagesQuery.isError ? (
@@ -560,7 +557,7 @@ export default function LeadsPage() {
                       setReferralForm((prev) => ({ ...prev, target_user_id: event.target.value }))
                     }
                     placeholder="Target user id"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                   <input
                     type="text"
@@ -569,7 +566,7 @@ export default function LeadsPage() {
                       setReferralForm((prev) => ({ ...prev, status: event.target.value }))
                     }
                     placeholder="Status"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                   <input
                     type="text"
@@ -578,14 +575,14 @@ export default function LeadsPage() {
                       setReferralForm((prev) => ({ ...prev, notes: event.target.value }))
                     }
                     placeholder="Notes"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => createReferralMutation.mutate()}
                   disabled={!selectedId || createReferralMutation.isLoading}
-                  className="w-full h-9 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                  className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
                 >
                   {createReferralMutation.isLoading ? "Saving..." : "Create referral"}
                 </button>
@@ -598,7 +595,7 @@ export default function LeadsPage() {
                         key={referral?.id}
                         type="button"
                         onClick={() => setActiveReferralId(String(referral?.id))}
-                        className={`w-full text-left rounded-xl border px-3 py-2 ${String(referral?.id) === String(activeReferralId)
+                        className={`w-full text-left rounded-md border px-3 py-2 ${String(referral?.id) === String(activeReferralId)
                           ? "border-primary bg-primary/5"
                           : "border-border"
                           }`}
@@ -622,7 +619,7 @@ export default function LeadsPage() {
                         setReferralUpdate((prev) => ({ ...prev, status: event.target.value }))
                       }
                       placeholder="Update status"
-                      className="h-9 rounded-lg border border-border px-2 text-xs w-full"
+                      className="h-9 rounded-md border border-border px-2 text-xs w-full"
                     />
                     <input
                       type="text"
@@ -631,13 +628,13 @@ export default function LeadsPage() {
                         setReferralUpdate((prev) => ({ ...prev, notes: event.target.value }))
                       }
                       placeholder="Update notes"
-                      className="h-9 rounded-lg border border-border px-2 text-xs w-full"
+                      className="h-9 rounded-md border border-border px-2 text-xs w-full"
                     />
                     <button
                       type="button"
                       onClick={() => updateReferralMutation.mutate()}
                       disabled={updateReferralMutation.isLoading}
-                      className="w-full h-9 rounded-lg border border-primary text-primary text-xs font-semibold disabled:opacity-50"
+                      className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
                     >
                       {updateReferralMutation.isLoading ? "Updating..." : "Update referral"}
                     </button>
@@ -657,7 +654,7 @@ export default function LeadsPage() {
                       setNurtureForm((prev) => ({ ...prev, to_email: event.target.value }))
                     }
                     placeholder="Recipient email"
-                    className="h-9 rounded-lg border border-border px-2 text-xs w-full"
+                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
                   />
                   <input
                     type="text"
@@ -666,7 +663,7 @@ export default function LeadsPage() {
                       setNurtureForm((prev) => ({ ...prev, subject: event.target.value }))
                     }
                     placeholder="Subject"
-                    className="h-9 rounded-lg border border-border px-2 text-xs w-full"
+                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
                   />
                   <textarea
                     rows={3}
@@ -675,7 +672,7 @@ export default function LeadsPage() {
                       setNurtureForm((prev) => ({ ...prev, body: event.target.value }))
                     }
                     placeholder="Message body"
-                    className="rounded-lg border border-border px-2 py-2 text-xs w-full"
+                    className="rounded-md border border-border px-2 py-2 text-xs w-full"
                   />
                   <input
                     type="text"
@@ -684,13 +681,13 @@ export default function LeadsPage() {
                       setNurtureForm((prev) => ({ ...prev, template_key: event.target.value }))
                     }
                     placeholder="Template key (optional)"
-                    className="h-9 rounded-lg border border-border px-2 text-xs w-full"
+                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
                   />
                   <button
                     type="button"
                     onClick={() => nurtureMutation.mutate()}
                     disabled={!selectedId || nurtureMutation.isLoading}
-                    className="w-full h-9 rounded-lg bg-primary text-white text-xs font-semibold disabled:opacity-50"
+                    className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
                   >
                     {nurtureMutation.isLoading ? "Sending..." : "Send nurture"}
                   </button>
@@ -709,7 +706,7 @@ export default function LeadsPage() {
                       setMortgageForm((prev) => ({ ...prev, price: event.target.value }))
                     }
                     placeholder="Price"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                   <input
                     type="number"
@@ -718,7 +715,7 @@ export default function LeadsPage() {
                       setMortgageForm((prev) => ({ ...prev, down_payment: event.target.value }))
                     }
                     placeholder="Down payment"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                   <input
                     type="number"
@@ -727,7 +724,7 @@ export default function LeadsPage() {
                       setMortgageForm((prev) => ({ ...prev, annual_rate: event.target.value }))
                     }
                     placeholder="Annual rate %"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                   <input
                     type="number"
@@ -736,14 +733,14 @@ export default function LeadsPage() {
                       setMortgageForm((prev) => ({ ...prev, amort_years: event.target.value }))
                     }
                     placeholder="Amort years"
-                    className="h-9 rounded-lg border border-border px-2 text-xs"
+                    className="h-9 rounded-md border border-border px-2 text-xs"
                   />
                 </div>
                 <button
                   type="button"
                   onClick={() => mortgageMutation.mutate()}
                   disabled={!selectedId || mortgageMutation.isLoading}
-                  className="w-full h-9 rounded-lg border border-primary text-primary text-xs font-semibold disabled:opacity-50"
+                  className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
                 >
                   {mortgageMutation.isLoading ? "Running..." : "Run mortgage"}
                 </button>
@@ -761,13 +758,13 @@ export default function LeadsPage() {
                       setClosingForm((prev) => ({ ...prev, price: event.target.value }))
                     }
                     placeholder="Price"
-                    className="h-9 rounded-lg border border-border px-2 text-xs w-full"
+                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
                   />
                   <button
                     type="button"
                     onClick={() => closingMutation.mutate()}
                     disabled={!selectedId || closingMutation.isLoading}
-                    className="w-full h-9 rounded-lg border border-primary text-primary text-xs font-semibold disabled:opacity-50"
+                    className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
                   >
                     {closingMutation.isLoading ? "Running..." : "Run closing cost"}
                   </button>
@@ -780,6 +777,15 @@ export default function LeadsPage() {
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {metaModal && (
+          <LeadMetaModal
+            title={metaModal.title}
+            meta={metaModal.data}
+            onClose={() => setMetaModal(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

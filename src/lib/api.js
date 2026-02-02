@@ -44,8 +44,8 @@ export const API_ENDPOINTS = {
       runs: withBaseUrl("/api/chat/calculators/runs"),
     },
     analytics: {
-      summary: withBaseUrl("/chat/analytics/summary"),
-      funnel: withBaseUrl("/chat/analytics/funnel"),
+      summary: withBaseUrl("/api/chat/analytics/summary"),
+      funnel: withBaseUrl("/api/chat/analytics/funnel"),
     },
   },
 };

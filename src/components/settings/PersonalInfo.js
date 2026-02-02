@@ -135,7 +135,7 @@ export default function PersonalInfo() {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+        <div className="h-24 w-24 rounded-md bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
           {profileImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -150,7 +150,7 @@ export default function PersonalInfo() {
         <div className="space-y-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
             onClick={() => fileInputRef.current?.click()}
           >
             <User size={16} />
@@ -170,7 +170,7 @@ export default function PersonalInfo() {
       </div>
 
       <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+        <div className="h-24 w-24 rounded-md bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
           {coverImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -185,7 +185,7 @@ export default function PersonalInfo() {
         <div className="space-y-2">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
             onClick={() => coverInputRef.current?.click()}
           >
             <User size={16} />

@@ -75,13 +75,13 @@ export default function AnalyticsPage() {
               summaryQuery.refetch();
               funnelQuery.refetch();
             }}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-lg px-3 py-2 hover:bg-primary/5 transition"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
           >
             <RefreshCw size={14} /> Refresh
           </button>
         </div>
 
-        <div className="rounded-2xl border border-border bg-white shadow-sm p-4 flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="rounded-md border border-border bg-white shadow-sm p-4 flex flex-col lg:flex-row lg:items-center gap-3">
           <div className="inline-flex items-center gap-2 text-xs text-text-muted">
             <Calendar size={14} />
             Date range
@@ -91,35 +91,35 @@ export default function AnalyticsPage() {
               type="date"
               value={startDate}
               onChange={(event) => setStartDate(event.target.value)}
-              className="h-9 rounded-lg border border-border px-2 text-xs"
+              className="h-9 rounded-md border border-border px-2 text-xs"
             />
             <input
               type="date"
               value={endDate}
               onChange={(event) => setEndDate(event.target.value)}
-              className="h-9 rounded-lg border border-border px-2 text-xs"
+              className="h-9 rounded-md border border-border px-2 text-xs"
             />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {summaryQuery.isLoading ? (
-            <div className="col-span-full rounded-2xl border border-border bg-white p-4 text-sm text-text-muted">
+            <div className="col-span-full rounded-md border border-border bg-white p-4 text-sm text-text-muted">
               Loading summary...
             </div>
           ) : summaryQuery.isError ? (
-            <div className="col-span-full rounded-2xl border border-border bg-white p-4 text-sm text-red-600">
+            <div className="col-span-full rounded-md border border-border bg-white p-4 text-sm text-red-600">
               Failed to load summary.
             </div>
           ) : summaryEntries.length === 0 ? (
-            <div className="col-span-full rounded-2xl border border-border bg-white p-4 text-sm text-text-muted">
+            <div className="col-span-full rounded-md border border-border bg-white p-4 text-sm text-text-muted">
               No summary data yet.
             </div>
           ) : (
             summaryEntries.map(([key, value]) => (
               <div
                 key={key}
-                className="rounded-2xl border border-border bg-white shadow-sm p-4"
+                className="rounded-md border border-border bg-white shadow-sm p-4"
               >
                 <div className="text-xs uppercase tracking-wide text-text-muted">
                   {String(key).replace(/_/g, " ")}
@@ -130,7 +130,7 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="rounded-2xl border border-border bg-white shadow-sm p-5 space-y-3">
+        <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-3">
           <div className="text-sm font-semibold text-text-heading">Funnel breakdown</div>
           {funnelQuery.isLoading ? (
             <div className="text-sm text-text-muted">Loading funnel...</div>

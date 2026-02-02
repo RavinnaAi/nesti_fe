@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   Flame,
@@ -13,12 +13,16 @@ import {
   ShieldCheck,
   CheckCircle2,
   XCircle,
+  Mail,
+  Globe,
+  Activity
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { fetchConversations } from "@/lib/chatClient";
+import NewLeadPopup from "@/components/leads/NewLeadPopup";
 
 export default function DashboardPage() {
   const { user, token } = useAppSelector((state) => state.auth);
@@ -30,12 +34,36 @@ export default function DashboardPage() {
   const [matchFilter, setMatchFilter] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [newLeadToNotify, setNewLeadToNotify] = useState(null);
+  const [shownLeadIds, setShownLeadIds] = useState(new Set());
 
   const conversationsQuery = useQuery({
     queryKey: ["dashboard-conversations", token],
     enabled: Boolean(token),
     queryFn: () => fetchConversations({ token }),
   });
+
+  // Detection logic for new leads (0-5 minutes)
+  useEffect(() => {
+    if (conversationsQuery.data) {
+      const data = conversationsQuery.data;
+      const list = Array.isArray(data) ? data : (data?.data || data?.items || []);
+
+      const now = new Date();
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+
+      const freshLead = list.find(lead => {
+        const createdAt = new Date(lead.created_at);
+        const leadId = lead.id || lead.conversation_id;
+        return createdAt > fiveMinutesAgo && !shownLeadIds.has(leadId);
+      });
+
+      if (freshLead) {
+        setNewLeadToNotify(freshLead);
+        setShownLeadIds(prev => new Set(prev).add(freshLead.id || freshLead.conversation_id));
+      }
+    }
+  }, [conversationsQuery.data, shownLeadIds]);
 
   const conversations = useMemo(() => {
     const data = conversationsQuery.data;
@@ -55,23 +83,39 @@ export default function DashboardPage() {
       conversation?.intent_label ||
       "";
     const channel = conversation?.channel || conversation?.source || "web";
-    
+
+    const qualified = conversation?.is_qualified ?? conversation?.isQualified ?? null;
+
     // Check for matched status in multiple possible fields
-    let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
+    let isMatched = conversation?.is_matched ?? conversation?.matched ?? qualified;
     if (isMatched === null) {
       const matchStatus = conversation?.match_status;
       if (matchStatus === "matched" || matchStatus === true) {
         isMatched = true;
       } else {
-        isMatched = conversation?.meta?.is_matched ?? 
-                    conversation?.meta?.matched ??
-                    conversation?.metadata?.is_matched ??
-                    conversation?.metadata?.matched ??
-                    null;
+        isMatched = conversation?.meta?.is_matched ??
+          conversation?.meta?.matched ??
+          conversation?.metadata?.is_matched ??
+          conversation?.metadata?.matched ??
+          conversation?.meta?.qualified ??
+          null;
       }
     }
-    
-    return { leadScore, leadGrade, intent, channel, isMatched };
+
+    const contact = conversation?.last_message_meta?.contact || conversation?.meta?.contact || {};
+    const email = conversation?.email || conversation?.visitor_email || conversation?.visitorEmail || contact?.email;
+    const nameFromEmail = email ? email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1) : null;
+
+    const name =
+      conversation?.name ||
+      conversation?.visitor_name ||
+      conversation?.visitorName ||
+      nameFromEmail ||
+      (conversation?.visitor_id || conversation?.visitorId
+        ? `Visitor ${String(conversation?.visitor_id || conversation?.visitorId).slice(0, 6)}`
+        : "Unknown visitor");
+
+    return { leadScore, leadGrade, intent, channel, isMatched, qualified, name, email };
   };
 
   const matchesSearch = (conversation, term) => {
@@ -103,8 +147,8 @@ export default function DashboardPage() {
       const { intent, isMatched } = getLeadMeta(conversation);
       const status = conversation?.status || "active";
       const intentLower = String(intent || "").toLowerCase();
-      if (leadType === "buyers" && intentLower && !intentLower.includes("buyer")) return false;
-      if (leadType === "sellers" && intentLower && !intentLower.includes("seller")) return false;
+      if (leadType === "buyers" && intentLower && !intentLower.includes("buy")) return false;
+      if (leadType === "sellers" && intentLower && !intentLower.includes("sell")) return false;
       if (leadStatus === "closed" && status !== "closed") return false;
       if (leadStatus === "active" && status === "closed") return false;
       if (matchFilter === "matched" && isMatched !== true) return false;
@@ -156,7 +200,7 @@ export default function DashboardPage() {
         label: "Hot Leads",
         value: hot,
         icon: Flame,
-        accent: "bg-green-100 text-green-600",
+        accent: "bg-red-100 text-red-600",
       },
       {
         label: "Matched",
@@ -210,12 +254,12 @@ export default function DashboardPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35 }}
-          className={`relative flex items-center gap-4 overflow-hidden rounded-3xl ${coverImage ? "text-white" : "bg-gradient-to-br from-primary/60 via-primary-dark/30 to-primary/20 text-white"
+          className={`relative flex items-center gap-4 overflow-hidden rounded-md ${coverImage ? "text-white" : "bg-gradient-to-br from-primary/60 via-primary-dark/30 to-primary/20 text-white"
             } shadow-xl p-6 md:p-8`}
           style={heroStyle}
         >
           <div className="relative">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-full bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
               {profile?.user?.profileImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
@@ -230,7 +274,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div className="space-y-2">
-              <div className="inline-flex items-center text-text-heading gap-2 rounded-lg bg-white/80 px-3 py-1 text-xs font-semibold">
+              <div className="inline-flex items-center text-text-heading gap-2 rounded-md bg-white/80 px-3 py-1 text-xs font-semibold">
                 <ShieldCheck size={14} />
                 Secure workspace
               </div>
@@ -253,7 +297,7 @@ export default function DashboardPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2, delay: idx * 0.05 }}
-              className="rounded-2xl border border-border bg-white shadow-lg shadow-primary/10 p-4 flex items-center justify-between"
+              className="rounded-md border border-border bg-white shadow-lg shadow-primary/10 p-4 flex items-center justify-between"
             >
               <div>
                 <p className="text-xs text-text-muted font-semibold uppercase tracking-wide">
@@ -264,7 +308,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div
-                className={`w-11 h-11 rounded-xl flex items-center justify-center ${accent}`}
+                className={`w-11 h-11 rounded-md flex items-center justify-center ${accent}`}
               >
                 <Icon size={18} />
               </div>
@@ -274,7 +318,7 @@ export default function DashboardPage() {
 
         {/* Filters */}
         <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-lg bg-white shadow-sm border border-border/60 overflow-hidden">
+          <div className="inline-flex rounded-md bg-white shadow-sm border border-border/60 overflow-hidden">
             {["buyers", "sellers"].map((type) => (
               <button
                 key={type}
@@ -288,7 +332,7 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-          <div className="inline-flex rounded-lg bg-white shadow-sm border border-border/60 overflow-hidden">
+          <div className="inline-flex rounded-md bg-white shadow-sm border border-border/60 overflow-hidden">
             {["active", "closed"].map((status) => (
               <button
                 key={status}
@@ -302,7 +346,7 @@ export default function DashboardPage() {
               </button>
             ))}
           </div>
-          <div className="inline-flex rounded-lg bg-white shadow-sm border border-border/60 overflow-hidden">
+          <div className="inline-flex rounded-md bg-white shadow-sm border border-border/60 overflow-hidden">
             {["", "matched", "mismatched"].map((match) => (
               <button
                 key={match || "all"}
@@ -331,7 +375,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Lead panels */}
-        <div className="bg-white rounded-2xl border border-border shadow-lg shadow-primary/10 p-5 space-y-4">
+        <div className="bg-white rounded-md border border-border shadow-lg shadow-primary/10 p-5 space-y-4">
           <div className="flex flex-col lg:flex-row lg:items-center gap-3">
             <div className="relative flex-1">
               <Search
@@ -343,17 +387,17 @@ export default function DashboardPage() {
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Search by name, email, phone, or city..."
-                className="w-full h-11 rounded-xl border border-border/60 bg-background-light/50 pl-10 pr-3 text-sm focus:ring-0 focus:ring-none focus:outline-none"
+                className="w-full h-11 rounded-md border border-border/60 bg-background-light/50 pl-10 pr-3 text-sm focus:ring-0 focus:ring-none focus:outline-none"
               />
             </div>
-            <button className="h-11 px-3 inline-flex items-center gap-2 rounded-xl border border-border bg-background-light/60 text-sm font-semibold text-text-heading hover:border-primary transition">
+            <button className="h-11 px-3 inline-flex items-center gap-2 rounded-md border border-border bg-background-light/60 text-sm font-semibold text-text-heading hover:border-primary transition">
               <Filter size={16} />
               Filters
             </button>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-2xl border border-border shadow-inner bg-background-light/60 min-h-[14rem] p-4 space-y-3">
+            <div className="rounded-md border border-border shadow-inner bg-background-light/60 min-h-[14rem] p-4 space-y-3">
               {conversationsQuery.isLoading ? (
                 <div className="text-sm text-text-muted">Loading leads...</div>
               ) : conversationsQuery.isError ? (
@@ -372,47 +416,45 @@ export default function DashboardPage() {
                 filteredLeads.slice(0, 6).map((lead) => {
                   const id = lead?.id || lead?.conversation_id || lead?.conversationId;
                   const meta = getLeadMeta(lead);
-                  const name =
-                    lead?.name ||
-                    lead?.visitor_name ||
-                    lead?.visitorName ||
-                    (lead?.visitor_id || lead?.visitorId
-                      ? `Visitor ${String(lead?.visitor_id || lead?.visitorId).slice(0, 6)}`
-                      : "Unknown visitor");
+                  const name = meta.name;
                   return (
                     <button
                       key={`lead-${id}`}
                       type="button"
                       onClick={() => setSelectedLeadId(id)}
-                      className={`w-full text-left rounded-xl border px-3 py-2 transition ${
-                        String(id) === String(selectedLeadId)
-                          ? "border-primary shadow-sm bg-primary/5"
-                          : meta.isMatched === false
+                      className={`w-full text-left rounded-md border px-3 py-2 transition ${String(id) === String(selectedLeadId)
+                        ? "border-primary shadow-sm bg-primary/5"
+                        : meta.isMatched === false
                           ? "border-red-200 bg-red-50/50 hover:border-red-300"
                           : "border-border bg-white hover:border-primary/40"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <div>
                           <div className="text-sm font-semibold text-text-heading">{name}</div>
-                          <div className="text-xs text-text-muted">
-                            {meta.intent || "Unknown intent"} • {meta.channel}
+                          <div className="text-xs font-semibold text-text-heading">
+                            {String(meta.intent).charAt(0).toUpperCase() + String(meta.intent).slice(1) || "Unknown intent"} • <span className="text-text-muted font-normal">{meta.channel}</span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1">
                           {meta.isMatched === true ? (
-                            <span className="text-[10px] px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
+                            <span className="text-[10px] px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
                               <CheckCircle2 size={10} />
                               Matched
                             </span>
                           ) : meta.isMatched === false ? (
-                            <span className="text-[10px] px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200 flex items-center gap-1">
+                            <span className="text-[10px] px-2 py-1 rounded-md bg-red-200 text-red-700 border border-red-200 flex items-center gap-1">
                               <XCircle size={10} />
                               Mismatched
                             </span>
                           ) : null}
                           {meta.leadGrade ? (
-                            <span className="text-[10px] px-2 py-1 rounded-full bg-primary/10 text-primary">
+                            <span className={`text-[10px] px-2 py-1 rounded-md ${String(meta.leadGrade).toLowerCase() === 'hot'
+                              ? 'bg-red-200 border-red-200 border text-red-700'
+                              : String(meta.leadGrade).toLowerCase() === 'warm'
+                                ? 'bg-yellow-200 border-yellow-200 border text-yellow-700'
+                                : 'bg-blue-200 border-blue-200 border text-blue-700'
+                              }`}>
                               {String(meta.leadGrade).toUpperCase()}
                             </span>
                           ) : null}
@@ -423,10 +465,10 @@ export default function DashboardPage() {
                 })
               )}
             </div>
-            <div className="rounded-2xl border border-border shadow-inner bg-background-light/60 min-h-[14rem] p-4">
+            <div className="rounded-md border border-border shadow-inner bg-background-light/60 min-h-[14rem] p-4">
               {!selectedLead ? (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                  <div className="w-12 h-12 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center">
                     <Users size={22} />
                   </div>
                   <p className="mt-3 text-base font-semibold text-text-heading">
@@ -440,45 +482,120 @@ export default function DashboardPage() {
                   </div>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <div className="text-sm font-semibold text-text-heading">Lead snapshot</div>
+                <div className="space-y-6">
+                  {/* Header: Identity */}
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Lead Snapshot</div>
+                      <h3 className="text-xl font-bold text-text-heading mb-1">{getLeadMeta(selectedLead).name}</h3>
+                      <div className="flex items-center gap-2 text-sm text-text-secondary">
+                        <Mail size={14} className="text-text-muted" />
+                        {getLeadMeta(selectedLead).email || "No email captured"}
+                      </div>
+                    </div>
+                    {/* Match Status */}
                     {getLeadMeta(selectedLead).isMatched === true ? (
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
-                        <CheckCircle2 size={12} />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 text-xs font-bold shadow-sm">
+                        <CheckCircle2 size={12} strokeWidth={2.5} />
                         Matched
                       </span>
                     ) : getLeadMeta(selectedLead).isMatched === false ? (
-                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-red-50 text-red-700 border border-red-200">
-                        <XCircle size={12} />
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 text-xs font-bold shadow-sm">
+                        <XCircle size={12} strokeWidth={2.5} />
                         Mismatched
                       </span>
                     ) : null}
                   </div>
-                  <div className="text-xs text-text-muted">
-                    {selectedLead?.email ||
-                      selectedLead?.visitor_email ||
-                      selectedLead?.visitorEmail ||
-                      "No email on file"}
-                  </div>
-                  <div className="flex flex-wrap gap-2 text-xs text-text-muted">
-                    {Object.entries(getLeadMeta(selectedLead))
-                      .filter(([key]) => key !== "isMatched")
-                      .map(([key, value]) => (
-                        <span
-                          key={key}
-                          className="px-2 py-1 rounded-full bg-white border border-border"
-                        >
-                          {key}: {String(value || "—")}
+
+                  {/* Key Metrics Grid */}
+                  <div className="grid grid-cols-3 pt-4 border-t border-border/60 gap-3">
+                    {/* Score */}
+                    <div className="flex flex-col items-center justify-between gap-2 py-3 rounded-md bg-gray-200 border border-gray-100">
+                      <span className="text-[10px] font-bold text-text-heading uppercase tracking-wider ">Score</span>
+                      <span className="text-xl font-bold text-primary">{getLeadMeta(selectedLead).leadScore}</span>
+                    </div>
+
+                    {/* Grade */}
+                    <div className="flex flex-col items-center justify-between gap-2 py-3 rounded-md bg-gray-200 border border-gray-100">
+                      <span className="text-[10px] font-bold text-text-heading uppercase tracking-wider ">Grade</span>
+                      <span className={`px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wide ${String(getLeadMeta(selectedLead).leadGrade).toLowerCase() === 'hot'
+                        ? 'bg-red-200 text-red-700'
+                        : String(getLeadMeta(selectedLead).leadGrade).toLowerCase() === 'warm'
+                          ? 'bg-yellow-200 text-yellow-700'
+                          : 'bg-blue-200 text-blue-700'
+                        }`}>
+                        {getLeadMeta(selectedLead).leadGrade || "—"}
+                      </span>
+                    </div>
+
+                    {/* Intent */}
+                    <div className="flex flex-col items-center justify-between gap-2 py-3 rounded-md bg-gray-200 border border-gray-100">
+                      <span className="text-[10px] font-bold text-text-heading uppercase tracking-wider ">Intent</span>
+                      <div className="flex items-center gap-1">
+                        <Activity size={14} className="text-primary-dark" />
+                        <span className={`px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wide ${String(getLeadMeta(selectedLead).intent).toLowerCase() === 'buy'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                          }`}>
+                          {getLeadMeta(selectedLead).intent || "—"}
                         </span>
-                      ))}
+                        {/* <span className={`px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wide text-primary-dark capitalize ${String(getLeadMeta(selectedLead).intent).toLowerCase() === 'buy'
+                          ? 'bg-green-100 text-green-700'
+                          : 'bg-orange-100 text-orange-700'
+                          }`}>
+                          {getLeadMeta(selectedLead).intent || "—"}
+                        </span> */}
+                      </div>
+                    </div>
                   </div>
+
+                  {/* Footer Stats */}
+                  <div className="flex items-center justify-between pt-4 border-t border-border/60 px-1">
+                    <div className="flex items-center gap-2">
+                      <span className="w-8 h-8 rounded-md bg-gray-200 flex items-center justify-center text-text-muted border border-gray-100">
+                        <Globe size={14} />
+                      </span>
+                      <div className="flex flex-col">
+                        <span className="text-[10px] font-semibold text-text-heading uppercase">Channel</span>
+                        <span className="text-xs font-semibold text-text-muted capitalize">{getLeadMeta(selectedLead).channel}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className={`w-8 h-8 rounded-md flex items-center justify-center border ${getLeadMeta(selectedLead).qualified ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-200 text-gray-400 border-gray-100'
+                        }`}>
+                        {getLeadMeta(selectedLead).qualified ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
+                      </span>
+                      <div className="flex flex-col items-start">
+                        <span className="text-[10px] font-semibold text-text-heading uppercase">Qualified</span>
+                        <span className={`text-xs font-bold ${getLeadMeta(selectedLead).qualified ? 'text-green-600' : 'text-red-700'}`}>
+                          {getLeadMeta(selectedLead).qualified ? 'Yes' : 'No'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
                 </div>
               )}
             </div>
           </div>
         </div>
       </div>
+      <AnimatePresence>
+        {newLeadToNotify && (
+          <NewLeadPopup
+            lead={{
+              ...newLeadToNotify,
+              ...getLeadMeta(newLeadToNotify)
+            }}
+            onClose={() => setNewLeadToNotify(null)}
+            onView={(id) => {
+              setSelectedLeadId(id);
+              // Scroll to list item or highlight it if needed
+            }}
+          />
+        )}
+      </AnimatePresence>
     </div >
   );
 }

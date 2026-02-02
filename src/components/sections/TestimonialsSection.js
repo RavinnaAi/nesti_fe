@@ -55,7 +55,7 @@ export default function TestimonialsSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <Star size={16} />
               Success Stories
             </span>
@@ -97,7 +97,7 @@ export default function TestimonialsSection() {
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
               whileHover={{ y: -6, transition: { duration: 0.3 } }}
-              className="rounded-2xl p-8 border border-border bg-background shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full"
+              className="rounded-md p-8 border border-border bg-background shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full"
               suppressHydrationWarning
             >
               <div className="flex gap-1 mb-6">
@@ -114,7 +114,7 @@ export default function TestimonialsSection() {
                 &ldquo;{testimonial.testimonial}&rdquo;
               </blockquote>
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 border-2 border-border">
+                <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 border-border">
                   <Image
                     src={testimonial.image}
                     alt={testimonial.name}

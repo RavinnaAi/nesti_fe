@@ -207,7 +207,7 @@ export default function VerifyEmailPage() {
                       onChange={(e) => handleOTPChange(index, e.target.value)}
                       onBlur={() => handleOTPBlur(index)}
                       onKeyDown={(e) => handleOTPKeyDown(index, e)}
-                      className="w-12 h-14 sm:w-14 sm:h-16 border-2 border-border rounded-xl text-center text-2xl font-semibold text-text-heading transition-all duration-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none bg-background-light/50 hover:bg-white"
+                      className="w-12 h-14 sm:w-14 sm:h-16 border-2 border-border rounded-md text-center text-2xl font-semibold text-text-heading transition-all duration-200 hover:border-primary focus:border-primary focus:ring-4 focus:ring-primary/10 focus:outline-none bg-background-light/50 hover:bg-white"
                       aria-label={`Digit ${index + 1}`}
                     />
                   ))}
@@ -219,7 +219,7 @@ export default function VerifyEmailPage() {
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 disabled={verifying || !isOtpComplete()}
-                className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
               >
                 {verifying ? (
                   <Loader2 className="h-6 w-6 animate-spin" />
@@ -256,7 +256,7 @@ export default function VerifyEmailPage() {
                 </motion.div>
               </div>
 
-              <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-700 text-center">
                   Your email has been successfully verified! You can now log in
                   to your account.
@@ -267,7 +267,7 @@ export default function VerifyEmailPage() {
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
                 onClick={() => router.push("/log-in")}
-                className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
+                className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
               >
                 Go to Login
               </motion.button>
@@ -288,7 +288,7 @@ export default function VerifyEmailPage() {
                 </motion.div>
               </div>
 
-              <div className="p-4 bg-red-50 border border-red-200 rounded-xl">
+              <div className="p-4 bg-red-50 border border-red-200 rounded-md">
                 <p className="text-sm text-red-700 text-center">
                   {errorMessage ||
                     "We couldn't verify your email. The code may have expired or is invalid."}
@@ -302,7 +302,7 @@ export default function VerifyEmailPage() {
                     whileTap={{ scale: 0.98 }}
                     disabled={resendMutation.isLoading}
                     onClick={handleResendVerification}
-                    className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-xl flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
+                    className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100"
                   >
                     {resendMutation.isLoading ? (
                       <Loader2 className="h-6 w-6 animate-spin" />
@@ -315,7 +315,7 @@ export default function VerifyEmailPage() {
                     whileHover={{ scale: 1.02, y: -2 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => router.push("/sign-up")}
-                    className="h-14 w-full bg-background border-2 border-border rounded-xl flex justify-center items-center cursor-pointer hover:border-primary hover:shadow-lg hover:bg-background-light/50 transition-all duration-300"
+                    className="h-14 w-full bg-background border-2 border-border rounded-md flex justify-center items-center cursor-pointer hover:border-primary hover:shadow-lg hover:bg-background-light/50 transition-all duration-300"
                   >
                     <span className="text-sm font-semibold text-text-heading">
                       Back to Sign Up
@@ -323,7 +323,7 @@ export default function VerifyEmailPage() {
                   </motion.button>
                 </>
               ) : (
-                <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                   <div className="flex items-center justify-center gap-2 mb-2">
                     <Mail size={20} className="text-green-700" />
                     <p className="text-sm text-green-700 font-semibold">
@@ -374,12 +374,12 @@ export default function VerifyEmailPage() {
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
             transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl"
+            className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-md blur-3xl"
           />
           <motion.div
             animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
             transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-full blur-3xl"
+            className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-md blur-3xl"
           />
         </div>
 
@@ -407,9 +407,9 @@ export default function VerifyEmailPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.3, duration: 0.5 }}
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg"
+              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
                 <Home className="text-white text-3xl" />
               </div>
               <p className="text-text-heading font-semibold text-sm">
@@ -422,9 +422,9 @@ export default function VerifyEmailPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.4, duration: 0.5 }}
               whileHover={{ scale: 1.1, rotate: -5 }}
-              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg"
+              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
                 <TrendingUp className="text-white text-3xl" />
               </div>
               <p className="text-text-heading font-semibold text-sm">
@@ -437,9 +437,9 @@ export default function VerifyEmailPage() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5, duration: 0.5 }}
               whileHover={{ scale: 1.1, rotate: 5 }}
-              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg"
+              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg"
             >
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center mb-3">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
                 <Shield className="text-white text-3xl" />
               </div>
               <p className="text-text-heading font-semibold text-sm">
@@ -482,12 +482,12 @@ export default function VerifyEmailPage() {
           <motion.div
             animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-20 right-10 w-20 h-20 bg-background/40 backdrop-blur-sm rounded-2xl shadow-lg hidden lg:block"
+            className="absolute top-20 right-10 w-20 h-20 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
           />
           <motion.div
             animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
             transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-32 left-10 w-16 h-16 bg-background/40 backdrop-blur-sm rounded-xl shadow-lg hidden lg:block"
+            className="absolute bottom-32 left-10 w-16 h-16 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
           />
         </div>
       </div>
