@@ -90,9 +90,9 @@ export default function SettingsPage() {
 
         {/* Content */}
         <div className="lg:col-span-9">
-          <div className="rounded-2xl border border-border bg-white shadow-sm p-6">
+          <div className="rounded-md border border-border bg-white shadow-sm p-6">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+              <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
                 {ActiveIcon ? <ActiveIcon size={18} /> : null}
               </div>
               <div className="flex-1">
@@ -118,7 +118,7 @@ export default function SettingsPage() {
                       toast.error("Failed to copy link");
                     }
                   }}
-                  className="h-10 w-10 rounded-full bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
+                  className="h-10 w-10 rounded-md bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
                   aria-label="Copy public link"
                 >
                   <Copy size={16} className="text-text-heading" />
@@ -137,7 +137,7 @@ export default function SettingsPage() {
                       toast.error("Failed to copy link");
                     }
                   }}
-                  className="h-10 w-10 rounded-full bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
+                  className="h-10 w-10 rounded-md bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
                   aria-label="Share"
                 >
                   <Share2 size={16} className="text-text-heading" />

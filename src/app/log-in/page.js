@@ -28,7 +28,7 @@ export default function LoginPage() {
   const [fieldErrors, setFieldErrors] = useState({});
   const loginMutation = useLogin();
   const googleLoginMutation = useGoogleAuth();
-  
+
   const googleLogin = useGoogleLogin({
     flow: "implicit",
     onSuccess: (tokenResponse) => {

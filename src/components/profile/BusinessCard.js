@@ -89,7 +89,7 @@ export default function BusinessCard({ businessInfo }) {
         items={businessInfo?.preferredClients || []}
       />
       {businessInfo?.testimonial ? (
-        <div className="mt-4 rounded-xl border border-border/70 bg-background-light/50 p-4 shadow-sm shadow-primary/10">
+        <div className="mt-4 rounded-md border border-border/70 bg-background-light/50 p-4 shadow-sm shadow-primary/10">
           <p className="text-xs uppercase tracking-wide text-text-muted font-semibold mb-2">
             Testimonial
           </p>

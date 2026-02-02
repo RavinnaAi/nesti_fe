@@ -40,7 +40,7 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3 mb-6">
-              <div className="h-14 w-14 rounded-2xl grid place-items-center shadow-lg bg-gradient-to-br from-primary to-primary-dark">
+              <div className="h-14 w-14 rounded-md grid place-items-center shadow-lg bg-gradient-to-br from-primary to-primary-dark">
                 <Bot size={28} className="text-white" />
               </div>
               <span className="text-3xl font-bold text-text-heading">

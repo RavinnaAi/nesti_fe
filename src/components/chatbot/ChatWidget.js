@@ -9,6 +9,9 @@ import {
   sendChatMessage,
   setVisitorId,
 } from "@/lib/chatClient";
+import { motion, AnimatePresence } from "framer-motion";
+import QuickReplyButtons from "./QuickReplyButtons";
+import ConversationProgress from "./ConversationProgress";
 
 const formatTime = (date) =>
   date.toLocaleTimeString([], {
@@ -33,6 +36,10 @@ export default function ChatWidget({
   const [sessionId, setSessionId] = useState("");
   const [visitorId, setVisitorIdState] = useState("");
   const [error, setError] = useState("");
+  const [step, setStep] = useState(0);
+  const [emotionalState, setEmotionalState] = useState("confident");
+  const [nextAction, setNextAction] = useState("continue");
+  const [quickReplies, setQuickReplies] = useState([]);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -68,13 +75,16 @@ export default function ChatWidget({
     ]);
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || loading || !embedToken || !sessionId) return;
-    const text = input.trim();
-    setInput("");
+  const handleSend = async (overrideText = null) => {
+    const text = overrideText || input.trim();
+    if (!text || loading || !embedToken || !sessionId) return;
+
+    if (!overrideText) setInput("");
     addMessage("user", text);
     setLoading(true);
     setError("");
+    setQuickReplies([]);
+
     try {
       const response = await sendChatMessage({
         message: text,
@@ -82,17 +92,32 @@ export default function ChatWidget({
         embedToken,
         visitorId,
       });
-      const reply = response?.data?.response || response?.response;
-      const returnedVisitor = response?.data?.meta?.visitorId || response?.visitorId;
+
+      const payload = response?.data || response;
+      const reply = payload.response;
+      const intent = payload.intent;
+      const emotion = payload.emotional_state;
+      const action = payload.next_action;
+
+      setEmotionalState(emotion || "confident");
+      setNextAction(action || "continue");
+
+      // Dynamic Step Progression
+      if (intent === "buy" || intent === "sell") setStep(1);
+      if (payload.extracted_data?.budget || payload.extracted_data?.timeline) setStep(2);
+      if (action === "collect_contact") setStep(3);
+      if (action === "offer_booking") setStep(4);
+
+      if (action === "collect_contact" && !quickReplies.length) {
+        setQuickReplies(["Share email", "Share phone", "Maybe later"]);
+      }
+
+      const returnedVisitor = payload.meta?.visitorId || payload.visitorId;
       if (returnedVisitor && !visitorId) {
         setVisitorId(returnedVisitor);
         setVisitorIdState(returnedVisitor);
       }
       addMessage("assistant", reply || "Thanks! How else can I help?");
-    } catch (err) {
-      const msg = err?.message || "Sorry, something went wrong. Please try again.";
-      setError(msg);
-      addMessage("assistant", msg);
     } finally {
       setTimeout(() => setLoading(false), 400);
     }
@@ -145,51 +170,67 @@ export default function ChatWidget({
   );
 
   const body = (
-    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-background-light">
-
-      {messages.map((msg, idx) => {
-        const isUser = msg.role === "user";
-        return (
-          <div
-            key={`${msg.role}-${idx}-${msg.timestamp?.toString?.() || ""}`}
-            className={`flex ${isUser ? "justify-end" : "justify-start"} items-end gap-2`}
-          >
-            {!isUser && (
-              <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
-                <MessageCircle size={14} />
-              </div>
-            )}
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2 shadow-sm ${isUser
-                ? "bg-primary text-white"
-                : "bg-white border border-border text-text-heading"
-                }`}
+    <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-background-light scrollbar-hide">
+      <AnimatePresence initial={false}>
+        {messages.map((msg, idx) => {
+          const isUser = msg.role === "user";
+          return (
+            <motion.div
+              key={`${msg.role}-${idx}`}
+              initial={{ opacity: 0, y: 10, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ duration: 0.3 }}
+              className={`flex ${isUser ? "justify-end" : "justify-start"} items-end gap-2`}
             >
-              <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
-              <p
-                className={`text-[10px] mt-1 ${isUser ? "text-white/70" : "text-text-muted"
+              {!isUser && (
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+                  <MessageCircle size={14} />
+                </div>
+              )}
+              <div
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm relative ${isUser
+                  ? "bg-primary text-white"
+                  : "bg-white border border-border text-text-heading"
                   }`}
               >
-                {formatTime(msg.timestamp || new Date())}
-              </p>
-            </div>
-          </div>
-        );
-      })}
+                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                <p
+                  className={`text-[9px] mt-1 font-medium tracking-wide ${isUser ? "text-white/70" : "text-text-muted text-right"
+                    }`}
+                >
+                  {formatTime(msg.timestamp || new Date())}
+                </p>
+
+                {!isUser && idx === messages.length - 1 && quickReplies.length > 0 && (
+                  <QuickReplyButtons options={quickReplies} onSelect={(opt) => handleSend(opt)} />
+                )}
+              </div>
+            </motion.div>
+          );
+        })}
+      </AnimatePresence>
 
       {loading && (
-        <div className="flex justify-start items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex justify-start items-center gap-2"
+        >
+          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 animate-pulse">
             <MessageCircle size={14} />
           </div>
-          <div className="bg-white border border-border rounded-2xl px-4 py-3 flex items-center gap-2 shadow-sm">
-            <Loader2 size={16} className="animate-spin text-primary" />
-            <span className="text-sm text-text-muted">Typing...</span>
+          <div className="bg-white border border-border rounded-2xl px-5 py-3 flex items-center gap-3 shadow-sm">
+            <div className="flex gap-1">
+              <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>
+            </div>
+            <span className="text-[11px] font-medium text-text-muted italic">Nesti is thinking...</span>
           </div>
-        </div>
+        </motion.div>
       )}
 
-      {error ? <div className="text-xs text-red-600">{error}</div> : null}
+      {error ? <div className="text-xs text-red-600 bg-red-50 p-2 rounded-lg border border-red-100">{error}</div> : null}
 
       <div ref={messagesEndRef} />
     </div>
@@ -242,16 +283,21 @@ export default function ChatWidget({
       )}
 
       {isOpen && (
-        <div
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
           className={`${inlineMode
             ? "relative w-full h-[600px] max-h-[70vh]"
-            : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[80vh] z-50"
-            } bg-transparent rounded-3xl shadow-2xl flex flex-col border border-border overflow-hidden`}
+            : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[85vh] z-50"
+            } bg-transparent rounded-[2rem] shadow-2xl flex flex-col border border-border overflow-hidden backdrop-blur-sm`}
         >
-          {header}
-          {body}
-          {footer}
-        </div>
+          <div className="flex flex-col h-full">
+            {header}
+            <ConversationProgress step={step} />
+            {body}
+            {footer}
+          </div>
+        </motion.div>
       )}
     </>
   );

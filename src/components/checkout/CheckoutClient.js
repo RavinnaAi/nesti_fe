@@ -42,7 +42,7 @@ export default function CheckoutClient() {
   if (!activePlan) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-16">
-        <div className="rounded-xl border border-border bg-white p-6 shadow-sm text-center space-y-3">
+        <div className="rounded-md border border-border bg-white p-6 shadow-sm text-center space-y-3">
           <div className="text-lg font-semibold text-text-heading">
             No plan selected
           </div>
@@ -51,7 +51,7 @@ export default function CheckoutClient() {
           </div>
           <Link
             href="/settings"
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold hover:brightness-95 transition"
+            className="inline-flex items-center justify-center px-4 py-2 rounded-md bg-primary text-white text-sm font-semibold hover:brightness-95 transition"
           >
             Go to Plans
           </Link>
@@ -64,9 +64,9 @@ export default function CheckoutClient() {
     <div className="max-w-6xl mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-2xl border border-border bg-white shadow-sm p-6 space-y-4">
+          <div className="rounded-md border border-border bg-white shadow-sm p-6 space-y-4">
             <div className="flex items-center gap-2">
-              <span className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
+              <span className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center text-sm font-semibold">
                 1
               </span>
               <div>
@@ -133,7 +133,7 @@ export default function CheckoutClient() {
                     onChange={setCountry}
                   />
                 </div>
-                <button className="w-full mt-2 rounded-lg bg-primary text-white py-3 font-semibold hover:brightness-95 transition">
+                <button className="w-full mt-2 rounded-md bg-primary text-white py-3 font-semibold hover:brightness-95 transition">
                   Pay Now
                 </button>
               </div>
@@ -142,7 +142,7 @@ export default function CheckoutClient() {
         </div>
 
         <div className="lg:col-span-1">
-          <div className="rounded-2xl border border-border bg-white shadow-sm p-6 space-y-4">
+          <div className="rounded-md border border-border bg-white shadow-sm p-6 space-y-4">
             <div className="flex items-center justify-between">
               <div>
                 <div className="text-lg font-semibold text-text-heading">
@@ -157,7 +157,7 @@ export default function CheckoutClient() {
               </div>
             </div>
 
-            <div className="rounded-xl border border-border/70 bg-background-light/60 p-4 space-y-2">
+            <div className="rounded-md border border-border/70 bg-background-light/60 p-4 space-y-2">
               <div className="flex items-center gap-2 text-sm text-text-heading font-semibold">
                 {activePlan?.name || "Selected Plan"}
               </div>

@@ -63,7 +63,7 @@ export default function PasswordField({
           onFocus={onFocus}
           onBlur={onBlur}
           minLength={8}
-          className={`w-full h-14 border-2 rounded-xl pl-12 pr-12 transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${getBorderColor()}`}
+          className={`w-full h-14 border-2 rounded-md pl-12 pr-12 transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${getBorderColor()}`}
           type={showPassword ? "text" : "password"}
           placeholder={placeholder}
           autoComplete={autoComplete}
@@ -81,25 +81,23 @@ export default function PasswordField({
       {showStrengthIndicator && value && passwordStrength && (
         <div className="mt-3 space-y-2">
           <div className="flex items-center gap-2">
-            <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="flex-1 h-2 bg-gray-200 rounded-md overflow-hidden">
               <div
-                className={`h-full transition-all duration-300 ${
-                  passwordStrength === "strong"
-                    ? "bg-green-500 w-full"
-                    : passwordStrength === "medium"
+                className={`h-full transition-all duration-300 ${passwordStrength === "strong"
+                  ? "bg-green-500 w-full"
+                  : passwordStrength === "medium"
                     ? "bg-yellow-500 w-2/3"
                     : "bg-red-500 w-1/3"
-                }`}
+                  }`}
               />
             </div>
             <span
-              className={`text-xs font-semibold ${
-                passwordStrength === "strong"
-                  ? "text-green-600"
-                  : passwordStrength === "medium"
+              className={`text-xs font-semibold ${passwordStrength === "strong"
+                ? "text-green-600"
+                : passwordStrength === "medium"
                   ? "text-yellow-600"
                   : "text-red-600"
-              }`}
+                }`}
             >
               {passwordStrength.charAt(0).toUpperCase() +
                 passwordStrength.slice(1)}

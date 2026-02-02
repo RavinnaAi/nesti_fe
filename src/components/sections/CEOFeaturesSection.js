@@ -115,7 +115,7 @@ export default function CEOFeaturesSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <Award size={16} aria-hidden="true" />
               CEO Recognition & Press Coverage
             </span>
@@ -153,7 +153,7 @@ export default function CEOFeaturesSection() {
               href={feature.url}
               target="_blank"
               rel="noopener noreferrer"
-              className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-xl"
+              className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
               aria-label={`Read article about ${feature.name}`}
             >
               <motion.div
@@ -171,12 +171,12 @@ export default function CEOFeaturesSection() {
                   scale: 1.05,
                   transition: { duration: 0.2 },
                 }}
-                className="group relative rounded-xl p-4 border border-border bg-background hover:shadow-lg transition-shadow duration-200 flex flex-col items-center justify-center text-center cursor-pointer h-full"
+                className="group relative rounded-md p-4 border border-border bg-background hover:shadow-lg transition-shadow duration-200 flex flex-col items-center justify-center text-center cursor-pointer h-full"
                 suppressHydrationWarning
               >
                 {/* Hover Gradient Background */}
                 <div
-                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 rounded-xl bg-gradient-to-br ${feature.gradient}`}
+                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 rounded-md bg-gradient-to-br ${feature.gradient}`}
                 />
 
                 {/* Logo Image */}

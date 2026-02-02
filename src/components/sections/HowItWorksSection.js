@@ -39,7 +39,7 @@ export default function HowItWorksSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <Target size={14} />
               Simple Process
             </span>
@@ -84,9 +84,9 @@ export default function HowItWorksSection() {
                 className="relative"
                 suppressHydrationWarning
               >
-                <div className="rounded-2xl p-10 border border-border h-full bg-background transition-all duration-300 hover:border-primary">
+                <div className="rounded-md p-10 border border-border h-full bg-background transition-all duration-300 hover:border-primary">
                   <div className="flex items-center gap-5 mb-8">
-                    <div className="w-16 h-16 rounded-2xl grid place-items-center shadow-lg flex-shrink-0 bg-gradient-to-br from-primary to-primary-dark text-white">
+                    <div className="w-16 h-16 rounded-md grid place-items-center shadow-lg flex-shrink-0 bg-gradient-to-br from-primary to-primary-dark text-white">
                       <IconComponent size={28} />
                     </div>
                     <span className="text-6xl font-black opacity-10 text-primary">

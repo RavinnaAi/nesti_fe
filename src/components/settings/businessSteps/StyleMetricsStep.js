@@ -4,10 +4,9 @@ import { Award, MapPin } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 
 const buttonClasses = (active) =>
-  `px-3 py-2 rounded-lg border text-sm font-semibold transition-all ${
-    active
-      ? "border-primary bg-primary/10 text-primary shadow-sm"
-      : "border-border bg-background-light/60 text-text-heading hover:border-primary"
+  `px-3 py-2 rounded-md border text-sm font-semibold transition-all ${active
+    ? "border-primary bg-primary/10 text-primary shadow-sm"
+    : "border-border bg-background-light/60 text-text-heading hover:border-primary"
   }`;
 
 export default function StyleMetricsStep({

@@ -6,16 +6,15 @@ export default function AuthVisualSection({ variant = "signup" }) {
 
   return (
     <div
-      className={`w-full md:w-[55%] relative overflow-hidden ${
-        isSignup
-          ? "bg-gradient-to-br from-primary-dark to-primary-light"
-          : "bg-gradient-to-br from-primary-light/20 via-primary/10 to-primary-dark/20"
-      }`}
+      className={`w-full md:w-[55%] relative overflow-hidden ${isSignup
+        ? "bg-gradient-to-br from-primary-dark to-primary-light"
+        : "bg-gradient-to-br from-primary-light/20 via-primary/10 to-primary-dark/20"
+        }`}
     >
       {/* Decorative Background Elements */}
       <div className="absolute inset-0">
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-full blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-full blur-3xl" />
+        <div className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-md blur-3xl" />
+        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-md blur-3xl" />
       </div>
 
       {/* Content Container */}
@@ -33,9 +32,8 @@ export default function AuthVisualSection({ variant = "signup" }) {
 
         <div className="text-center mb-12">
           <h2
-            className={`text-3xl md:text-4xl lg:text-5xl font-bold mb-4 ${
-              isSignup ? "text-white" : "text-text-heading"
-            }`}
+            className={`text-3xl md:text-4xl lg:text-5xl font-bold mb-4 ${isSignup ? "text-white" : "text-text-heading"
+              }`}
           >
             Your Dream Home
             <br />
@@ -44,9 +42,8 @@ export default function AuthVisualSection({ variant = "signup" }) {
             </span>
           </h2>
           <p
-            className={`text-base md:text-lg max-w-md mx-auto ${
-              isSignup ? "text-white/90" : "text-text-body"
-            }`}
+            className={`text-base md:text-lg max-w-md mx-auto ${isSignup ? "text-white/90" : "text-text-body"
+              }`}
           >
             Join thousands of users finding their perfect property
           </p>
@@ -54,8 +51,8 @@ export default function AuthVisualSection({ variant = "signup" }) {
 
         {!isSignup && (
           <div className="grid grid-cols-3 gap-6 md:gap-8 mb-12">
-            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
                 <Home className="text-white text-3xl" />
               </div>
               <p className="text-text-heading font-semibold text-sm">
@@ -63,8 +60,8 @@ export default function AuthVisualSection({ variant = "signup" }) {
               </p>
             </div>
 
-            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
                 <TrendingUp className="text-white text-3xl" />
               </div>
               <p className="text-text-heading font-semibold text-sm">
@@ -72,8 +69,8 @@ export default function AuthVisualSection({ variant = "signup" }) {
               </p>
             </div>
 
-            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-2xl p-6 shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-xl flex items-center justify-center mb-3">
+            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
                 <Shield className="text-white text-3xl" />
               </div>
               <p className="text-text-heading font-semibold text-sm">
@@ -84,54 +81,46 @@ export default function AuthVisualSection({ variant = "signup" }) {
         )}
 
         <div className="grid grid-cols-3 gap-6 md:gap-8 w-full max-w-lg">
-          <div className="text-center">
+          <div className={`text-center ${isSignup ? "flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg" : ""} `}>
             <div
-              className={`text-3xl md:text-4xl font-bold mb-1 ${
-                isSignup ? "text-white" : "text-primary"
-              }`}
+              className={`text-3xl md:text-4xl font-bold mb-1 ${isSignup ? "text-text-heading" : "text-primary"
+                }`}
             >
               50K+
             </div>
             <div
-              className={`text-xs md:text-sm ${
-                isSignup ? "text-white/80" : "text-text-body"
-              }`}
+              className={`text-xs md:text-sm ${isSignup ? "text-text-heading/80" : "text-text-body"
+                }`}
             >
               Properties
             </div>
           </div>
           <div
-            className={`text-center border-x ${
-              isSignup ? "border-white/30" : "border-primary/30"
-            }`}
+            className={`text-center border-x border-text-muted/30 ${isSignup ? "flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg " : ""} `}
           >
             <div
-              className={`text-3xl md:text-4xl font-bold mb-1 ${
-                isSignup ? "text-white" : "text-primary"
-              }`}
+              className={`text-3xl md:text-4xl font-bold mb-1 ${isSignup ? "text-text-heading" : "text-primary"
+                }`}
             >
               100K+
             </div>
             <div
-              className={`text-xs md:text-sm ${
-                isSignup ? "text-white/80" : "text-text-body"
-              }`}
+              className={`text-xs md:text-sm ${isSignup ? "text-text-heading/80" : "text-text-body"
+                }`}
             >
               Happy Users
             </div>
           </div>
-          <div className="text-center">
+          <div className={`text-center ${isSignup ? "flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg" : ""} `}>
             <div
-              className={`text-3xl md:text-4xl font-bold mb-1 ${
-                isSignup ? "text-white" : "text-primary"
-              }`}
+              className={`text-3xl md:text-4xl font-bold mb-1 ${isSignup ? "text-text-heading" : "text-primary"
+                }`}
             >
               500+
             </div>
             <div
-              className={`text-xs md:text-sm ${
-                isSignup ? "text-white/80" : "text-text-body"
-              }`}
+              className={`text-xs md:text-sm ${isSignup ? "text-text-heading/80" : "text-text-body"
+                }`}
             >
               Agents
             </div>

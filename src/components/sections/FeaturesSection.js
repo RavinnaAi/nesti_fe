@@ -95,7 +95,7 @@ export default function FeaturesSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <Zap size={14} />
               Platform Capabilities
             </span>
@@ -144,19 +144,19 @@ export default function FeaturesSection() {
                       y: -4,
                       transition: { duration: 0.3 },
                     }}
-                    className="group relative h-full rounded-2xl p-8 bg-background border border-border transition-all duration-500 overflow-hidden min-w-[320px] md:min-w-0"
+                    className="group relative h-full rounded-md !overflow-hidden p-8 bg-background border border-border transition-all duration-500 min-w-[320px] md:min-w-0"
                     suppressHydrationWarning
                   >
                     {/* Hover Gradient Background */}
                     <div
-                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 bg-gradient-to-br ${feature.gradient}`}
+                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 rounded-md transition-opacity duration-500 bg-gradient-to-br ${feature.gradient}`}
                     />
 
                     {/* Content Wrapper */}
                     <div className="relative z-10">
                       {/* Icon */}
                       <div
-                        className={`w-16 h-16 rounded-2xl p-4 mb-6 bg-gradient-to-br ${feature.gradient} transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110`}
+                        className={`w-16 h-16 rounded-md p-4 mb-6 bg-gradient-to-br ${feature.gradient} transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110`}
                       >
                         <IconComponent className="w-full h-full text-white transition-colors duration-500 group-hover:text-gray-800" />
                       </div>

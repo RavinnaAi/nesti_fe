@@ -13,11 +13,11 @@ const MetricBar = ({ label, value, icon: Icon, color = "bg-primary" }) => (
       <span className="font-semibold">{Math.round(value)}%</span>
     </div>
     <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
-      <motion.div 
+      <motion.div
         initial={{ width: 0 }}
         animate={{ width: `${Math.min(100, Math.max(0, value))}%` }}
         transition={{ duration: 1, ease: "easeOut" }}
-        className={`h-full rounded-full ${color}`} 
+        className={`h-full rounded-full ${color}`}
       />
     </div>
   </div>
@@ -25,20 +25,20 @@ const MetricBar = ({ label, value, icon: Icon, color = "bg-primary" }) => (
 
 export default function LeadScoreCard({ score = 0, grade = "cold", breakdown = {}, reasons = [] }) {
   const [showModal, setShowModal] = useState(false);
-  
+
   const scoreNum = parseInt(score) || 0;
-  
-  let color = "text-blue-500 border-blue-500";
-  let bgColor = "bg-blue-50";
+
+  let color = "text-blue-700 border-blue-700";
+  let bgColor = "bg-blue-200";
   let label = "Cold";
-  
+
   if (scoreNum >= 70) {
-    color = "text-green-500 border-green-500";
-    bgColor = "bg-green-50";
+    color = "text-red-700 border-red-700";
+    bgColor = "bg-red-200";
     label = "Hot";
   } else if (scoreNum >= 40) {
-    color = "text-yellow-500 border-yellow-500";
-    bgColor = "bg-yellow-50";
+    color = "text-yellow-700 border-yellow-700";
+    bgColor = "bg-yellow-200";
     label = "Warm";
   }
 
@@ -49,7 +49,7 @@ export default function LeadScoreCard({ score = 0, grade = "cold", breakdown = {
 
   return (
     <>
-      <div className="rounded-2xl border border-border bg-white shadow-sm p-5 space-y-4">
+      <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
         <div className="flex items-start justify-between">
           <div>
             <div className="text-sm font-semibold text-text-heading flex items-center gap-2">
@@ -60,9 +60,9 @@ export default function LeadScoreCard({ score = 0, grade = "cold", breakdown = {
               AI-calculated conversion probability
             </p>
           </div>
-          <button 
+          <button
             onClick={() => setShowModal(true)}
-            className="text-text-muted hover:text-primary transition"
+            className="p-1.5 rounded-md bg-white border border-primary/20 text-primary hover:bg-primary/5 transition-colors shadow-sm"
           >
             <Info size={16} />
           </button>
@@ -102,50 +102,50 @@ export default function LeadScoreCard({ score = 0, grade = "cold", breakdown = {
           </div>
 
           <div className="flex-1 space-y-3">
-             <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold ${bgColor} ${color.split(" ")[0]}`}>
-               <Flame size={12} />
-               {label} Lead
-             </div>
-             
-             <div className="text-xs text-text-muted">
-               {reasons.length > 0 ? (
-                 <span>Driven by: <span className="font-medium text-text-heading">{reasons.slice(0, 2).map(r => r.replace(/_/g, " ")).join(", ")}</span></span>
-               ) : (
-                 "Not enough data for detailed analysis"
-               )}
-             </div>
+            <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-bold ${bgColor} ${color.split(" ")[0]}`}>
+              <Flame size={12} />
+              {label} Lead
+            </div>
+
+            <div className="text-xs text-text-muted">
+              {reasons.length > 0 ? (
+                <span>Driven by: <span className="font-medium text-text-heading">{reasons.slice(0, 2).map(r => r.replace(/_/g, " ")).join(", ")}</span></span>
+              ) : (
+                "Not enough data for detailed analysis"
+              )}
+            </div>
           </div>
         </div>
 
         <div className="space-y-3 pt-2 border-t border-border/50">
-          <MetricBar 
-            label="Timeline Urgency" 
-            value={breakdown.timeline || 0} 
-            icon={Clock} 
+          <MetricBar
+            label="Timeline Urgency"
+            value={breakdown.timeline || 0}
+            icon={Clock}
             color={breakdown.timeline > 60 ? "bg-green-500" : "bg-primary"}
           />
-          <MetricBar 
-            label="Financial Readiness" 
-            value={breakdown.budget || 0} 
+          <MetricBar
+            label="Financial Readiness"
+            value={breakdown.budget || 0}
             icon={DollarSign}
             color={breakdown.budget > 60 ? "bg-green-500" : "bg-primary"}
           />
-          <MetricBar 
-            label="Engagement" 
-            value={breakdown.engagement || 0} 
+          <MetricBar
+            label="Engagement"
+            value={breakdown.engagement || 0}
             icon={MessageCircle}
             color={breakdown.engagement > 60 ? "bg-green-500" : "bg-primary"}
           />
         </div>
       </div>
-      
+
       {showModal && (
-        <LeadScoreModal 
-          score={scoreNum} 
-          grade={label} 
+        <LeadScoreModal
+          score={scoreNum}
+          grade={label}
           reasons={reasons}
           breakdown={breakdown}
-          onClose={() => setShowModal(false)} 
+          onClose={() => setShowModal(false)}
         />
       )}
     </>

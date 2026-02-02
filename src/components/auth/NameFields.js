@@ -28,11 +28,10 @@ export default function NameFields({
           onChange={onFirstNameChange}
           onFocus={onFirstNameFocus}
           onBlur={onFirstNameBlur}
-          className={`w-full h-14 border-2 rounded-xl px-4 transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${
-            firstNameError
+          className={`w-full h-14 border-2 rounded-md px-4 transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${firstNameError
               ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20"
-          }`}
+            }`}
           placeholder="Enter first name"
         />
         {firstNameError && (
@@ -51,11 +50,10 @@ export default function NameFields({
           onChange={onLastNameChange}
           onFocus={onLastNameFocus}
           onBlur={onLastNameBlur}
-          className={`w-full h-14 border-2 rounded-xl px-4 transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${
-            lastNameError
+          className={`w-full h-14 border-2 rounded-md px-4 transition-all duration-200 hover:shadow-md hover:bg-white bg-background-light/50 cursor-text ${lastNameError
               ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-2 focus:ring-primary/20"
-          }`}
+            }`}
           placeholder="Enter last name"
         />
         {lastNameError && (

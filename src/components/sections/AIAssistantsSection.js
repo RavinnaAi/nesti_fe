@@ -111,7 +111,7 @@ export default function AIAssistantsSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
               <Bot size={14} />
               AI-Powered Assistant Network
             </span>
@@ -154,12 +154,12 @@ export default function AIAssistantsSection() {
                 viewport={{ once: true, margin: "0px" }}
                 transition={{ duration: 0.3 }}
                 whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                className="group relative h-full rounded-2xl p-8 bg-background border-2 border-border shadow-sm hover:shadow-md hover:border-primary transition-all duration-300"
+                className="group relative h-full rounded-md p-8 bg-background border-2 border-border shadow-sm hover:shadow-md hover:border-primary transition-all duration-300"
                 suppressHydrationWarning
               >
                 {/* Icon */}
                 <div
-                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${assistant.gradient} p-4 mb-6 group-hover:scale-105 transition-transform duration-300 shadow-lg`}
+                  className={`w-16 h-16 rounded-md bg-gradient-to-br ${assistant.gradient} p-4 mb-6 group-hover:scale-105 transition-transform duration-300 shadow-lg`}
                 >
                   <IconComponent className={`w-full h-full text-white `} />
                 </div>
