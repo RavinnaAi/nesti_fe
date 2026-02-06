@@ -23,6 +23,9 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { motion, AnimatePresence } from "framer-motion";
 import { fetchConversations } from "@/lib/chatClient";
 import NewLeadPopup from "@/components/leads/NewLeadPopup";
+import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings";
+import CalendarSettingsModal from "@/components/dashboard/CalendarSettingsModal";
+import LeadDetailsModal from "@/components/dashboard/LeadDetailsModal";
 
 export default function DashboardPage() {
   const { user, token } = useAppSelector((state) => state.auth);
@@ -36,6 +39,7 @@ export default function DashboardPage() {
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [newLeadToNotify, setNewLeadToNotify] = useState(null);
   const [shownLeadIds, setShownLeadIds] = useState(new Set());
+  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
   const conversationsQuery = useQuery({
     queryKey: ["dashboard-conversations", token],
@@ -465,137 +469,38 @@ export default function DashboardPage() {
                 })
               )}
             </div>
-            <div className="rounded-md border border-border shadow-inner bg-background-light/60 min-h-[14rem] p-4">
-              {!selectedLead ? (
-                <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                  <div className="w-12 h-12 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                    <Users size={22} />
-                  </div>
-                  <p className="mt-3 text-base font-semibold text-text-heading">
-                    Select a Lead
-                  </p>
-                  <p className="text-sm text-text-muted mb-3">
-                    Click on any lead to view detailed information and take action
-                  </p>
-                  <div className="inline-flex items-center gap-2 text-primary font-semibold text-sm">
-                    View details <ArrowRight size={16} />
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  {/* Header: Identity */}
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="text-xs font-bold text-text-muted uppercase tracking-wider mb-1">Lead Snapshot</div>
-                      <h3 className="text-xl font-bold text-text-heading mb-1">{getLeadMeta(selectedLead).name}</h3>
-                      <div className="flex items-center gap-2 text-sm text-text-secondary">
-                        <Mail size={14} className="text-text-muted" />
-                        {getLeadMeta(selectedLead).email || "No email captured"}
-                      </div>
-                    </div>
-                    {/* Match Status */}
-                    {getLeadMeta(selectedLead).isMatched === true ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 text-xs font-bold shadow-sm">
-                        <CheckCircle2 size={12} strokeWidth={2.5} />
-                        Matched
-                      </span>
-                    ) : getLeadMeta(selectedLead).isMatched === false ? (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 text-xs font-bold shadow-sm">
-                        <XCircle size={12} strokeWidth={2.5} />
-                        Mismatched
-                      </span>
-                    ) : null}
-                  </div>
-
-                  {/* Key Metrics Grid */}
-                  <div className="grid grid-cols-3 pt-4 border-t border-border/60 gap-3">
-                    {/* Score */}
-                    <div className="flex flex-col items-center justify-between gap-2 py-3 rounded-md bg-gray-200 border border-gray-100">
-                      <span className="text-[10px] font-bold text-text-heading uppercase tracking-wider ">Score</span>
-                      <span className="text-xl font-bold text-primary">{getLeadMeta(selectedLead).leadScore}</span>
-                    </div>
-
-                    {/* Grade */}
-                    <div className="flex flex-col items-center justify-between gap-2 py-3 rounded-md bg-gray-200 border border-gray-100">
-                      <span className="text-[10px] font-bold text-text-heading uppercase tracking-wider ">Grade</span>
-                      <span className={`px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wide ${String(getLeadMeta(selectedLead).leadGrade).toLowerCase() === 'hot'
-                        ? 'bg-red-200 text-red-700'
-                        : String(getLeadMeta(selectedLead).leadGrade).toLowerCase() === 'warm'
-                          ? 'bg-yellow-200 text-yellow-700'
-                          : 'bg-blue-200 text-blue-700'
-                        }`}>
-                        {getLeadMeta(selectedLead).leadGrade || "—"}
-                      </span>
-                    </div>
-
-                    {/* Intent */}
-                    <div className="flex flex-col items-center justify-between gap-2 py-3 rounded-md bg-gray-200 border border-gray-100">
-                      <span className="text-[10px] font-bold text-text-heading uppercase tracking-wider ">Intent</span>
-                      <div className="flex items-center gap-1">
-                        <Activity size={14} className="text-primary-dark" />
-                        <span className={`px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wide ${String(getLeadMeta(selectedLead).intent).toLowerCase() === 'buy'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-orange-100 text-orange-700'
-                          }`}>
-                          {getLeadMeta(selectedLead).intent || "—"}
-                        </span>
-                        {/* <span className={`px-2 py-0.5 rounded-md text-base font-bold uppercase tracking-wide text-primary-dark capitalize ${String(getLeadMeta(selectedLead).intent).toLowerCase() === 'buy'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-orange-100 text-orange-700'
-                          }`}>
-                          {getLeadMeta(selectedLead).intent || "—"}
-                        </span> */}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Footer Stats */}
-                  <div className="flex items-center justify-between pt-4 border-t border-border/60 px-1">
-                    <div className="flex items-center gap-2">
-                      <span className="w-8 h-8 rounded-md bg-gray-200 flex items-center justify-center text-text-muted border border-gray-100">
-                        <Globe size={14} />
-                      </span>
-                      <div className="flex flex-col">
-                        <span className="text-[10px] font-semibold text-text-heading uppercase">Channel</span>
-                        <span className="text-xs font-semibold text-text-muted capitalize">{getLeadMeta(selectedLead).channel}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className={`w-8 h-8 rounded-md flex items-center justify-center border ${getLeadMeta(selectedLead).qualified ? 'bg-green-50 text-green-600 border-green-100' : 'bg-gray-200 text-gray-400 border-gray-100'
-                        }`}>
-                        {getLeadMeta(selectedLead).qualified ? <CheckCircle2 size={14} /> : <XCircle size={14} />}
-                      </span>
-                      <div className="flex flex-col items-start">
-                        <span className="text-[10px] font-semibold text-text-heading uppercase">Qualified</span>
-                        <span className={`text-xs font-bold ${getLeadMeta(selectedLead).qualified ? 'text-green-600' : 'text-red-700'}`}>
-                          {getLeadMeta(selectedLead).qualified ? 'Yes' : 'No'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              )}
+            {/* Right Column: Upcoming Meetings */}
+            <div className="space-y-4">
+              <UpcomingMeetings onOpenSettings={() => setIsCalendarModalOpen(true)} />
             </div>
           </div>
         </div>
+
       </div>
       <AnimatePresence>
+        {selectedLead && (
+          <LeadDetailsModal
+            lead={{
+              ...selectedLead,
+              ...getLeadMeta(selectedLead)
+            }}
+            onClose={() => setSelectedLeadId(null)}
+          />
+        )}
         {newLeadToNotify && (
           <NewLeadPopup
             lead={{
               ...newLeadToNotify,
-              ...getLeadMeta(newLeadToNotify)
+              ...(newLeadToNotify ? getLeadMeta(newLeadToNotify) : {})
             }}
             onClose={() => setNewLeadToNotify(null)}
             onView={(id) => {
               setSelectedLeadId(id);
-              // Scroll to list item or highlight it if needed
             }}
           />
         )}
       </AnimatePresence>
+      <CalendarSettingsModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)} />
     </div >
   );
 }

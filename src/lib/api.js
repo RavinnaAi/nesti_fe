@@ -48,6 +48,12 @@ export const API_ENDPOINTS = {
       funnel: withBaseUrl("/api/chat/analytics/funnel"),
     },
   },
+  calendar: {
+    connect: (provider) => withBaseUrl(`/api/calendar/connect/${provider}`),
+    bookings: withBaseUrl("/api/calendar/bookings"),
+    status: withBaseUrl("/api/calendar/status"),
+    disconnect: (provider) => withBaseUrl(`/api/calendar/disconnect/${provider}`),
+  },
 };
 
 export async function apiClient({ url, method = "GET", data, token }) {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { User, Mail, Phone } from "lucide-react";
+import { User, Mail, Phone, Calendar } from "lucide-react";
 import { toast } from "react-toastify";
 import FormField from "@/components/auth/FormField";
 import SubmitButton from "@/components/auth/SubmitButton";
@@ -36,6 +36,7 @@ export default function PersonalInfo() {
     lastName: "",
     email: "",
     phone: "",
+    calendalyUrl: "",
   });
   const [profileImage, setProfileImage] = useState("");
   const [coverImage, setCoverImage] = useState("");
@@ -76,9 +77,13 @@ export default function PersonalInfo() {
       fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
+      // calendalyUrl: form.calendalyUrl.trim(),
       profile_image: profileImage,
       cover_image: coverImage,
     };
+
+    // console.log("payload", payload);
+    // return;
 
     setLoading(true);
     try {
@@ -288,6 +293,21 @@ export default function PersonalInfo() {
           icon={Phone}
           focusedField={focusedField}
         />
+
+        {/* <FormField
+          label="Calendaly Url"
+          name="calendalyUrl"
+          value={form.calendalyUrl}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("calendalyUrl")}
+          onBlur={() => setFocusedField("")}
+          placeholder="Enter calendaly url"
+          icon={Calendar}
+          focusedField={focusedField}
+          required
+        />  
+        */}
+
       </div>
 
       <div className="pt-2">

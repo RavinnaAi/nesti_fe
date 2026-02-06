@@ -51,11 +51,21 @@ export default function AnalyticsPage() {
     queryFn: () => fetchAnalyticsFunnel({ token, start: startDate, end: endDate }),
   });
 
-  const summary = useMemo(() => normalizeObject(summaryQuery.data), [summaryQuery.data]);
-  const funnelRows = useMemo(() => normalizeArray(funnelQuery.data), [funnelQuery.data]);
+  const summary = useMemo(() => {
+    const data = summaryQuery.data;
+    if (Array.isArray(data) && data.length > 0) return data[0];
+    return {};
+  }, [summaryQuery.data]);
+
+  const funnelData = useMemo(() => {
+    const data = funnelQuery.data;
+    if (data && !Array.isArray(data) && typeof data === "object") return data;
+    return null;
+  }, [funnelQuery.data]);
+
   const summaryEntries = useMemo(() => {
     return Object.entries(summary).filter(
-      ([, value]) => typeof value !== "object" && value !== null && value !== undefined
+      ([key, value]) => key !== "embed_token" && typeof value !== "object"
     );
   }, [summary]);
 
@@ -130,38 +140,87 @@ export default function AnalyticsPage() {
           )}
         </div>
 
-        <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-3">
+        <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-6">
           <div className="text-sm font-semibold text-text-heading">Funnel breakdown</div>
           {funnelQuery.isLoading ? (
             <div className="text-sm text-text-muted">Loading funnel...</div>
           ) : funnelQuery.isError ? (
             <div className="text-sm text-red-600">Failed to load funnel.</div>
-          ) : funnelRows.length === 0 ? (
+          ) : !funnelData ? (
             <div className="text-sm text-text-muted">No funnel data yet.</div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="text-xs text-text-muted uppercase">
-                  <tr>
-                    {Object.keys(funnelRows[0] || {}).map((header) => (
-                      <th key={header} className="text-left py-2 px-3">
-                        {String(header).replace(/_/g, " ")}
-                      </th>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* Left Column: High Level Stats */}
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100">
+                    <div className="text-xs text-blue-600 font-semibold uppercase">Total Conversations</div>
+                    <div className="text-2xl font-bold text-blue-900 mt-1">{funnelData.total_conversations || 0}</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-green-50/50 border border-green-100">
+                    <div className="text-xs text-green-600 font-semibold uppercase">Qualified Leads</div>
+                    <div className="text-2xl font-bold text-green-900 mt-1">{funnelData.qualified || 0}</div>
+                  </div>
+                  <div className="p-4 rounded-xl bg-purple-50/50 border border-purple-100">
+                    <div className="text-xs text-purple-600 font-semibold uppercase">Conversion Rate</div>
+                    <div className="text-2xl font-bold text-purple-900 mt-1">
+                      {funnelData.total_conversations > 0
+                        ? Math.round((funnelData.qualified / funnelData.total_conversations) * 100)
+                        : 0}%
+                    </div>
+                  </div>
+                </div>
+
+                <div className="p-4 rounded-xl border border-border/60">
+                  <h3 className="text-xs font-semibold text-text-muted uppercase mb-3">Lead Grades</h3>
+                  <div className="space-y-3">
+                    {Object.entries(funnelData.lead_grades || {}).map(([grade, count]) => (
+                      <div key={grade} className="flex items-center justify-between text-sm">
+                        <span className={`capitalize px-2 py-0.5 rounded text-xs font-semibold
+                                    ${grade === 'hot' ? 'bg-red-100 text-red-700' :
+                            grade === 'warm' ? 'bg-yellow-100 text-yellow-700' :
+                              'bg-blue-100 text-blue-700'}`}>
+                          {grade}
+                        </span>
+                        <div className="flex items-center gap-3 flex-1 mx-3">
+                          <div className="h-1.5 flex-1 rounded-full bg-gray-100 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${grade === 'hot' ? 'bg-red-500' : grade === 'warm' ? 'bg-yellow-500' : 'bg-blue-500'}`}
+                              style={{ width: `${(count / (funnelData.total_conversations || 1)) * 100}%` }}
+                            />
+                          </div>
+                          <span className="font-mono font-medium text-text-muted">{count}</span>
+                        </div>
+                      </div>
                     ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {funnelRows.map((row, index) => (
-                    <tr key={index} className="border-t border-border/60">
-                      {Object.values(row).map((cell, cellIndex) => (
-                        <td key={cellIndex} className="py-2 px-3 text-text-heading">
-                          {String(cell)}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Intents */}
+              <div className="p-4 rounded-xl border border-border/60 h-full">
+                <h3 className="text-xs font-semibold text-text-muted uppercase mb-4">Detected Intents</h3>
+                <div className="space-y-4">
+                  {Object.entries(funnelData.intents || {}).length === 0 ? (
+                    <div className="text-sm text-text-muted">No intents detected yet.</div>
+                  ) : (
+                    Object.entries(funnelData.intents).map(([intent, count]) => (
+                      <div key={intent}>
+                        <div className="flex justify-between text-sm mb-1">
+                          <span className="font-medium text-text-heading capitalize">{intent.replace(/_/g, ' ')}</span>
+                          <span className="text-text-muted">{count}</span>
+                        </div>
+                        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-primary/80 rounded-full"
+                            style={{ width: `${(count / (funnelData.total_conversations || 1)) * 100}%` }}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </div>

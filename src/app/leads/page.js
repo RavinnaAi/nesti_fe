@@ -25,6 +25,7 @@ import LeadActionSection from "@/components/leads/LeadActionSection";
 import LeadScoreCard from "@/components/leads/LeadScoreCard";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 import LeadMetaModal from "@/components/leads/LeadMetaModal";
+import LeadActionPopup from "@/components/leads/LeadActionPopup";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -139,6 +140,13 @@ export default function LeadsPage() {
     amort_years: "",
   });
   const [closingForm, setClosingForm] = useState({ price: "" });
+
+  // Popup visibility state - resets when a new lead is selected
+  const [showAdvicePopup, setShowAdvicePopup] = useState(false);
+
+  // Reset popup when selection changes
+  // We use useEffect to watch selectedId 
+  // (or can just rely on the effect below if we want strict sync)
 
   const conversationsQuery = useQuery({
     queryKey: ["chat-conversations", token],
@@ -429,7 +437,10 @@ export default function LeadsPage() {
                       key={id}
                       conversation={conversation}
                       active={id === selectedId}
-                      onSelect={setSelectedId}
+                      onSelect={(newId) => {
+                        setSelectedId(newId);
+                        setShowAdvicePopup(true); // Show popup when selecting a lead
+                      }}
                     />
                   );
                 })
@@ -457,6 +468,8 @@ export default function LeadsPage() {
                   reasons={extractMeta(selectedConversation).lead_reasons || extractMeta(selectedConversation).all_reasons || []}
                 />
               )}
+
+
 
               {selectedConversation ? (
                 <>
@@ -783,6 +796,14 @@ export default function LeadsPage() {
             title={metaModal.title}
             meta={metaModal.data}
             onClose={() => setMetaModal(null)}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {selectedConversation && showAdvicePopup && messageMeta?.ai_metadata && (
+          <LeadActionPopup
+            aiMetadata={messageMeta.ai_metadata}
+            onClose={() => setShowAdvicePopup(false)}
           />
         )}
       </AnimatePresence>
