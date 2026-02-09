@@ -89,12 +89,12 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex gap-4">
                                     <div className={`w-10 h-10 rounded-md flex items-center justify-center border shrink-0 ${meeting.provider === 'google' ? 'bg-blue-50 border-blue-100 text-blue-600' :
-                                            'bg-gray-50 border-gray-100 text-gray-600'
+                                        'bg-gray-50 border-gray-100 text-gray-600'
                                         }`}>
                                         {meeting.provider === 'google' ? (
-                                            <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" className="w-5 h-5" alt="Google" />
+                                            <img src={`https://img.logo.dev/google.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} className="w-5 h-5" alt="Google" />
                                         ) : meeting.provider === 'calendly' ? (
-                                            <img src="https://assets.calendly.com/assets/external/media_kit/calendly-symbol.png" className="w-5 h-5 object-contain" alt="Calendly" />
+                                            <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} className="w-5 h-5 object-contain" alt="Calendly" />
                                         ) : (
                                             <Calendar size={20} />
                                         )}
