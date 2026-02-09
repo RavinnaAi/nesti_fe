@@ -65,9 +65,9 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                         <Settings2 size={14} />
                         Manage
                     </button>
-                    <button className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-primary/5 transition-colors">
+                    {/* <button className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-primary/5 transition-colors">
                         View Calendar <ArrowRight size={14} />
-                    </button>
+                    </button> */}
                 </div>
             </div>
 
