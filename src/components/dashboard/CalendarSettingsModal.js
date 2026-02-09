@@ -106,11 +106,11 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
 
                     <div className="space-y-4">
                         {/* Google Calendar */}
-                        <div className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
+                        {/* <div className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
                             <div className="flex items-center gap-3">
-                                {/* <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
-                                    <img src="https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg" alt="Google" className="w-full h-full" />
-                                </div> */}
+                                <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
+                                    <img src={`https://img.logo.dev/google.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Google" className="w-full h-full" />
+                                </div>
                                 <div>
                                     <h4 className="font-semibold text-text-heading text-sm">Google Calendar</h4>
                                     {isConnected('google') ? (
@@ -143,14 +143,14 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
                                     {connecting === 'google' ? <Loader2 size={14} className="animate-spin" /> : "Connect"}
                                 </button>
                             )}
-                        </div>
+                        </div> */}
 
                         {/* Calendly */}
                         <div className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
                             <div className="flex items-center gap-3">
-                                {/* <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
-                                    <img src="https://assets.calendly.com/assets/external/media_kit/calendly-symbol.png" alt="Calendly" className="w-full h-full object-contain" />
-                                </div> */}
+                                <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
+                                    <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Calendly" className="w-full h-full object-contain" />
+                                </div>
                                 <div>
                                     <h4 className="font-semibold text-text-heading text-sm">Calendly</h4>
                                     {isConnected('calendly') ? (
