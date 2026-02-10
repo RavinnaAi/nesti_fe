@@ -11,6 +11,7 @@ export default function UpcomingMeetings({ onOpenSettings }) {
     const [meetings, setMeetings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" or "past"
 
     const loadMeetings = async () => {
         try {
@@ -44,11 +45,53 @@ export default function UpcomingMeetings({ onOpenSettings }) {
         }).format(date);
     };
 
+    // Filter meetings based on active tab
+    const now = new Date();
+    const filteredMeetings = meetings.filter(meeting => {
+        const meetingDate = new Date(meeting.startTime);
+        if (activeTab === "upcoming") {
+            return meetingDate >= now;
+        } else {
+            return meetingDate < now;
+        }
+    });
+
+    // Sort accordingly
+    filteredMeetings.sort((a, b) => {
+        const dateA = new Date(a.startTime);
+        const dateB = new Date(b.startTime);
+        return activeTab === "upcoming"
+            ? dateA - dateB
+            : dateB - dateA; // Past meetings: most recent first
+    });
+
     return (
         <div className="bg-white rounded-md border border-border shadow-lg shadow-primary/5 overflow-hidden flex flex-col min-h-[12rem] relative">
             <div className="p-4 border-b border-border flex items-center justify-between bg-background-light/20">
-                <div className="flex items-center gap-2">
-                    <h3 className="text-base font-bold text-text-heading">Upcoming Meetings</h3>
+                <div className="flex items-center gap-4">
+                    <h3 className="text-base font-bold text-text-heading">Meetings</h3>
+
+                    <div className="flex p-1 bg-background-light rounded-lg border border-border/50">
+                        <button
+                            onClick={() => setActiveTab("upcoming")}
+                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${activeTab === "upcoming"
+                                ? "bg-white text-primary shadow-sm"
+                                : "text-text-muted hover:text-text-heading"
+                                }`}
+                        >
+                            Upcoming
+                        </button>
+                        <button
+                            onClick={() => setActiveTab("past")}
+                            className={`px-3 py-1 text-xs font-semibold rounded-md transition-all ${activeTab === "past"
+                                ? "bg-white text-primary shadow-sm"
+                                : "text-text-muted hover:text-text-heading"
+                                }`}
+                        >
+                            Past
+                        </button>
+                    </div>
+
                     <button
                         onClick={loadMeetings}
                         className="p-1 rounded-md text-text-muted hover:text-primary hover:bg-primary/5 transition-colors"
@@ -65,26 +108,23 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                         <Settings2 size={14} />
                         Manage
                     </button>
-                    {/* <button className="text-xs font-bold text-primary hover:underline flex items-center gap-1.5 px-3 py-1.5 rounded-md hover:bg-primary/5 transition-colors">
-                        View Calendar <ArrowRight size={14} />
-                    </button> */}
                 </div>
             </div>
 
-            <div className="divide-y divide-border/60 flex-1">
+            <div className="divide-y divide-border/60 flex-1 overflow-y-auto max-h-[300px]">
                 {loading && meetings.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-10 text-text-muted">
                         <Loader2 size={24} className="animate-spin mb-2" />
                         <p className="text-xs">Loading schedule...</p>
                     </div>
-                ) : meetings.length > 0 ? (
-                    meetings.map((meeting, idx) => (
+                ) : filteredMeetings.length > 0 ? (
+                    filteredMeetings.map((meeting, idx) => (
                         <motion.div
                             key={meeting.id}
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className="p-4 hover:bg-background-light/30 transition-colors group"
+                            className={`p-4 hover:bg-background-light/30 transition-colors group ${activeTab === 'past' ? 'opacity-75 grayscale-[0.3]' : ''}`}
                         >
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex gap-4">
@@ -102,7 +142,14 @@ export default function UpcomingMeetings({ onOpenSettings }) {
 
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2">
-                                            <h4 className="font-bold text-sm text-text-heading line-clamp-1">{meeting.title}</h4>
+                                            <h4 className={`font-bold text-sm text-text-heading line-clamp-1 ${activeTab === 'past' ? 'line-through decoration-text-muted/50' : ''}`}>
+                                                {meeting.title}
+                                            </h4>
+                                            {activeTab === 'past' && (
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500">
+                                                    Ended
+                                                </span>
+                                            )}
                                         </div>
 
                                         <div className="flex items-center gap-3 text-xs text-text-muted">
@@ -121,7 +168,7 @@ export default function UpcomingMeetings({ onOpenSettings }) {
 
                                 <div className="flex flex-col items-end gap-2">
                                     <div className="flex gap-2">
-                                        {meeting.link && (
+                                        {meeting.link && activeTab === 'upcoming' && (
                                             <a
                                                 href={meeting.link}
                                                 target="_blank"
@@ -129,6 +176,16 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                                                 className="h-7 px-3 rounded-md bg-primary text-white text-[10px] font-bold shadow-sm shadow-primary/20 hover:bg-primary-dark transition-all flex items-center gap-1"
                                             >
                                                 Join <ExternalLink size={10} />
+                                            </a>
+                                        )}
+                                        {meeting.link && activeTab === 'past' && (
+                                            <a
+                                                href={meeting.link}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="h-7 px-3 rounded-md bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 transition-all flex items-center gap-1"
+                                            >
+                                                Link <ExternalLink size={10} />
                                             </a>
                                         )}
                                     </div>
@@ -141,7 +198,10 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                         <div className="w-12 h-12 rounded-md bg-background-light flex items-center justify-center text-text-muted">
                             <Calendar size={24} />
                         </div>
-                        <p className="text-sm font-semibold text-text-heading">No Upcoming Meetings</p>
+                        <p className="text-sm font-semibold text-text-heading">
+                            No {activeTab} meetings
+                        </p>
+
                         <p className="text-xs text-text-muted max-w-[250px]">
                             Connect your Google Calendar or Calendly to see your upcoming schedule here.
                         </p>
