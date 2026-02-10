@@ -124,7 +124,7 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                             initial={{ opacity: 0, x: -10 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: idx * 0.1 }}
-                            className={`p-4 hover:bg-background-light/30 transition-colors group ${activeTab === 'past' ? 'opacity-75 grayscale-[0.3]' : ''}`}
+                            className={`p-4 transition-colors shadow-inner group ${activeTab === 'past' ? 'bg-red-100' : 'bg-gradient-to-br from-primary/60 via-primary-dark/30 to-primary/20'}`}
                         >
                             <div className="flex items-start justify-between gap-4">
                                 <div className="flex gap-4">
@@ -142,11 +142,11 @@ export default function UpcomingMeetings({ onOpenSettings }) {
 
                                     <div className="space-y-1">
                                         <div className="flex items-center gap-2">
-                                            <h4 className={`font-bold text-sm text-text-heading line-clamp-1 ${activeTab === 'past' ? 'line-through decoration-text-muted/50' : ''}`}>
+                                            <h4 className={`font-bold text-sm text-text-heading line-clamp-1 ${activeTab === 'past' ? 'line-through text-red-700 decoration-red-700/50' : ''}`}>
                                                 {meeting.title}
                                             </h4>
                                             {activeTab === 'past' && (
-                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-gray-100 text-gray-500">
+                                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-200 text-red-700 border border-red-200">
                                                     Ended
                                                 </span>
                                             )}
@@ -179,14 +179,11 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                                             </a>
                                         )}
                                         {meeting.link && activeTab === 'past' && (
-                                            <a
-                                                href={meeting.link}
-                                                target="_blank"
-                                                rel="noopener noreferrer"
-                                                className="h-7 px-3 rounded-md bg-gray-100 text-gray-500 text-[10px] font-bold hover:bg-gray-200 transition-all flex items-center gap-1"
+                                            <span
+                                                className="h-7 px-3 rounded-md bg-red-200 text-red-700 border border-red-200 text-[10px] font-bold cursor-not-allowed flex items-center gap-1"
                                             >
                                                 Link <ExternalLink size={10} />
-                                            </a>
+                                            </span>
                                         )}
                                     </div>
                                 </div>
