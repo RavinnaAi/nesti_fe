@@ -146,7 +146,7 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
                         </div> */}
 
                         {/* Calendly */}
-                        <div className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
+                        <div className="flex items-center flex-wrap justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
                                     <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Calendly" className="w-full h-full object-contain" />
