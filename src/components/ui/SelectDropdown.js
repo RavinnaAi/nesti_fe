@@ -63,15 +63,15 @@ export default function SelectDropdown({
           onFocus={onFocus}
           onBlur={onBlur}
           className={`w-full ${disabled ? "!cursor-not-allowed !bg-gray-100" : ""
-            } ${size === "small" ? "h-10 text-xs px-3 pr-10" : "h-14 px-4 pr-12"} border-2 rounded-md transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-center ${error
+            } ${size === "small" ? "h-10 text-xs px-3 pr-10" : "h-14 px-4 pr-12"} border-2 rounded-md transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-start pt-4 ${error
               ? "border-red-400 focus:border-red-500 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-primary/20"
             } ${value ? "text-text-heading" : "text-text-muted"}`}
         >
           {selectedOption ? (
-            <span className="font-medium flex items-center gap-2">
+            <span className="font-medium flex items-start gap-2">
               {selectedOption.icon ? (
-                <selectedOption.icon size={18} className="text-primary" />
+                <selectedOption.icon size={18} className="text-primary mt-0.5" />
               ) : null}
               {selectedOption.label}
             </span>
@@ -109,9 +109,9 @@ export default function SelectDropdown({
                     onChange(opt.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full px-4 py-3 flex items-center gap-3 transition-colors group duration-150 hover:!text-primary-dark  ${isSelected
-                      ? "bg-primary/20 text-primary-dark"
-                      : "hover:bg-primary/20 hover:text-primary-dark"
+                  className={`w-full px-4 py-3 flex items-start gap-3 transition-colors group duration-150 hover:!text-primary-dark  ${isSelected
+                    ? "bg-primary/20 text-primary-dark"
+                    : "hover:bg-primary/20 hover:text-primary-dark"
                     } ${index !== options.length - 1
                       ? "border-b border-border/50"
                       : ""
@@ -123,7 +123,7 @@ export default function SelectDropdown({
                     </div>
                   ) : null}
                   <span
-                    className={`font-medium transition-colors text-sm duration-150
+                    className={`font-medium transition-colors text-sm duration-150 pt-0.5
                        ${isSelected
                         ? "text-primary-dark"
                         : "group-hover:text-primary-dark"

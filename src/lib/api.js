@@ -54,6 +54,11 @@ export const API_ENDPOINTS = {
     status: withBaseUrl("/api/calendar/status"),
     disconnect: (provider) => withBaseUrl(`/api/calendar/disconnect/${provider}`),
   },
+  billing: {
+    setupIntent: withBaseUrl("/api/billing/setup-intent"),
+    subscriptions: withBaseUrl("/api/billing/subscriptions"),
+    taxCalculate: withBaseUrl("/api/billing/tax/calculate"),
+  },
 };
 
 export async function apiClient({ url, method = "GET", data, token }) {
