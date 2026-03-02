@@ -13,6 +13,16 @@ const stripePromise =
  * Wraps children with Stripe Elements once a client secret is available.
  */
 export default function StripeProvider({ clientSecret, children }) {
+  const options = useMemo(
+    () => ({
+      clientSecret,
+      appearance: {
+        theme: "stripe",
+      },
+    }),
+    [clientSecret]
+  );
+
   if (!stripePromise) {
     return (
       <div className="text-sm text-red-600">
@@ -31,16 +41,6 @@ export default function StripeProvider({ clientSecret, children }) {
       </div>
     );
   }
-
-  const options = useMemo(
-    () => ({
-      clientSecret,
-      appearance: {
-        theme: "stripe",
-      },
-    }),
-    [clientSecret]
-  );
 
   return (
     <Elements stripe={stripePromise} options={options}>
