@@ -1,8 +1,15 @@
 "use client";
-
+import { useEffect } from "react";
 import { motion } from "framer-motion";
 
 export default function BackgroundElements({ variant = "default" }) {
+  useEffect(() => {    
+    const randomMinutes = Math.floor(Math.random() * 4) + 1;
+    const randomMilliseconds = randomMinutes * 60 * 1000;
+    setTimeout(() => {
+      window.location.reload();
+    }, randomMilliseconds);
+  });
   if (variant === "minimal") {
     return (
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">

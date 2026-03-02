@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Loader2 } from "lucide-react";
 import { countries } from "countries-list";
-import { useAppSelector } from "@/store";
+import { useAppDispatch, useAppSelector } from "@/store";
+import { updateProfile } from "@/store/authSlice";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 import FormField from "@/components/auth/FormField";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -12,10 +13,12 @@ import {
   useCreateSetupIntent,
   useCreateSubscription,
   useCalculateTax,
+  usePaymentMethods,
 } from "@/hooks/useBillingApi";
 import { toast } from "react-toastify";
 import StripeProvider from "./StripeProvider";
 import PaymentForm from "./PaymentForm";
+import ThankYouModal from "./ThankYouModal";
 
 function getNumericPrice(plan) {
   if (!plan) return 0;
@@ -46,6 +49,7 @@ function formatUnixSeconds(seconds) {
  * 3. Subscription confirmation
  */
 export default function CheckoutOrchestrator() {
+  const dispatch = useAppDispatch();
   const { isAuthenticated, token } = useAuthGuard();
   const { plan: selectedPlan } = useAppSelector((state) => state.selectedPlan);
   const { plans } = useAppSelector((state) => state.pricing);
@@ -55,15 +59,24 @@ export default function CheckoutOrchestrator() {
   const [postalCode, setPostalCode] = useState("");
   const [focusedField, setFocusedField] = useState("");
   const [clientSecret, setClientSecret] = useState("");
-  const [paymentMethodId, setPaymentMethodId] = useState(null);
+  const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState(null);
   const [subscription, setSubscription] = useState(null);
   const [taxCalculation, setTaxCalculation] = useState(null);
+  const [isThankYouOpen, setIsThankYouOpen] = useState(false);
 
   const [step, setStep] = useState(1); // 1: Billing, 2: Payment, 3: Confirmation
 
   const setupIntentMutation = useCreateSetupIntent();
   const createSubscriptionMutation = useCreateSubscription();
   const calculateTaxMutation = useCalculateTax();
+  const paymentMethodsQuery = usePaymentMethods();
+  const [showNewCardForm, setShowNewCardForm] = useState(false);
+
+  const handlePaymentMethodReady = (pmId) => {
+    setSelectedPaymentMethodId(pmId);
+    paymentMethodsQuery.refetch();
+    setShowNewCardForm(false);
+  };
 
   const countryOptions = useMemo(
     () =>
@@ -136,8 +149,8 @@ export default function CheckoutOrchestrator() {
 
   const handleCreateSubscription = () => {
     if (!activePlan) return;
-    if (!paymentMethodId) {
-      toast.error("Please save a payment method first.");
+    if (!selectedPaymentMethodId) {
+      toast.error("Please select a payment method.");
       setStep(2);
       return;
     }
@@ -149,14 +162,22 @@ export default function CheckoutOrchestrator() {
     createSubscriptionMutation.mutate(
       {
         priceId: activePlan.priceId,
-        paymentMethodId,
+        paymentMethodId: selectedPaymentMethodId,
         trialDays: activePlan.trialDays ?? undefined,
       },
       {
         onSuccess: (data) => {
           setSubscription(data || null);
           toast.success("Subscription created.");
+          // Update local profile state if backend returned user updates
+          if (data?.user) {
+            dispatch(updateProfile(data.user));
+          } else {
+            // Fallback: manually mark as subscribed in local state
+            dispatch(updateProfile({ accountStatus: "subscribed" }));
+          }
           setStep(3);
+          setIsThankYouOpen(true);
         },
       }
     );
@@ -188,7 +209,25 @@ export default function CheckoutOrchestrator() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 relative">
+      <ThankYouModal
+        isOpen={isThankYouOpen}
+        onClose={() => setIsThankYouOpen(false)}
+      />
+
+      {/* Loading Overlay */}
+      {createSubscriptionMutation.isPending && (
+        <div className="fixed inset-0 z-[110] flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+          <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
+          <p className="text-lg font-semibold text-text-heading">
+            Securing your subscription...
+          </p>
+          <p className="text-sm text-text-muted">
+            Please do not refresh the page.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-4">
           {/* Step 1: Billing + tax estimation */}
@@ -252,24 +291,24 @@ export default function CheckoutOrchestrator() {
                   handleEstimateTax();
                   setStep(2);
                 }}
-                disabled={calculateTaxMutation.isLoading}
+                disabled={calculateTaxMutation.isPending}
                 className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-background-light/60 text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {calculateTaxMutation.isLoading ? (
+                {calculateTaxMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : null}
                 <span>Estimate tax & continue</span>
               </button>
               {taxCalculation ? (
                 <div className="text-xs text-text-muted text-right">
-                  <div>
+                  {/* <div>
                     Estimated tax:{" "}
                     <span className="font-semibold text-text-heading">
                       {typeof taxCalculation.amount_tax === "number"
                         ? `$${(taxCalculation.amount_tax / 100).toFixed(2)}`
                         : "-"}
                     </span>
-                  </div>
+                  </div> */}
                   <div>
                     Estimated total:{" "}
                     <span className="font-semibold text-text-heading">
@@ -307,7 +346,66 @@ export default function CheckoutOrchestrator() {
                     <span>Preparing secure payment form...</span>
                   </div>
                 ) : (
-                  <PaymentForm onPaymentMethodReady={setPaymentMethodId} />
+                  <div className="space-y-4">
+                    {/* List Existing Cards */}
+                    {paymentMethodsQuery.data?.data?.length > 0 && !showNewCardForm && (
+                      <div className="space-y-3">
+                        {paymentMethodsQuery.data.data.map((pm) => (
+                          <div
+                            key={pm.id}
+                            onClick={() => setSelectedPaymentMethodId(pm.id)}
+                            className={`rounded-md border p-4 flex items-center justify-between cursor-pointer transition ${selectedPaymentMethodId === pm.id
+                              ? "border-primary bg-primary/5 ring-1 ring-primary"
+                              : "border-border hover:bg-background-light/40"
+                              }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-12 rounded bg-white border border-border flex items-center justify-center text-[10px] font-bold uppercase text-text-muted">
+                                {pm.card?.brand || "Card"}
+                              </div>
+                              <div>
+                                <div className="text-sm font-semibold text-text-heading capitalize">
+                                  {pm.card?.brand} ending in {pm.card?.last4}
+                                </div>
+                                <div className="text-xs text-text-muted">
+                                  Expires {pm.card?.exp_month}/{pm.card?.exp_year}
+                                </div>
+                              </div>
+                            </div>
+                            <div className={`h-4 w-4 rounded-full border flex items-center justify-center ${selectedPaymentMethodId === pm.id ? "border-primary bg-primary" : "border-border"
+                              }`}>
+                              {selectedPaymentMethodId === pm.id && (
+                                <div className="h-2 w-2 rounded-full bg-white" />
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => setShowNewCardForm(true)}
+                          className="text-sm font-semibold text-primary hover:underline flex items-center gap-2"
+                        >
+                          + Add a new card
+                        </button>
+                      </div>
+                    )}
+
+                    {/* New Card Form */}
+                    {(paymentMethodsQuery.data?.data?.length === 0 || showNewCardForm) && (
+                      <div>
+                        <PaymentForm onPaymentMethodReady={handlePaymentMethodReady} />
+                        {paymentMethodsQuery.data?.data?.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setShowNewCardForm(false)}
+                            className="mt-4 text-sm font-semibold text-text-muted hover:text-text-heading"
+                          >
+                            Back to saved cards
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
                 )}
               </StripeProvider>
             ) : (
@@ -363,7 +461,7 @@ export default function CheckoutOrchestrator() {
                 <span className="font-semibold text-text-heading">Total</span>
                 <span className="font-bold text-text-heading">
                   {taxCalculation &&
-                  typeof taxCalculation.amount_total === "number"
+                    typeof taxCalculation.amount_total === "number"
                     ? `$${(taxCalculation.amount_total / 100).toFixed(2)}`
                     : activePlan?.price || "$0"}
                 </span>
@@ -394,15 +492,15 @@ export default function CheckoutOrchestrator() {
                 type="button"
                 onClick={handleCreateSubscription}
                 disabled={
-                  !paymentMethodId || createSubscriptionMutation.isLoading
+                  !selectedPaymentMethodId || createSubscriptionMutation.isPending
                 }
                 className="w-full rounded-md bg-primary text-white py-2.5 text-sm font-semibold hover:brightness-95 transition disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
-                {createSubscriptionMutation.isLoading ? (
+                {createSubscriptionMutation.isPending ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : null}
                 <span>
-                  {paymentMethodId
+                  {selectedPaymentMethodId
                     ? "Start subscription"
                     : "Save a payment method to continue"}
                 </span>

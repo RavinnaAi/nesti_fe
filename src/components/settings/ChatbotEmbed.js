@@ -7,6 +7,8 @@ import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppSelector } from "@/store";
 import dynamic from "next/dynamic";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
 const FRONTEND_BASE = process.env.NEXT_PUBLIC_API_URL || "";
@@ -14,6 +16,9 @@ const ChatWidget = dynamic(() => import("@/components/chatbot/ChatWidget"), { ss
 
 export default function ChatbotEmbed() {
   const { token } = useAppSelector((state) => state.auth);
+  // Basic chatbot embedding is available on free trial + Basic/Pro subscriptions.
+  const { hasFeature } = useFeatureAccess();
+  const canUseChatbot = hasFeature(FEATURES.CHATBOT_BASIC);
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [copiedKey, setCopiedKey] = useState("");
@@ -115,6 +120,19 @@ export default function ChatbotEmbed() {
         <div className="text-sm font-semibold text-text-heading mb-2">Embed Chatbot</div>
         <p className="text-sm text-text-body">
           Please log in to manage your chatbot embed links.
+        </p>
+      </div>
+    );
+  }
+
+  if (!canUseChatbot) {
+    return (
+      <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-2">
+        <div className="text-sm font-semibold text-text-heading mb-1">Embed Chatbot</div>
+        <p className="text-sm text-text-body">
+          Chatbot embeds are part of the paid Nesti plans.{" "}
+          <span className="font-semibold">Upgrade your subscription</span> on the Subscription tab to unlock this
+          feature.
         </p>
       </div>
     );

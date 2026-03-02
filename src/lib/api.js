@@ -57,6 +57,7 @@ export const API_ENDPOINTS = {
   billing: {
     setupIntent: withBaseUrl("/api/billing/setup-intent"),
     subscriptions: withBaseUrl("/api/billing/subscriptions"),
+    paymentMethods: withBaseUrl("/api/billing/payment-methods"),
     taxCalculate: withBaseUrl("/api/billing/tax/calculate"),
   },
 };

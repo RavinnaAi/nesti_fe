@@ -72,7 +72,7 @@ const nextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: `default-src 'self'; base-uri 'self'; object-src 'none'; frame-src https://calendly.com; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; ${connectSrc} form-action 'self'`,
+            value: `default-src 'self'; base-uri 'self'; object-src 'none'; frame-src https://calendly.com https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; ${connectSrc} form-action 'self'`,
           },
           {
             key: "Strict-Transport-Security",

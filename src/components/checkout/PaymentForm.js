@@ -46,8 +46,17 @@ export default function PaymentForm({ onPaymentMethodReady }) {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="rounded-md border border-border/70 bg-background-light/60 p-4">
-        <PaymentElement />
+      <div
+        className="rounded-md border border-border/70 bg-background-light/60 p-4"
+        style={{ minHeight: "250px" }}
+      >
+        <PaymentElement options={{ paymentMethodOrder: ['card'] }} />
+        {!stripe || !elements ? (
+          <div className="flex items-center justify-center p-8 text-sm text-text-muted gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span>Loading payment options...</span>
+          </div>
+        ) : null}
       </div>
       <button
         type="submit"

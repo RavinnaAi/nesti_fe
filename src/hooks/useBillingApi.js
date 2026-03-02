@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppSelector } from "@/store";
@@ -66,3 +66,19 @@ export function useCalculateTax() {
   });
 }
 
+export function usePaymentMethods() {
+  const { token } = useAppSelector((state) => state.auth);
+
+  return useQuery({
+    queryKey: ["paymentMethods"],
+    queryFn: () => {
+      if (!token) throw new Error("missing or invalid Authorization header");
+      return apiClient({
+        url: API_ENDPOINTS.billing.paymentMethods,
+        method: "GET",
+        token,
+      });
+    },
+    enabled: !!token,
+  });
+}

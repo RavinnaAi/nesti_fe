@@ -1,4 +1,4 @@
-"use client";
+ "use client";
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -6,6 +6,8 @@ import { Calendar, RefreshCw } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchAnalyticsSummary, fetchAnalyticsFunnel } from "@/lib/chatClient";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 const normalizeObject = (data) => {
   if (!data) return {};
@@ -34,6 +36,8 @@ const getDefaultRange = () => {
 
 export default function AnalyticsPage() {
   const { isAuthenticated } = useAuthGuard();
+  // Require advanced analytics feature (Pro)
+  useFeatureAccess(FEATURES.LEADS_INSIGHTS_ADVANCED);
   const { token } = useAppSelector((state) => state.auth);
   const defaults = useMemo(() => getDefaultRange(), []);
   const [startDate, setStartDate] = useState(defaults.start);

@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -43,6 +45,24 @@ export default function SettingsPage() {
     handleScroll();
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const upgrade = params.get("upgrade");
+    const expired = params.get("expired");
+
+    if (tab && tabs.some((t) => t.id === tab)) {
+      setActiveTab(tab);
+    }
+
+    if (upgrade === "1") {
+      toast.info("Upgrade is required to access this feature.");
+    } else if (expired === "1") {
+      toast.warning("Your trial has expired. Please subscribe to continue.");
+    }
   }, []);
   const ActiveComponent = useMemo(() => {
     switch (activeTab) {

@@ -4,20 +4,29 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setSelectedPlan } from "@/store/selectedPlanSlice";
 import { setPlans } from "@/store/pricingSlice";
-import { useRouter } from "next/navigation";
+import { updateProfile } from "@/store/authSlice";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useStrapiQuery } from "@/lib/strapi";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Building, Mail, User, Send } from "lucide-react";
+import { X, Check, Building, Mail, User, Send, CreditCard, Plus, Loader2, Trash2 } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
+import { ACCOUNT_STATUS, SUBSCRIPTION_PLAN } from "@/constants/features";
+import { usePaymentMethods } from "@/hooks/useBillingApi";
+import StripeProvider from "@/components/checkout/StripeProvider";
+import PaymentForm from "@/components/checkout/PaymentForm";
 
 export default function SubscriptionInfo() {
   const dispatch = useAppDispatch();
   const { plans } = useAppSelector((state) => state.pricing);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { user, token } = useAppSelector((state) => state.auth);
   const [selectedPlanForModal, setSelectedPlanForModal] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAddCardOpen, setIsAddCardOpen] = useState(false);
+  const [clientSecret, setClientSecret] = useState("");
 
   // Enterprise Form State
   const [enterpriseData, setEnterpriseData] = useState({
@@ -27,7 +36,28 @@ export default function SubscriptionInfo() {
   });
   const [isEnterpriseSubmitting, setIsEnterpriseSubmitting] = useState(false);
   const [isSubscribed, setIsSubscribed] = useState(false);
-  const token = useAppSelector((state) => state.auth.token);
+
+  // Payment Methods
+  const paymentMethodsQuery = usePaymentMethods();
+
+  // 1. Refresh user profile on mount to ensure status is accurate
+  useEffect(() => {
+    const refreshProfile = async () => {
+      if (!token) return;
+      try {
+        const res = await apiClient({
+          url: "/auth/profile",
+          token,
+        });
+        if (res.success && res.user) {
+          dispatch(updateProfile(res.user));
+        }
+      } catch (error) {
+        console.error("Error refreshing profile:", error);
+      }
+    };
+    refreshProfile();
+  }, [token, dispatch]);
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -173,10 +203,33 @@ export default function SubscriptionInfo() {
     return [lower, popularPlan, ...higher];
   }, [effectivePlans]);
 
-  const activePlan = useMemo(() => {
-    if (!effectivePlans?.length) return null;
-    return effectivePlans.find((p) => p.popular) || effectivePlans[0];
-  }, [effectivePlans]);
+  const hasSavedCards = paymentMethodsQuery.data?.data?.length > 0;
+
+  const handleOpenAddCard = async () => {
+    if (hasSavedCards) return; // Safeguard if button somehow clicked
+    setIsAddCardOpen(true);
+    try {
+      const res = await apiClient({
+        url: API_ENDPOINTS.billing.setupIntent,
+        method: "POST",
+        token,
+      });
+      const secret = res?.client_secret || res?.clientSecret;
+      if (secret) {
+        setClientSecret(secret);
+      } else {
+        toast.error("Failed to initialize payment form.");
+      }
+    } catch (error) {
+      toast.error("Failed to initialize payment form.");
+    }
+  };
+
+  const handleAddCardSuccess = () => {
+    setIsAddCardOpen(false);
+    setClientSecret("");
+    paymentMethodsQuery.refetch();
+  };
 
   if (isLoading && !effectivePlans.length) {
     return (
@@ -204,83 +257,160 @@ export default function SubscriptionInfo() {
 
   return (
     <div className="space-y-4">
-      {/* <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+      {/* Account status summary */}
+      <div className="rounded-md border border-border bg-background-light/60 p-4 shadow-sm space-y-2">
         <div className="flex items-center justify-between">
           <div>
             <div className="text-sm font-semibold text-text-heading">
-              Current Plan
+              Account Status
             </div>
             <div className="text-xs text-text-muted">
-              {activePlan?.name || "Plan"} • Billed monthly
+              Trial, subscription, and plan information
             </div>
           </div>
-          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-semibold">
-            Active
-          </span>
+          <StatusPill user={user} />
         </div>
-        <div className="mt-3 text-sm text-text-body">
-          Price: {activePlan?.price || "$0"} {activePlan?.period || ""}
-        </div>
-      </div> */}
+        <StatusDetails user={user} />
+        {searchParams.get("expired") === "1" ? (
+          <div className="mt-2 text-xs text-red-600 font-semibold">
+            Your trial has expired. Please subscribe to continue using Nesti.
+          </div>
+        ) : null}
+      </div>
+      {paymentMethodsQuery.data?.data?.length > 0 && (
 
+        <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold text-text-heading">
+                Payment Methods
+              </div>
+              <div className="text-xs text-text-muted">
+                View and manage your saved cards
+              </div>
+            </div>
+            {!hasSavedCards && (
+              <button
+                onClick={handleOpenAddCard}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-primary/10 text-primary text-xs font-semibold hover:bg-primary/20 transition-colors"
+              >
+                <Plus size={14} />
+                Add Card
+              </button>
+            )}
+          </div>
+
+          {paymentMethodsQuery.isLoading ? (
+            <div className="flex items-center gap-2 py-2 text-xs text-text-muted">
+              <Loader2 size={14} className="animate-spin" />
+              <span>Loading payment methods...</span>
+            </div>
+          ) : hasSavedCards ? (
+            <div className="grid grid-cols-1 gap-2">
+              {paymentMethodsQuery.data.data.map((pm) => (
+                <div
+                  key={pm.id}
+                  className="flex items-center justify-between rounded-md border border-border/60 bg-background-light/20 p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="h-8 w-10 rounded bg-white border border-border flex items-center justify-center text-[8px] font-bold uppercase text-text-muted shadow-sm">
+                      {pm.card?.brand || "Card"}
+                    </div>
+                    <div>
+                      <div className="text-xs font-semibold text-text-heading capitalize">
+                        {pm.card?.brand} ending in {pm.card?.last4}
+                      </div>
+                      <div className="text-[10px] text-text-muted">
+                        Expires {pm.card?.exp_month}/{pm.card?.exp_year}
+                      </div>
+                    </div>
+                  </div>
+                  {/* <button className="text-text-muted hover:text-red-500 transition-colors">
+                  <Trash2 size={14} />
+                </button> */}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="rounded-md border border-dashed border-border p-6 text-center">
+              <div className="flex justify-center mb-2 text-text-muted/40">
+                <CreditCard size={32} />
+              </div>
+              <p className="text-xs text-text-muted">No saved payment methods found.</p>
+            </div>
+          )}
+        </div>
+      )}
       <div className="rounded-md flex flex-col gap- pb-8 ">
-        {/* <div className="text-lg font-semibold mb-2 text-text-heading">
-          Available Plans
-        </div> */}
         <div className="flex flex-col justify-center mt-6 gap-8">
-          {sortedPlans?.map((plan) => (
-            <div
-              key={`plan-${plan?.name}`}
-              onClick={() => {
-                setSelectedPlanForModal(plan);
-                setIsModalOpen(true);
-              }}
-              className={`group cursor-pointer w-full shadow-inner rounded-md relative md:p-8 flex flex-col gap-3 border py-5 p-2 text-sm transition-all duration-200 ${plan?.popular
-                // ? "border-transparent bg-gradient-to-r from-primary to-primary-dark text-white"
-                ? "border-border/60 bg-white text-text-body hover:border-primary-dark/50"
-                : "border-border/60 bg-white text-text-body hover:border-primary-dark/50"
-                }`}
-            >
-
-              <div className="flex justify-between items-center gap-1">
-                <div className={`md:text-sm text-xs px-5 py-1 rounded-md font-semibold md:min-w-[120px] text-center shadow-inner ${plan?.popular ? "bg-primary-dark/20 text-text-heading" : "bg-primary-dark/20 text-text-heading"
-                  }`}>{plan?.name}</div>
-                <div className={`md:text-sm text-xs px-5 py-1 rounded-md font-semibold md:min-w-[150px] text-center shadow-inner ${plan?.popular ? "bg-primary-dark/20 text-text-heading" : "bg-primary-dark/20 text-text-heading"
-                  }`}>
+          {sortedPlans
+            ?.filter((plan) => {
+              const userStatus = (user?.accountStatus || user?.account_status || "").toLowerCase();
+              const userPlan = (user?.subscriptionPlan || user?.subscription_plan || "").toLowerCase();
+              if (userStatus === "subscribed" && userPlan) {
+                return plan.name.toLowerCase().includes(userPlan);
+              }
+              return true;
+            })
+            .map((plan) => (
+              <div
+                key={`plan-${plan?.name}`}
+                onClick={() => {
+                  const userStatus = (user?.accountStatus || user?.account_status || "").toLowerCase();
+                  if (userStatus === "subscribed") return;
+                  setSelectedPlanForModal(plan);
+                  setIsModalOpen(true);
+                }}
+                className={`group cursor-pointer w-full shadow-inner rounded-md relative md:p-8 flex flex-col gap-3 border py-5 p-2 text-sm transition-all duration-200 ${plan?.popular
+                    ? "border-border/60 bg-white text-text-body hover:border-primary-dark/50"
+                    : "border-border/60 bg-white text-text-body hover:border-primary-dark/50"
+                  } ${(user?.accountStatus || user?.account_status || "").toLowerCase() === "subscribed"
+                    ? "cursor-default border-primary/40 bg-primary/5"
+                    : ""
+                  }`}
+              >
+                <div className="flex justify-between items-center gap-1">
                   <div
-                    className={`font-semibold ${plan?.popular ? "text-text-heading" : "text-text-heading"
+                    className={`md:text-sm text-xs px-5 py-1 rounded-md font-semibold md:min-w-[120px] text-center shadow-inner ${plan?.popular
+                        ? "bg-primary-dark/20 text-text-heading"
+                        : "bg-primary-dark/20 text-text-heading"
                       }`}
                   >
-                    {plan?.price} {plan?.period}
+                    {plan?.name}
                   </div>
-                </div>
-                {/* <div
-                  className={`text-xs ${plan?.popular ? "text-white" : "text-text-muted group-hover:text-white"
-                    }`}
-                >
-                  {plan?.description || "No description"}
-                </div> */}
-              </div>
-
-              {/* Tags Section */}
-              {Array.isArray(plan?.tags) && plan.tags.length > 0 && (
-                <div className="flex flex-wrap w-full md:pl-8 pl-2 absolute -top-4 left-1/2 -translate-x-1/2 gap-2 mt-1">
-                  {plan.tags.map((tag, idx) => (
+                  <div
+                    className={`md:text-sm text-xs px-5 py-1 rounded-md font-semibold md:min-w-[150px] text-center shadow-inner ${plan?.popular
+                        ? "bg-primary-dark/20 text-text-heading"
+                        : "bg-primary-dark/20 text-text-heading"
+                      }`}
+                  >
                     <div
-                      key={idx}
-                      className={`md:text-[10px] text-[8px] md:px-3 px-2 md:py-0.5 py-0 rounded-full font-medium md:font-semibold uppercase tracking-wider ${plan?.popular
-                        ? "bg-primary text-white border border-primary/30"
-                        : "bg-primary text-white border border-primary/30 "
+                      className={`font-semibold ${plan?.popular ? "text-text-heading" : "text-text-heading"
                         }`}
                     >
-                      {tag}
+                      {plan?.price} {plan?.period}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              )}
 
-            </div>
-          ))}
+                {/* Tags Section */}
+                {Array.isArray(plan?.tags) && plan.tags.length > 0 && (
+                  <div className="flex flex-wrap w-full md:pl-8 pl-2 absolute -top-4 left-1/2 -translate-x-1/2 gap-2 mt-1">
+                    {plan.tags.map((tag, idx) => (
+                      <div
+                        key={idx}
+                        className={`md:text-[10px] text-[8px] md:px-3 px-2 md:py-0.5 py-0 rounded-full font-medium md:font-semibold uppercase tracking-wider ${plan?.popular
+                            ? "bg-primary text-white border border-primary/30"
+                            : "bg-primary text-white border border-primary/30 "
+                          }`}
+                      >
+                        {tag}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
         </div>
 
         {/* Enterprise Waitlist Section */}
@@ -484,6 +614,184 @@ export default function SubscriptionInfo() {
           </div>
         )}
       </AnimatePresence>
+
+      <AnimatePresence>
+        {isAddCardOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsAddCardOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-md overflow-hidden rounded-xl bg-white shadow-2xl border border-border p-6"
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold text-text-heading">Add Payment Method</h3>
+                <button onClick={() => setIsAddCardOpen(false)} className="text-text-muted hover:text-text-heading">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <StripeProvider clientSecret={clientSecret}>
+                {clientSecret ? (
+                  <PaymentForm onPaymentMethodReady={handleAddCardSuccess} />
+                ) : (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 size={24} className="animate-spin text-primary" />
+                  </div>
+                )}
+              </StripeProvider>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+function StatusPill({ user }) {
+  if (!user) return null;
+  const rawStatus =
+    user.accountStatus || user.account_status || ACCOUNT_STATUS.FREE_TRIAL;
+  const status = rawStatus.toLowerCase();
+  const plan = (user.subscriptionPlan || user.subscription_plan || "").toLowerCase();
+
+  let label = "Active";
+  let className = "bg-primary/10 text-primary";
+
+  if (status === ACCOUNT_STATUS.FREE_TRIAL) {
+    label = "Free Trial";
+    className = "bg-amber-100 text-amber-700";
+  } else if (status === ACCOUNT_STATUS.EXPIRED) {
+    label = "Expired";
+    className = "bg-red-100 text-red-700";
+  } else if (status === ACCOUNT_STATUS.SUBSCRIBED) {
+    if (plan === SUBSCRIPTION_PLAN.PRO) {
+      label = "Pro Plan";
+      className = "bg-purple-100 text-purple-700";
+    } else if (plan === SUBSCRIPTION_PLAN.BASIC) {
+      label = "Basic Plan";
+      className = "bg-emerald-100 text-emerald-700";
+    } else {
+      label = "Subscribed";
+    }
+  }
+
+  return (
+    <span className={`px-3 py-1 rounded-full text-[11px] font-semibold ${className}`}>
+      {label}
+    </span>
+  );
+}
+
+function StatusDetails({ user }) {
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  if (!user) return null;
+
+  const status =
+    (user.accountStatus || user.account_status || ACCOUNT_STATUS.FREE_TRIAL)
+      ?.toLowerCase() || ACCOUNT_STATUS.FREE_TRIAL;
+
+  const trialEnds = user.trialEndsAt || user.trial_ends_at;
+  const subEnds = user.subscriptionEndsAt || user.subscription_ends_at;
+  const plan = (user.subscriptionPlan || user.subscription_plan || "").toLowerCase();
+
+  const formatDate = (value) => {
+    if (!value) return null;
+    try {
+      const d = new Date(value);
+      return d.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    } catch {
+      return null;
+    }
+  };
+
+  const getRemainingTime = (endTime) => {
+    if (!endTime) return null;
+    const ms = new Date(endTime).getTime() - now;
+    if (ms <= 0) return "Expired";
+
+    const totalSec = Math.floor(ms / 1000);
+    const days = Math.floor(totalSec / 86400);
+    const hours = Math.floor((totalSec % 86400) / 3600);
+    const minutes = Math.floor((totalSec % 3600) / 60);
+    const seconds = totalSec % 60;
+
+    const parts = [];
+    if (days > 0) parts.push(`${days}d`);
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
+
+    return parts.join(" ");
+  };
+
+  return (
+    <div className="text-xs text-text-muted space-y-1 mt-2">
+      {status === ACCOUNT_STATUS.FREE_TRIAL && (
+        <>
+          <div>
+            Trial status:{" "}
+            <span className="font-semibold text-text-heading">Active</span>
+          </div>
+          <div>
+            Trial ends on:{" "}
+            <span className="font-semibold text-text-heading">
+              {formatDate(trialEnds) || "Unknown"}
+            </span>
+            {trialEnds && (
+              <span className="ml-1.5 px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-bold">
+                {getRemainingTime(trialEnds)} left
+              </span>
+            )}
+          </div>
+        </>
+      )}
+
+      {status === ACCOUNT_STATUS.EXPIRED && (
+        <div className="text-red-600 font-medium">
+          Your free trial has ended. Subscribe to unlock all Nesti features.
+        </div>
+      )}
+
+      {status === ACCOUNT_STATUS.SUBSCRIBED && (
+        <>
+          <div>
+            Current plan:{" "}
+            <span className="font-semibold text-text-heading">
+              {plan === SUBSCRIPTION_PLAN.PRO
+                ? "Pro"
+                : plan === SUBSCRIPTION_PLAN.BASIC
+                  ? "Basic"
+                  : "Unknown"}
+            </span>
+          </div>
+          {subEnds ? (
+            <div>
+              Current billing period until:{" "}
+              <span className="font-semibold text-text-heading">
+                {formatDate(subEnds)}
+              </span>
+            </div>
+          ) : null}
+        </>
+      )}
     </div>
   );
 }

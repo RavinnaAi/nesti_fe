@@ -160,7 +160,7 @@ export function useForgotPassword() {
     onSuccess: (data) => {
       toast.success(
         data?.message ||
-          "Password reset instructions have been sent to your email."
+        "Password reset instructions have been sent to your email."
       );
     },
     onError: toastError,
@@ -238,9 +238,8 @@ export function useProfileQuery() {
         token,
       }),
     onSuccess: (data) => {
-      if (data?.user || data?.data) {
-        dispatch(updateProfile(data.user || data.data));
-      }
+      // NOTE: onSuccess in useQuery is deprecated/removed in TanStack Query v5.
+      // Profile sync is now handled via useEffect in useAuthGuard.js.
     },
     onError: (error) => {
       toastError(error);
