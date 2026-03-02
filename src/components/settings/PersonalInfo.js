@@ -77,7 +77,7 @@ export default function PersonalInfo() {
       fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
       email: form.email.trim().toLowerCase(),
       phone: form.phone.trim(),
-      // calendalyUrl: form.calendalyUrl.trim(),
+      calendalyUrl: form.calendalyUrl.trim(),
       profile_image: profileImage,
       cover_image: coverImage,
     };
@@ -294,7 +294,7 @@ export default function PersonalInfo() {
           focusedField={focusedField}
         />
 
-        {/* <FormField
+        <FormField
           label="Calendaly Url"
           name="calendalyUrl"
           value={form.calendalyUrl}
@@ -306,7 +306,7 @@ export default function PersonalInfo() {
           focusedField={focusedField}
           required
         />  
-        */}
+       
 
       </div>
 

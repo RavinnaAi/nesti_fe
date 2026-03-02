@@ -151,8 +151,8 @@ export default function DashboardPage() {
       const { intent, isMatched } = getLeadMeta(conversation);
       const status = conversation?.status || "active";
       const intentLower = String(intent || "").toLowerCase();
-      if (leadType === "buyers" && intentLower && !intentLower.includes("buy")) return false;
-      if (leadType === "sellers" && intentLower && !intentLower.includes("sell")) return false;
+      if (leadType === "buyers" && intentLower.includes("sell") && !intentLower.includes("buy")) return false;
+      if (leadType === "sellers" && intentLower.includes("buy") && !intentLower.includes("sell")) return false;
       if (leadStatus === "closed" && status !== "closed") return false;
       if (leadStatus === "active" && status === "closed") return false;
       if (matchFilter === "matched" && isMatched !== true) return false;

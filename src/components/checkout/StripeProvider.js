@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 
@@ -21,6 +22,9 @@ export default function StripeProvider({ clientSecret, children }) {
   }
 
   if (!clientSecret) {
+    if (typeof window !== "undefined") {
+      console.warn("StripeProvider: No clientSecret provided.");
+    }
     return (
       <div className="text-sm text-red-600">
         Failed to initialize payment form. Please refresh the page and try again.
@@ -28,16 +32,18 @@ export default function StripeProvider({ clientSecret, children }) {
     );
   }
 
+  const options = useMemo(
+    () => ({
+      clientSecret,
+      appearance: {
+        theme: "stripe",
+      },
+    }),
+    [clientSecret]
+  );
+
   return (
-    <Elements
-      stripe={stripePromise}
-      options={{
-        clientSecret,
-        appearance: {
-          theme: "stripe",
-        },
-      }}
-    >
+    <Elements stripe={stripePromise} options={options}>
       {children}
     </Elements>
   );

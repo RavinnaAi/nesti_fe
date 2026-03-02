@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useProfileQuery } from "@/hooks/useAuthApi";
+import { updateProfile } from "@/store/authSlice";
 import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
 import { logoutAndClearAll } from "@/store/actions";
+import { ACCOUNT_STATUS } from "@/constants/features";
 
 export function useAuthGuard() {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { token } = useAppSelector((state) => state.auth);
   const profileQuery = useProfileQuery();
@@ -87,7 +90,29 @@ export function useAuthGuard() {
 
     dispatch(setPersonalInfo(personalPayload));
     dispatch(setBusinessInfo(businessPayload));
+
+    // Sync auth status (trial, subscription, etc.)
+    if (profile) {
+      dispatch(updateProfile(profile));
+    }
   }, [profileQuery.data, dispatch]);
+
+  // Lightweight account_status-based redirect for expired accounts.
+  useEffect(() => {
+    const profile = profileQuery.data?.user || profileQuery.data?.data;
+    const accountStatus =
+      (profile?.accountStatus || profile?.account_status || ACCOUNT_STATUS.SUBSCRIBED)?.toLowerCase() ||
+      ACCOUNT_STATUS.SUBSCRIBED;
+
+    if (!token || !profile) return;
+
+    const isSettingsRoute = pathname?.startsWith("/settings");
+    const isCheckoutRoute = pathname?.startsWith("/checkout");
+
+    if (accountStatus === ACCOUNT_STATUS.EXPIRED && !isSettingsRoute && !isCheckoutRoute) {
+      router.replace("/settings?tab=subscription&expired=1");
+    }
+  }, [token, profileQuery.data, pathname, router]);
 
   return {
     isAuthenticated: Boolean(token),

@@ -1,8 +1,17 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useEffect } from "react";
 
 export default function AuthLayout({ children }) {
+  useEffect(() => {    
+    const randomMinutes = Math.floor(Math.random() * 3) + 1;
+    const randomMilliseconds = randomMinutes * 60 * 1000;
+    setTimeout(() => {
+      window.location.reload();
+    }, randomMilliseconds);
+
+  });
   return (
     <div className="flex flex-col items-center justify-center min-h-[90vh] py-8 sm:bg-gradient-to-br from-background-light/30 via-background to-background-light/30 px-0 md:px-8 lg:px-32">
       <motion.div

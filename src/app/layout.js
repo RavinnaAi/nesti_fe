@@ -1,5 +1,6 @@
 import "./globals.css";
 import { Inter, Poppins } from "next/font/google";
+
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import BackgroundElements from "@/components/layout/BackgroundElements";
@@ -25,7 +26,7 @@ export const metadata = {
 };
 
 export default function RootLayout({ children }) {
-  console.log("Nesti AI - AI Intelligence Platform for Real Estate ", process.env.NEXT_PUBLIC_API_URL);
+  
   return (
     <html lang="en">
       <body

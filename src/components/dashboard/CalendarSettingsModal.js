@@ -2,12 +2,16 @@
 
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Calendar, CheckCircle2, AlertCircle, Loader2, ExternalLink, RefreshCw } from "lucide-react";
+import { X, Calendar, CheckCircle2, AlertCircle, Loader2, ExternalLink, RefreshCw, Lock } from "lucide-react";
 import { connectCalendar, disconnectCalendar, fetchCalendarStatus } from "@/lib/calendarClient";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
     const { profile, token } = useAuthGuard();
+    const { hasFeature } = useFeatureAccess();
+    const canUseCalendar = hasFeature(FEATURES.CALENDAR_INTEGRATION);
     const [loading, setLoading] = useState(true);
     const [connecting, setConnecting] = useState(null);
     const [disconnecting, setDisconnecting] = useState(null);
@@ -104,9 +108,23 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
                         </div>
                     )}
 
-                    <div className="space-y-4">
-                        {/* Google Calendar */}
-                        {/* <div className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
+                    {!canUseCalendar ? (
+                        <div className="space-y-4">
+                            <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-3">
+                                <Lock className="text-amber-500 mt-0.5" size={18} />
+                                <div>
+                                    <p className="text-sm font-semibold text-amber-800">Upgrade required</p>
+                                    <p className="text-xs text-amber-700 mt-1">
+                                        Calendar connections are available on the Pro plan. Upgrade your subscription on
+                                        the Subscription tab to unlock Google Calendar and Calendly integrations.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            {/* Google Calendar */}
+                            {/* <div className="flex items-center justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
                                     <img src={`https://img.logo.dev/google.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Google" className="w-full h-full" />
@@ -145,46 +163,47 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
                             )}
                         </div> */}
 
-                        {/* Calendly */}
-                        <div className="flex items-center flex-wrap justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
-                                    <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Calendly" className="w-full h-full object-contain" />
+                            {/* Calendly */}
+                            <div className="flex items-center flex-wrap justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
+                                        <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Calendly" className="w-full h-full object-contain" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-semibold text-text-heading text-sm">Calendly</h4>
+                                        {isConnected('calendly') ? (
+                                            <div className="flex items-center gap-1 text-xs text-green-600 font-medium mt-0.5">
+                                                <CheckCircle2 size={12} />
+                                                Connected as {isConnected('calendly').email}
+                                            </div>
+                                        ) : (
+                                            <p className="text-xs text-text-muted mt-0.5">Sync scheduled events</p>
+                                        )}
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 className="font-semibold text-text-heading text-sm">Calendly</h4>
-                                    {isConnected('calendly') ? (
-                                        <div className="flex items-center gap-1 text-xs text-green-600 font-medium mt-0.5">
-                                            <CheckCircle2 size={12} />
-                                            Connected as {isConnected('calendly').email}
-                                        </div>
-                                    ) : (
-                                        <p className="text-xs text-text-muted mt-0.5">Sync scheduled events</p>
-                                    )}
-                                </div>
-                            </div>
 
-                            {loading ? (
-                                <div className="w-20 h-8 bg-gray-100 animate-pulse rounded-md" />
-                            ) : isConnected('calendly') ? (
-                                <button
-                                    onClick={() => handleDisconnect('calendly')}
-                                    disabled={disconnecting === 'calendly'}
-                                    className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
-                                >
-                                    {disconnecting === 'calendly' ? <Loader2 size={14} className="animate-spin" /> : "Disconnect"}
-                                </button>
-                            ) : (
-                                <button
-                                    onClick={() => handleConnect('calendly')}
-                                    disabled={connecting === 'calendly'}
-                                    className="px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-dark rounded-md transition-colors shadow-sm shadow-primary/20 flex items-center gap-2"
-                                >
-                                    {connecting === 'calendly' ? <Loader2 size={14} className="animate-spin" /> : "Connect"}
-                                </button>
-                            )}
+                                {loading ? (
+                                    <div className="w-20 h-8 bg-gray-100 animate-pulse rounded-md" />
+                                ) : isConnected('calendly') ? (
+                                    <button
+                                        onClick={() => handleDisconnect('calendly')}
+                                        disabled={disconnecting === 'calendly'}
+                                        className="px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50 rounded-md transition-colors border border-transparent hover:border-red-100"
+                                    >
+                                        {disconnecting === 'calendly' ? <Loader2 size={14} className="animate-spin" /> : "Disconnect"}
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => handleConnect('calendly')}
+                                        disabled={connecting === 'calendly'}
+                                        className="px-3 py-1.5 text-xs font-semibold text-white bg-primary hover:bg-primary-dark rounded-md transition-colors shadow-sm shadow-primary/20 flex items-center gap-2"
+                                    >
+                                        {connecting === 'calendly' ? <Loader2 size={14} className="animate-spin" /> : "Connect"}
+                                    </button>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
 
                 <div className="p-4 bg-gray-50/50 border-t border-border flex justify-end">

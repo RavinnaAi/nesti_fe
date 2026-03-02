@@ -1,13 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Calendar, Clock, Video, MoreHorizontal, User, ArrowRight, CheckCircle2, Loader2, RefreshCw, Settings2, Link as LinkIcon, ExternalLink } from "lucide-react";
+import { Calendar, Clock, Video, MoreHorizontal, User, ArrowRight, CheckCircle2, Loader2, RefreshCw, Settings2, Link as LinkIcon, ExternalLink, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { fetchBookings } from "@/lib/calendarClient";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 export default function UpcomingMeetings({ onOpenSettings }) {
     const { token } = useAuthGuard();
+    const { hasFeature } = useFeatureAccess();
+    const canUseCalendar = hasFeature(FEATURES.CALENDAR_INTEGRATION);
     const [meetings, setMeetings] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -29,10 +33,10 @@ export default function UpcomingMeetings({ onOpenSettings }) {
     };
 
     useEffect(() => {
-        if (token) {
+        if (token && canUseCalendar) {
             loadMeetings();
         }
-    }, [token]);
+    }, [token, canUseCalendar]);
 
     const formatDate = (isoString) => {
         const date = new Date(isoString);
@@ -64,6 +68,27 @@ export default function UpcomingMeetings({ onOpenSettings }) {
             ? dateA - dateB
             : dateB - dateA; // Past meetings: most recent first
     });
+
+    if (!canUseCalendar) {
+        return (
+            <div className="bg-white rounded-md border border-dashed border-border/70 shadow-none flex flex-col items-center justify-center min-h-[12rem] px-6 py-8 text-center space-y-3">
+                <div className="w-10 h-10 rounded-full bg-background-light flex items-center justify-center text-text-muted">
+                    <Lock size={18} />
+                </div>
+                <p className="text-sm font-semibold text-text-heading">Calendar integration is a Pro feature</p>
+                <p className="text-xs text-text-muted max-w-xs">
+                    Upgrade to the Pro plan to connect Google Calendar or Calendly and see your upcoming meetings here.
+                </p>
+                <button
+                    type="button"
+                    onClick={onOpenSettings}
+                    className="mt-1 inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-1.5 hover:bg-primary/5 transition"
+                >
+                    <Settings2 size={12} /> Manage subscription
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-white rounded-md border border-border shadow-lg shadow-primary/5 overflow-hidden flex flex-col min-h-[12rem] relative">

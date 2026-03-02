@@ -20,6 +20,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import SidebarTabs from "@/components/ui/SidebarTabs";
 import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
+import { useSearchParams } from "next/navigation";
 
 const tabs = [
   { id: "personal", label: "Personal Information", icon: User },
@@ -31,6 +32,7 @@ const tabs = [
 
 export default function SettingsPage() {
   const { isAuthenticated } = useAuthGuard();
+  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("personal");
   const [stickyTop, setStickyTop] = useState("0");
 
@@ -44,6 +46,22 @@ export default function SettingsPage() {
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const upgrade = searchParams.get("upgrade");
+    const expired = searchParams.get("expired");
+
+    if (tab && tabs.some((t) => t.id === tab)) {
+      setActiveTab(tab);
+    }
+
+    if (upgrade === "1") {
+      toast.info("Upgrade is required to access this feature.");
+    } else if (expired === "1") {
+      toast.warning("Your trial has expired. Please subscribe to continue.");
+    }
+  }, [searchParams]);
   const ActiveComponent = useMemo(() => {
     switch (activeTab) {
       case "personal":
