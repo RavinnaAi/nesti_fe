@@ -1,5 +1,7 @@
 "use client";
 
+export const dynamic = "force-dynamic";
+
 import { useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -20,7 +22,6 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import SidebarTabs from "@/components/ui/SidebarTabs";
 import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
-import { useSearchParams } from "next/navigation";
 
 const tabs = [
   { id: "personal", label: "Personal Information", icon: User },
@@ -32,7 +33,6 @@ const tabs = [
 
 export default function SettingsPage() {
   const { isAuthenticated } = useAuthGuard();
-  const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState("personal");
   const [stickyTop, setStickyTop] = useState("0");
 
@@ -48,9 +48,11 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    const upgrade = searchParams.get("upgrade");
-    const expired = searchParams.get("expired");
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    const tab = params.get("tab");
+    const upgrade = params.get("upgrade");
+    const expired = params.get("expired");
 
     if (tab && tabs.some((t) => t.id === tab)) {
       setActiveTab(tab);
@@ -61,7 +63,7 @@ export default function SettingsPage() {
     } else if (expired === "1") {
       toast.warning("Your trial has expired. Please subscribe to continue.");
     }
-  }, [searchParams]);
+  }, []);
   const ActiveComponent = useMemo(() => {
     switch (activeTab) {
       case "personal":
