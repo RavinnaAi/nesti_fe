@@ -34,6 +34,7 @@ function formatRemaining(ms) {
 
 export default function TrialCountdownBadge() {
   const user = useAppSelector((state) => state.auth.user);
+  const [isMounted, setIsMounted] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const accountStatus =
@@ -45,11 +46,16 @@ export default function TrialCountdownBadge() {
   const remainingMs = useMemo(() => getRemainingMs(trialEndsAt), [trialEndsAt, now]);
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (accountStatus !== ACCOUNT_STATUS.FREE_TRIAL) return;
     const id = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(id);
   }, [accountStatus]);
 
+  if (!isMounted) return null;
   if (!user) return null;
   if (accountStatus !== ACCOUNT_STATUS.FREE_TRIAL) return null;
   if (!trialEndsAt) return null;

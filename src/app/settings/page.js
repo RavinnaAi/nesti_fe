@@ -33,8 +33,13 @@ const tabs = [
 
 export default function SettingsPage() {
   const { isAuthenticated } = useAuthGuard();
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
   const [stickyTop, setStickyTop] = useState("0");
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -86,6 +91,11 @@ export default function SettingsPage() {
   const activeMeta = tabs.find((t) => t.id === activeTab);
   const { user } = useAppSelector((state) => state.auth);
   const ActiveIcon = activeMeta?.icon;
+
+  // Prevent hydration mismatch: auth state is client-derived.
+  if (!isMounted) {
+    return null;
+  }
 
   if (!isAuthenticated) {
     return null;

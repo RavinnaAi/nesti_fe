@@ -13,7 +13,16 @@ export default function Header() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, token } = useAppSelector((state) => state.auth);
-  const isAuthenticated = Boolean(token);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Prevent hydration mismatch:
+  // server render doesn't have client auth state yet, so defer auth-dependent
+  // navigation until after mount.
+  const isAuthenticated = isMounted && Boolean(token);
 
   const NAVIGATION_ITEMS = useMemo(
     () =>
@@ -62,17 +71,19 @@ export default function Header() {
 
   const displayName =
     user?.name ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
     [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
     user?.email ||
-    "User";
+    "";
   const displayEmail = user?.email || "";
-  const initials =
-    displayName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "U";
+  const initials = displayName
+    ? displayName
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("")
+    : "?";
 
   const handleLogout = () => {
     dispatch(logoutAndClearAll());

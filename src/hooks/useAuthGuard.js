@@ -39,13 +39,16 @@ export function useAuthGuard() {
       profileQuery.data?.professionalProfile || profileQuery.data?.professional_profile;
     if (!profile && !professionalProfile) return;
 
+    const calendlyFromProfile = String(professionalProfile?.calendly_link || "").trim();
+
     const personalPayload = {
-      firstName: profile?.firstName || "",
-      lastName: profile?.lastName || "",
+      firstName: profile?.first_name || profile?.firstName || "",
+      lastName: profile?.last_name || profile?.lastName || "",
       email: profile?.email || professionalProfile?.email || "",
       phone: professionalProfile?.phone || profile?.phone || "",
       country: profile?.country || "",
       role: profile?.role || professionalProfile?.professional_type || "",
+      calendlyUrl: calendlyFromProfile,
     };
 
     const businessPayload = {
@@ -76,7 +79,13 @@ export function useAuthGuard() {
       fullName:
         professionalProfile?.full_name ||
         profile?.name ||
-        [profile?.firstName, profile?.lastName].filter(Boolean).join(" ").trim() ||
+        [
+          profile?.first_name || profile?.firstName,
+          profile?.last_name || profile?.lastName,
+        ]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
         "",
       location: professionalProfile?.location || "",
       specializations: professionalProfile?.specializations || [],
@@ -86,6 +95,7 @@ export function useAuthGuard() {
       maxActiveLeads: professionalProfile?.max_active_leads ?? null,
       profileCompleteness: professionalProfile?.profile_completeness ?? null,
       profileQualityScore: professionalProfile?.profile_quality_score ?? null,
+      calendlyLink: calendlyFromProfile,
     };
 
     dispatch(setPersonalInfo(personalPayload));

@@ -7,21 +7,15 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { loginSuccess, updateProfile } from "@/store/authSlice";
 import { logoutAndClearAll } from "@/store/actions";
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 const toastError = (error) =>
   toast.error(error?.message || "Something went wrong. Please try again.");
 
-export function useCheckEmail() {
-  return useMutation({
-    mutationFn: (email) =>
-      apiClient({
-        url: API_ENDPOINTS.auth.checkEmail,
-        method: "POST",
-        data: { email: email.toLowerCase().trim() },
-      }),
-    onError: toastError,
-  });
-}
-
+// ─── Signup ──────────────────────────────────────────────────────────────────
+// POST /auth/signup
+// Body: { email, password, first_name, last_name, role }
+// Response: { success, message, verificationToken }
 export function useSignup() {
   return useMutation({
     mutationFn: (payload) =>
@@ -29,14 +23,67 @@ export function useSignup() {
         url: API_ENDPOINTS.auth.signup,
         method: "POST",
         data: {
-          ...payload,
+          first_name: payload.first_name,
+          last_name: payload.last_name,
           email: payload.email?.toLowerCase().trim(),
+          password: payload.password,
+          role: payload.role,
         },
       }),
     onError: toastError,
   });
 }
 
+// ─── Verify Email ─────────────────────────────────────────────────────────────
+// POST /auth/verify-email
+// Body: { otp }
+// Header: Authorization: <verificationToken> (raw JWT, no Bearer prefix)
+// Response: { success, message, token }  — token is the session JWT
+export function useVerifyEmail() {
+  const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ otp, verificationToken }) =>
+      apiClient({
+        url: API_ENDPOINTS.auth.verifyEmail,
+        method: "POST",
+        data: { otp: String(otp).trim() },
+        token: verificationToken,
+        rawToken: true,
+      }),
+    onSuccess: async (data) => {
+      if (data?.token) {
+        // 1. Store the session token in Redux + sessionStorage
+        dispatch(loginSuccess({ user: null, token: data.token }));
+
+        // 2. Immediately fetch the profile so the Header has real user data
+        //    before navigation happens (avoids "U" initial and RSC error)
+        try {
+          const profileData = await apiClient({
+            url: API_ENDPOINTS.auth.profile,
+            method: "GET",
+            token: data.token,
+          });
+          if (profileData?.user) {
+            dispatch(updateProfile(profileData.user));
+          }
+        } catch {
+          // profile fetch failing is non-fatal; useAuthGuard will retry
+        }
+
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+      }
+      toast.success(data?.message || "Email verified successfully!");
+    },
+    onError: toastError,
+  });
+}
+
+// ─── Login ────────────────────────────────────────────────────────────────────
+// POST /auth/login
+// Body: { email, password }
+// Response: { success, token }  — no user object; profile fetched separately
 export function useLogin() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
@@ -47,17 +94,30 @@ export function useLogin() {
         url: API_ENDPOINTS.auth.login,
         method: "POST",
         data: {
-          ...payload,
           email: payload.email?.toLowerCase().trim(),
+          password: payload.password,
         },
       }),
-    onSuccess: (data) => {
-      dispatch(
-        loginSuccess({
-          user: data.user || data.data || null,
-          token: data.token || data.accessToken || data.data?.token || null,
-        })
-      );
+    onSuccess: async (data) => {
+      const token = data.token || null;
+      dispatch(loginSuccess({ user: null, token }));
+
+      // Fetch profile immediately so Header shows real name before navigation
+      if (token) {
+        try {
+          const profileData = await apiClient({
+            url: API_ENDPOINTS.auth.profile,
+            method: "GET",
+            token,
+          });
+          if (profileData?.user) {
+            dispatch(updateProfile(profileData.user));
+          }
+        } catch {
+          // non-fatal; useAuthGuard will retry
+        }
+      }
+
       toast.success(data?.message || "Logged in successfully!");
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
@@ -65,6 +125,139 @@ export function useLogin() {
   });
 }
 
+// ─── Forgot Password ──────────────────────────────────────────────────────────
+// POST /auth/forgot-password
+// Body: { email }
+// Response: { success, message }
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (email) =>
+      apiClient({
+        url: API_ENDPOINTS.auth.forgotPassword,
+        method: "POST",
+        data: { email: email.toLowerCase().trim() },
+      }),
+    onSuccess: (data) => {
+      toast.dismiss("forgot-password-error");
+      toast.success(
+        data?.message ||
+          "Password reset instructions have been sent to your email.",
+        { toastId: "forgot-password-success" }
+      );
+    },
+    onError: (error) => {
+      toast.dismiss("forgot-password-success");
+      const msg =
+        error?.status === 404
+          ? error?.message || "No account found with that email address."
+          : error?.message || "Something went wrong. Please try again.";
+      toast.error(msg, { toastId: "forgot-password-error" });
+    },
+  });
+}
+
+// ─── Verify Reset OTP ─────────────────────────────────────────────────────────
+// POST /auth/verify-reset-otp
+// Body: { email, otp }
+// Response: { success, message, resetToken }
+export function useVerifyResetOTP() {
+  return useMutation({
+    mutationFn: ({ email, otp }) =>
+      apiClient({
+        url: API_ENDPOINTS.auth.verifyResetOTP,
+        method: "POST",
+        data: { email: email.toLowerCase().trim(), otp: String(otp).trim() },
+      }),
+    onSuccess: (data) => {
+      toast.success(data?.message || "OTP verified successfully!", {
+        toastId: "verify-reset-otp-success",
+      });
+    },
+    onError: toastError,
+  });
+}
+
+// ─── Reset Password ───────────────────────────────────────────────────────────
+// POST /auth/reset-password
+// Body: { newPassword }
+// Header: Authorization: Bearer <resetToken>
+// Response: { success, message }
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: ({ newPassword, resetToken }) =>
+      apiClient({
+        url: API_ENDPOINTS.auth.resetPassword,
+        method: "POST",
+        data: { newPassword },
+        token: resetToken,
+        rawToken: true,
+      }),
+    onSuccess: (data) => {
+      toast.success(data?.message || "Password reset successfully!", {
+        toastId: "reset-password-success",
+      });
+    },
+    onError: toastError,
+  });
+}
+
+// ─── Change Password ──────────────────────────────────────────────────────────
+// POST /auth/change-password
+// Body: { currentPassword, newPassword }  (camelCase per backend Joi schema)
+// Header: Authorization: Bearer <session token>
+export function useChangePassword() {
+  const { token } = useAppSelector((state) => state.auth);
+
+  return useMutation({
+    mutationFn: ({ currentPassword, newPassword }) =>
+      apiClient({
+        url: API_ENDPOINTS.auth.changePassword,
+        method: "POST",
+        data: { currentPassword, newPassword },
+        token,
+      }),
+    onSuccess: (data) => {
+      toast.success(data?.message || "Password updated successfully!");
+    },
+    onError: toastError,
+  });
+}
+
+// ─── Profile ──────────────────────────────────────────────────────────────────
+// GET /auth/profile
+// Header: Authorization: Bearer <session token>
+// Response: { success, user, professionalProfile }
+export function useProfileQuery() {
+  const token = useAppSelector((state) => state.auth.token);
+  const dispatch = useAppDispatch();
+
+  return useQuery({
+    queryKey: ["profile"],
+    enabled: Boolean(token),
+    queryFn: () =>
+      apiClient({
+        url: API_ENDPOINTS.auth.profile,
+        method: "GET",
+        token,
+      }),
+    onError: (error) => {
+      toastError(error);
+      const status = error?.status;
+      const message = error?.message?.toLowerCase?.() || "";
+      if (
+        status === 401 ||
+        status === 403 ||
+        status === 404 ||
+        message.includes("unauthorized") ||
+        message.includes("not found")
+      ) {
+        dispatch(logoutAndClearAll());
+      }
+    },
+  });
+}
+
+// ─── Google Auth (stubs — backend not yet implemented) ────────────────────────
 export function useGoogleLogin() {
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
@@ -79,8 +272,8 @@ export function useGoogleLogin() {
     onSuccess: (data) => {
       dispatch(
         loginSuccess({
-          user: data.user || data.data || null,
-          token: data.token || data.accessToken || data.data?.token || null,
+          user: data.user || null,
+          token: data.token || null,
         })
       );
       toast.success(data?.message || "Logged in with Google!");
@@ -104,8 +297,8 @@ export function useGoogleSignup() {
     onSuccess: (data) => {
       dispatch(
         loginSuccess({
-          user: data.user || data.data || null,
-          token: data.token || data.accessToken || data.data?.token || null,
+          user: data.user || null,
+          token: data.token || null,
         })
       );
       toast.success(data?.message || "Signed up with Google!");
@@ -115,6 +308,7 @@ export function useGoogleSignup() {
   });
 }
 
+// ─── Resend Verification (stub — backend not yet implemented) ─────────────────
 export function useResendVerification() {
   return useMutation({
     mutationFn: (email) =>
@@ -132,130 +326,20 @@ export function useResendVerification() {
   });
 }
 
-export function useVerifyEmail() {
-  return useMutation({
-    mutationFn: ({ email, token }) =>
-      apiClient({
-        url: API_ENDPOINTS.auth.verifyEmail,
-        method: "POST",
-        data: { email: email.toLowerCase().trim(), token: token.trim() },
-      }),
-    onSuccess: (data) => {
-      toast.success(
-        data?.message || "Email verified successfully. You can now log in."
-      );
-    },
-    onError: toastError,
-  });
-}
-
-export function useForgotPassword() {
+// ─── Check Email (stub — backend not yet implemented) ────────────────────────
+export function useCheckEmail() {
   return useMutation({
     mutationFn: (email) =>
       apiClient({
-        url: API_ENDPOINTS.auth.forgotPassword,
+        url: API_ENDPOINTS.auth.checkEmail,
         method: "POST",
         data: { email: email.toLowerCase().trim() },
       }),
-    onSuccess: (data) => {
-      toast.success(
-        data?.message ||
-        "Password reset instructions have been sent to your email."
-      );
-    },
     onError: toastError,
   });
 }
 
-export function useVerifyResetOTP() {
-  return useMutation({
-    mutationFn: ({ email, otp }) =>
-      apiClient({
-        url: API_ENDPOINTS.auth.verifyResetOTP,
-        method: "POST",
-        data: { email: email.toLowerCase().trim(), otp: otp.trim() },
-      }),
-    onSuccess: (data) => {
-      toast.success(
-        data?.message || "OTP verified successfully! Redirecting to reset..."
-      );
-    },
-    onError: toastError,
-  });
-}
-
-export function useResetPassword() {
-  return useMutation({
-    mutationFn: ({ email, otp, newPassword }) =>
-      apiClient({
-        url: API_ENDPOINTS.auth.resetPassword,
-        method: "POST",
-        data: {
-          email: email.toLowerCase().trim(),
-          otp: otp.trim(),
-          newPassword,
-        },
-      }),
-    onSuccess: (data) => {
-      toast.success(data?.message || "Password reset successfully!");
-    },
-    onError: toastError,
-  });
-}
-
-export function useChangePassword() {
-  const { token } = useAppSelector((state) => state.auth);
-
-  return useMutation({
-    mutationFn: ({ currentPassword, newPassword }) =>
-      apiClient({
-        url: "/auth/change-password",
-        method: "POST",
-        data: {
-          current_password: currentPassword,
-          new_password: newPassword,
-        },
-        token,
-      }),
-    onSuccess: (data) => {
-      toast.success(data?.message || "Password updated successfully!");
-    },
-    onError: toastError,
-  });
-}
-
-export function useProfileQuery() {
-  const token = useAppSelector((state) => state.auth.token);
-  const dispatch = useAppDispatch();
-
-  return useQuery({
-    queryKey: ["profile"],
-    enabled: Boolean(token),
-    queryFn: () =>
-      apiClient({
-        url: API_ENDPOINTS.auth.profile,
-        method: "GET",
-        token,
-      }),
-    onSuccess: (data) => {
-      // NOTE: onSuccess in useQuery is deprecated/removed in TanStack Query v5.
-      // Profile sync is now handled via useEffect in useAuthGuard.js.
-    },
-    onError: (error) => {
-      toastError(error);
-      const status = error?.status;
-      const message = error?.message?.toLowerCase?.() || "";
-      if (status === 401 || status === 403 || status === 404) {
-        dispatch(logoutAndClearAll());
-        return;
-      }
-      if (message.includes("unauthorized") || message.includes("not found")) {
-        dispatch(logoutAndClearAll());
-      }
-    },
-  });
-}
-
+// ─── Public Profile (stub — backend not yet implemented) ─────────────────────
 export function usePublicProfile(email) {
   const normalized = email?.toLowerCase().trim();
   return useQuery({
@@ -263,9 +347,7 @@ export function usePublicProfile(email) {
     enabled: Boolean(normalized),
     queryFn: () =>
       apiClient({
-        url: `${API_ENDPOINTS.auth.publicProfile}?email=${encodeURIComponent(
-          normalized
-        )}`,
+        url: `${API_ENDPOINTS.auth.publicProfile}?email=${encodeURIComponent(normalized)}`,
         method: "GET",
       }),
     onError: toastError,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -10,16 +10,20 @@ import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import FormField from "@/components/auth/FormField";
 import PasswordField from "@/components/auth/PasswordField";
 import SubmitButton from "@/components/auth/SubmitButton";
-import Divider from "@/components/auth/Divider";
-import GoogleButton from "@/components/auth/GoogleButton";
 import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
-import { toast } from "react-toastify";
-import { useLogin, useGoogleLogin as useGoogleAuth } from "@/hooks/useAuthApi";
-import { useGoogleLogin } from "@react-oauth/google";
+import { useLogin } from "@/hooks/useAuthApi";
+import { useAppDispatch } from "@/store";
+import { logoutAndClearAll } from "@/store/actions";
 
 export default function LoginPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+
+  // Clear any stale session when landing on the login page
+  useEffect(() => {
+    dispatch(logoutAndClearAll());
+  }, [dispatch]);
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
     email: "",
@@ -27,25 +31,7 @@ export default function LoginPage() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const loginMutation = useLogin();
-  const googleLoginMutation = useGoogleAuth();
-
-  const googleLogin = useGoogleLogin({
-    flow: "implicit",
-    onSuccess: (tokenResponse) => {
-      googleLoginMutation.mutate(
-        {
-          token: tokenResponse.access_token,
-          token_type: "access_token",
-        },
-        {
-          onSuccess: () => router.push("/dashboard"),
-        }
-      );
-    },
-    onError: () => toast.error("Google login failed. Please try again."),
-  });
-  const isSubmitting =
-    loginMutation.isLoading || googleLoginMutation.isLoading;
+  const isSubmitting = loginMutation.isLoading;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -81,10 +67,6 @@ export default function LoginPage() {
     } catch (err) {
       console.error("Login error:", err);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    googleLogin();
   };
 
   return (
@@ -126,7 +108,6 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
-          {/* Forgot Password Link */}
           <div className="text-right">
             <Link
               href="/forgot-password"
@@ -141,16 +122,6 @@ export default function LoginPage() {
           <div className="flex flex-col space-y-3 pt-2">
             <SubmitButton loading={isSubmitting}>Sign In</SubmitButton>
           </div>
-
-          <Divider />
-
-          {/* Google Login Button */}
-          <GoogleButton
-            onClick={handleGoogleLogin}
-            loading={googleLoginMutation.isLoading}
-          >
-            Sign in with Google
-          </GoogleButton>
         </form>
 
         <AuthFooter

@@ -124,7 +124,7 @@ export default function Footer() {
             </h4>
             <ul className="space-y-3">
               {companyLinks.map((link) => (
-                <li key={link.href}>
+                <li key={link.label}>
                   <Link
                     href={link.href}
                     className="text-text-body hover:text-primary transition-colors text-base font-medium inline-flex items-center gap-2 group"
@@ -145,7 +145,7 @@ export default function Footer() {
             <h4 className="font-bold mb-6 text-lg text-text-heading">Legal</h4>
             <ul className="space-y-3">
               {legalLinks.map((link) => (
-                <li key={link.href}>
+                <li key={link.label}>
                   <Link
                     href={link.href}
                     className="text-text-body hover:text-primary transition-colors text-base font-medium inline-flex items-center gap-2 group"

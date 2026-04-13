@@ -1,8 +1,6 @@
 "use client";
 
-import { apiClient, API_ENDPOINTS } from "@/lib/api";
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+import { apiClient, API_ENDPOINTS, apiUrl } from "@/lib/api";
 const AUTH_STORAGE_KEY = "nesti_auth_state";
 
 const getStoredAuthToken = () => {
@@ -50,8 +48,22 @@ export const setVisitorId = (val, key = defaultVisitorKey) => {
   localStorage.setItem(key, val);
 };
 
+/** New session id + drop stored visitor so the next chat is a clean lead thread. */
+export function resetChatIdentity({
+  sessionKey = defaultSessionKey,
+  visitorKey = defaultVisitorKey,
+} = {}) {
+  if (typeof window === "undefined") return { sessionId: "", visitorCleared: true };
+  const sid = `session_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+  localStorage.setItem(sessionKey, sid);
+  localStorage.removeItem(visitorKey);
+  return { sessionId: sid, visitorCleared: true };
+}
+
 export async function resolveEmbedToken(token) {
-  const response = await fetch(`${API_BASE}${API_ENDPOINTS.embed.resolve(token)}`, {
+  const t = String(token || "").trim();
+  if (!t) throw new Error("Missing embed token.");
+  const response = await fetch(apiUrl(`/api/embed/resolve/${encodeURIComponent(t)}`), {
     method: "GET",
     cache: "no-store",
   });
@@ -69,6 +81,7 @@ export async function sendChatMessage({
   visitorId,
   agentType,
   channel = "web",
+  formContact,
 }) {
   const payload = {
     id: sessionId,
@@ -77,9 +90,12 @@ export async function sendChatMessage({
     visitorId: visitorId || undefined,
     agentType: agentType || undefined,
     channel,
+    ...(formContact && typeof formContact === "object" && Object.keys(formContact).length
+      ? { formContact }
+      : {}),
   };
 
-  const response = await fetch(`${API_BASE}/api/chat`, {
+  const response = await fetch(apiUrl("/api/chat"), {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
@@ -93,10 +109,13 @@ export async function sendChatMessage({
 }
 
 export async function clearChatSession(sessionId) {
-  const response = await fetch(`${API_BASE}/api/chat/clear/${sessionId}`, {
-    method: "DELETE",
-    cache: "no-store",
-  });
+  const response = await fetch(
+    apiUrl(`/api/chat/clear/${encodeURIComponent(String(sessionId || ""))}`),
+    {
+      method: "DELETE",
+      cache: "no-store",
+    },
+  );
   if (!response.ok) {
     const json = await parseJson(response);
     throw new Error(apiErrorMessage(json));

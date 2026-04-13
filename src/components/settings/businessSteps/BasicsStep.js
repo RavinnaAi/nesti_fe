@@ -26,7 +26,7 @@ export default function BasicsStep({
         options={[
           { value: "agent", label: "Agent" },
           { value: "lawyer", label: "Lawyer" },
-          { value: "broker", label: "Mortgage Broker" },
+          { value: "mortgage_broker", label: "Mortgage Broker" },
         ]}
       />
       <FormField

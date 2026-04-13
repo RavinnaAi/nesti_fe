@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -22,14 +22,19 @@ import {
   passwordRequirements,
 } from "@/utils/validation";
 import { useSignupFlow } from "@/hooks/useSignupFlow";
-import {
-  useCheckEmail,
-  useSignup,
-  useGoogleSignup,
-} from "@/hooks/useAuthApi";
+import { useSignup, useGoogleSignup } from "@/hooks/useAuthApi";
+import { useAppDispatch } from "@/store";
+import { logoutAndClearAll } from "@/store/actions";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
+
+  // Clear any stale session so the Header doesn't show authenticated state
+  // while the user is on the public sign-up page
+  useEffect(() => {
+    dispatch(logoutAndClearAll());
+  }, [dispatch]);
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(null);
@@ -43,11 +48,9 @@ export default function SignUpPage() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const { saveSignupData } = useSignupFlow();
-  const checkEmailMutation = useCheckEmail();
   const signupMutation = useSignup();
   const googleSignupMutation = useGoogleSignup();
-  const isSubmitting =
-    loader || checkEmailMutation.isLoading || signupMutation.isLoading;
+  const isSubmitting = loader || signupMutation.isLoading;
   const googleSignup = useGoogleLogin({
     flow: "implicit",
     onSuccess: (tokenResponse) => {
@@ -83,25 +86,6 @@ export default function SignUpPage() {
     setFieldErrors((prev) => ({ ...prev, role: "" }));
   };
 
-  const handleEmailBlur = async () => {
-    setFocusedField("");
-    const email = form.email.trim().toLowerCase();
-    if (!email || !emailRegex.test(email)) return;
-    try {
-      const res = await checkEmailMutation.mutateAsync(email);
-      if (res?.exists) {
-        const message = "Email already registered. Please log in or use another.";
-        setFieldErrors((prev) => ({ ...prev, email: message }));
-        toast.error(message);
-      } else {
-        setFieldErrors((prev) => ({ ...prev, email: "" }));
-      }
-    } catch (error) {
-      console.error("Email check error:", error);
-      // errors are surfaced via toast in mutation
-    }
-  };
-
   const validate = () => {
     const errs = {};
     const { firstName, lastName, email, password, role } = form;
@@ -135,17 +119,19 @@ export default function SignUpPage() {
 
     setLoader(true);
     try {
-      await signupMutation.mutateAsync({
+      const data = await signupMutation.mutateAsync({
         first_name: form.firstName.trim(),
         last_name: form.lastName.trim(),
         email: form.email.toLowerCase().trim(),
         password: form.password,
         role: form.role,
-        country: form.country,
       });
 
-      // Save email to localStorage for verification page
-      saveSignupData({ email: form.email });
+      // Persist email + verificationToken for the OTP verification step
+      saveSignupData({
+        email: form.email,
+        verificationToken: data?.verificationToken || null,
+      });
 
       // Redirect to verify email page
       router.push("/verify-email");
@@ -192,7 +178,7 @@ export default function SignUpPage() {
             value={form.email}
             onChange={handleChange}
             onFocus={() => setFocusedField("email")}
-            onBlur={handleEmailBlur}
+            onBlur={() => setFocusedField("")}
             placeholder="Enter your email"
             icon={Mail}
             focusedField={focusedField}

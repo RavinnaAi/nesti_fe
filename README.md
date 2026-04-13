@@ -2,6 +2,10 @@
 
 A modern Next.js 14+ application built with App Router and Tailwind CSS.
 
+## Backend API
+
+Auth and app APIs are served by the **Node.js + Express** app in `node-backend` (not NestJS). Point the frontend at it with `NEXT_PUBLIC_API_URL` / `NEXT_PUBLIC_NODE_BACKEND_URL` (e.g. `http://localhost:5000`).
+
 ## Getting Started
 
 First, install the dependencies:

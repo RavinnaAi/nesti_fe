@@ -1,10 +1,10 @@
 "use client";
 
-import { apiClient } from "./api";
+import { apiClient } from "../api";
 
 /**
- * Lightweight Stripe API client specifically for the checkout flow.
- * These helpers hit the new Python backend routes under `/api/stripe/*`.
+ * Stripe/checkout helpers for the Nesti Node/Express API.
+ * Ensure paths match your server (this app’s billing routes live under `/api/billing/*`).
  */
 
 export async function getCheckout({ token } = {}) {

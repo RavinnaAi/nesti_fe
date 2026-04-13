@@ -9,7 +9,7 @@ const emptyState = {
   user: null,
   token: null,
   resetEmail: null,
-  resetOtp: null,
+  resetToken: null,
   expiresAt: null,
 };
 
@@ -44,7 +44,7 @@ const persistState = (state) => {
         user: state.user,
         token: state.token,
         resetEmail: state.resetEmail,
-        resetOtp: state.resetOtp,
+        resetToken: state.resetToken,
         expiresAt: state.expiresAt,
       })
     );
@@ -71,7 +71,7 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.resetEmail = null;
-      state.resetOtp = null;
+      state.resetToken = null;
       state.expiresAt = null;
       if (typeof window !== "undefined") {
         sessionStorage.removeItem(STORAGE_KEY);
@@ -85,12 +85,12 @@ const authSlice = createSlice({
       state.resetEmail = null;
       persistState(state);
     },
-    setResetOtp: (state, action) => {
-      state.resetOtp = action.payload || null;
+    setResetToken: (state, action) => {
+      state.resetToken = action.payload || null;
       persistState(state);
     },
-    clearResetOtp: (state) => {
-      state.resetOtp = null;
+    clearResetToken: (state) => {
+      state.resetToken = null;
       persistState(state);
     },
   },
@@ -102,7 +102,7 @@ export const {
   logout,
   setResetEmail,
   clearResetEmail,
-  setResetOtp,
-  clearResetOtp,
+  setResetToken,
+  clearResetToken,
 } = authSlice.actions;
 export default authSlice.reducer;

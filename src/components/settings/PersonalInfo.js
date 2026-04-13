@@ -36,7 +36,7 @@ export default function PersonalInfo() {
     lastName: "",
     email: "",
     phone: "",
-    calendalyUrl: "",
+    calendlyUrl: "",
   });
   const [profileImage, setProfileImage] = useState("");
   const [coverImage, setCoverImage] = useState("");
@@ -47,7 +47,11 @@ export default function PersonalInfo() {
 
   useEffect(() => {
     if (storedPersonal) {
-      setForm((prev) => ({ ...prev, ...storedPersonal }));
+      setForm((prev) => ({
+        ...prev,
+        ...storedPersonal,
+        calendlyUrl: storedPersonal.calendlyUrl || storedPersonal.calendalyUrl || "",
+      }));
       if (storedPersonal.profileImage) {
         setProfileImage(storedPersonal.profileImage);
       }
@@ -71,15 +75,11 @@ export default function PersonalInfo() {
     }
     // console.log("savePersonalInfo", storedPersonal);
     const payload = {
-      professional_type: storedPersonal.role,
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
-      fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
-      email: form.email.trim().toLowerCase(),
+      full_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
       phone: form.phone.trim(),
-      calendalyUrl: form.calendalyUrl.trim(),
-      profile_image: profileImage,
-      cover_image: coverImage,
+      calendly_link: form.calendlyUrl.trim(),
     };
 
     // console.log("payload", payload);
@@ -295,16 +295,15 @@ export default function PersonalInfo() {
         />
 
         <FormField
-          label="Calendaly Url"
-          name="calendalyUrl"
-          value={form.calendalyUrl}
+          label="Calendly URL"
+          name="calendlyUrl"
+          value={form.calendlyUrl}
           onChange={handleChange}
-          onFocus={() => setFocusedField("calendalyUrl")}
+          onFocus={() => setFocusedField("calendlyUrl")}
           onBlur={() => setFocusedField("")}
-          placeholder="Enter calendaly url"
+          placeholder="Enter Calendly URL"
           icon={Calendar}
           focusedField={focusedField}
-          required
         />  
        
 

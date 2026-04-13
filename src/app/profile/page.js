@@ -20,6 +20,7 @@ const tabs = [
 ];
 
 function ProfilePageContent() {
+  const [isMounted, setIsMounted] = useState(false);
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email");
   const normalizedEmail = emailParam?.toLowerCase().trim() || "";
@@ -32,6 +33,10 @@ function ProfilePageContent() {
   const pricingPlans = useAppSelector((state) => state.pricing.plans);
   const [activeTab, setActiveTab] = useState("personal");
   const [stickyTop, setStickyTop] = useState("0");
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
@@ -214,6 +219,10 @@ function ProfilePageContent() {
     }
     : {};
 
+
+  if (!isMounted) {
+    return <div className="p-6 text-sm text-text-muted">Loading profile...</div>;
+  }
 
   return (
     <div className="min-h-screen bg-background">

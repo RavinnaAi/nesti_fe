@@ -76,6 +76,7 @@ export default function BusinessInformation() {
     targetNeighborhoods: "",
     fullName: "",
     location: "",
+    calendlyLink: "",
   });
   const [loading, setLoading] = useState(false);
   const [specializations, setSpecializations] = useState([]);
@@ -128,15 +129,15 @@ export default function BusinessInformation() {
     if (e?.preventDefault) e.preventDefault();
     setLoading(true);
     try {
-      const { transactionsThisYear, careerTransactions, clientRating, ...rest } = form;
-      const payload = {
-        ...rest,
-        specializations,
-        communicationChannels,
-        preferredClients,
-      };
-      await saveBusinessInfo.mutateAsync(payload);
-      dispatch(setBusinessInfo(payload));
+      await saveBusinessInfo.mutateAsync(buildBusinessPayload());
+      dispatch(
+        setBusinessInfo({
+          ...form,
+          specializations,
+          communicationChannels,
+          preferredClients,
+        })
+      );
       setShowModal(false);
     } catch (err) {
       console.error("Business info update error:", err);
@@ -145,6 +146,34 @@ export default function BusinessInformation() {
       setLoading(false);
     }
   };
+
+  const buildBusinessPayload = () => ({
+    full_name: form.fullName || "",
+    website: form.website || "",
+    company_name: form.companyName || "",
+    certificates: Array.isArray(form.certificates) ? form.certificates : [],
+    phone: form.phone || "",
+    location: form.location || "",
+    target_neighborhoods: form.targetNeighborhoods || "",
+    experience: form.experience || "",
+    license_number: form.licenseNumber || "",
+    social_media: form.socialMedia || "",
+    transaction_volume: form.transactionVolume || "",
+    avg_sale_price: form.avgSalePrice || "",
+    response_time: form.responseTime || "",
+    availability: form.availability || "",
+    support_level: form.supportLevel || "",
+    negotiation_style: form.negotiationStyle || "",
+    sales_approach: form.salesApproach || "",
+    energy_style: form.energyStyle || "",
+    personality_tag: form.personalityTag || "",
+    awards: form.awards || "",
+    specializations,
+    communication_channels: communicationChannels,
+    preferred_clients: preferredClients,
+    calendly_link: form.calendlyLink || "",
+    bio: form.testimonial || "",
+  });
 
   const steps = [
     {
@@ -192,14 +221,14 @@ export default function BusinessInformation() {
   const stepProps = steps[activeStep]?.props || {};
 
   const handleNext = () => {
-    const { transactionsThisYear, careerTransactions, clientRating, ...rest } = form;
-    const payload = {
-      ...rest,
-      specializations,
-      communicationChannels,
-      preferredClients,
-    };
-    dispatch(setBusinessInfo(payload));
+    dispatch(
+      setBusinessInfo({
+        ...form,
+        specializations,
+        communicationChannels,
+        preferredClients,
+      })
+    );
     setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
   };
 
@@ -306,11 +335,7 @@ export default function BusinessInformation() {
                 </AnimatePresence>
               </div>
 
-              <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-primary-light/20">
-                <div className="flex items-center gap-2 text-xs text-text-muted">
-                  <span className="h-2 w-2 rounded-md bg-primary" />
-                  Progress autosaves after each step.
-                </div>
+              <div className="flex items-center justify-end px-6 py-4 border-t border-border bg-primary-light/20">
                 <div className="flex gap-3">
                   {activeStep > 0 && (
                     // <button

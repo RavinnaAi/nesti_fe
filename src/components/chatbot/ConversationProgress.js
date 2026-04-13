@@ -1,18 +1,21 @@
-export default function ConversationProgress({ step = 0 }) {
-    const steps = ["Intro", "Intent", "Qualify", "Details", "Booking"];
+"use client";
 
-    return (
-        <div className="px-5 py-2 bg-white border-b border-border/50 flex items-center justify-between">
-            {steps.map((label, idx) => (
-                <div key={label} className="flex flex-col items-center gap-1 flex-1">
-                    <div className={`h-1 w-full rounded-full transition-all duration-500 ${idx <= step ? "bg-primary" : "bg-gray-100"
-                        }`} />
-                    <span className={`text-[9px] uppercase tracking-wider font-semibold ${idx <= step ? "text-primary" : "text-gray-300"
-                        }`}>
-                        {label}
-                    </span>
-                </div>
-            ))}
-        </div>
-    );
+import StepSegmentBar from "./StepSegmentBar";
+
+const CHAT_PROGRESS_STEPS = [
+  { key: "intro", label: "Intro" },
+  { key: "intent", label: "Intent" },
+  { key: "qualify", label: "Qualify" },
+  { key: "details", label: "Details" },
+  { key: "booking", label: "Booking" },
+];
+
+export default function ConversationProgress({ step = 0 }) {
+  const activeIndex = Math.min(Math.max(0, step), CHAT_PROGRESS_STEPS.length - 1);
+
+  return (
+    <div className="px-5 py-3 bg-white border-b border-border/50 shrink-0">
+      <StepSegmentBar steps={CHAT_PROGRESS_STEPS} activeIndex={activeIndex} />
+    </div>
+  );
 }

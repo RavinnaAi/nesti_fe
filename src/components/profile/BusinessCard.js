@@ -24,6 +24,11 @@ export default function BusinessCard({ businessInfo }) {
             icon: Briefcase,
           },
           {
+            label: "Company Name",
+            value: businessInfo?.companyName,
+            icon: Briefcase,
+          },
+          {
             label: "License Number",
             value: businessInfo?.licenseNumber,
             icon: BadgeCheck,

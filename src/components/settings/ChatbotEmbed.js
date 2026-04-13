@@ -11,7 +11,19 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { FEATURES } from "@/constants/features";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
-const FRONTEND_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+/** Origin where the Next app is served (embed + iframe URLs), not the API host. */
+function getSiteOrigin() {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ""
+  );
+}
+
 const ChatWidget = dynamic(() => import("@/components/chatbot/ChatWidget"), { ssr: false });
 
 export default function ChatbotEmbed() {
@@ -23,6 +35,7 @@ export default function ChatbotEmbed() {
   const [newName, setNewName] = useState("");
   const [copiedKey, setCopiedKey] = useState("");
   const [previewToken, setPreviewToken] = useState("");
+  const [previewWidgetRole, setPreviewWidgetRole] = useState("agent");
 
   const {
     data,
@@ -43,17 +56,20 @@ export default function ChatbotEmbed() {
 
   const embeds = useMemo(() => {
     if (!data) return [];
+    if (Array.isArray(data.embeds)) return data.embeds;
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.data)) return data.data;
     return [];
   }, [data]);
 
   const generateMutation = useMutation({
-    mutationFn: (url_name) =>
+    mutationFn: (displayName) =>
       apiClient({
         url: API_ENDPOINTS.embed.generate,
         method: "POST",
-        data: url_name ? { url_name } : {},
+        data: displayName
+          ? { widget_settings: { display_name: String(displayName).trim() } }
+          : {},
         token,
       }),
     onSuccess: () => {
@@ -105,11 +121,8 @@ export default function ChatbotEmbed() {
   };
 
   const renderEmbedSnippet = (embed) => {
-    const tokenValue = embed?.unique_token || embed?.token || embed?.id;
-    const origin =
-      FRONTEND_BASE ||
-      (typeof window !== "undefined" && window.location?.origin ? window.location.origin : "") ||
-      API_BASE;
+    const tokenValue = embed?.unique_token || embed?.token || embed?._id;
+    const origin = getSiteOrigin() || API_BASE;
     const scriptSrc = `${origin}/chatbot/widget.js?token=${tokenValue}`;
     return `<script src="${scriptSrc}"></script>`;
   };
@@ -194,13 +207,9 @@ export default function ChatbotEmbed() {
         ) : (
           <div className="space-y-3">
             {embeds.map((embed) => {
-              const tokenValue = embed?.unique_token || embed?.token || embed?.id;
-              const origin =
-                FRONTEND_BASE ||
-                (typeof window !== "undefined" && window.location?.origin
-                  ? window.location.origin
-                  : "") ||
-                API_BASE;
+              const embedDocId = embed?._id || embed?.id;
+              const tokenValue = embed?.unique_token || embed?.token;
+              const origin = getSiteOrigin() || API_BASE;
               const publicUrl = `${origin}/chatbot/${tokenValue}`;
               const codeSnippet = renderEmbedSnippet(embed);
               const iframeSnippet = `<iframe src="${publicUrl}" style="width:100%;height:100%;border:none;"></iframe>`;
@@ -209,13 +218,13 @@ export default function ChatbotEmbed() {
 
               return (
                 <div
-                  key={`embed-${embed?.id || tokenValue}`}
+                  key={`embed-${embedDocId || tokenValue}`}
                   className=" flex flex-col gap-3"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
                       <div className="text-sm font-semibold text-text-heading">
-                        {embed?.url_name || "Website Chatbot"}
+                        {embed?.widget_settings?.display_name || "Website Chatbot"}
                       </div>
                       <div className="text-xs text-text-muted">
                         Token: {tokenValue} • Created:{" "}
@@ -229,7 +238,7 @@ export default function ChatbotEmbed() {
                         type="button"
                         onClick={() =>
                           updateMutation.mutate({
-                            id: embed.id,
+                            id: embedDocId,
                             payload: { is_active: !active },
                           })
                         }
@@ -243,7 +252,7 @@ export default function ChatbotEmbed() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteMutation.mutate(embed.id)}
+                        onClick={() => deleteMutation.mutate(embedDocId)}
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition"
                       >
                         <Trash2 className="h-4 w-4" /> Delete
@@ -266,7 +275,16 @@ export default function ChatbotEmbed() {
                         )}
                         Copy link
                       </button>
-                      {/* Open + preview disabled */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewToken(tokenValue);
+                          setPreviewWidgetRole(embed?.widget_role || "agent");
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/5 transition"
+                      >
+                        Preview
+                      </button>
                     </div>
                   </div>
 
@@ -346,7 +364,7 @@ export default function ChatbotEmbed() {
       </div>
 
       {previewToken && (
-        <div className="rounded bg-primary-dark/10 shadow-lg p-4 space-y-3">
+        <div className="rounded bg-primary-dark/10 shadow-lg p-4 space-y-4">
           <div className="flex items-center justify-between ">
             <div>
               <div className="text-sm font-semibold text-text-heading">Live Preview</div>
@@ -356,21 +374,43 @@ export default function ChatbotEmbed() {
             </div>
             <button
               type="button"
-              onClick={() => setPreviewToken("")}
+              onClick={() => {
+                setPreviewToken("");
+                setPreviewWidgetRole("agent");
+              }}
               className="text-xs text-text-muted hover:text-text-heading"
             >
               Close preview
             </button>
           </div>
-          <div className="relative w-full min-h-[480px] bg-transparent rounded overflow-hidden">
-            <ChatWidget
-              embedToken={previewToken}
-              defaultOpen
-              allowLauncher={false}
-              title="Chatbot Preview"
-              subtitle="Public embed experience"
-              inlineMode
-            />
+          <div>
+            <div className="text-xs font-semibold text-text-heading mb-2">
+              Iframe embed (production-style)
+            </div>
+            <div className="w-full h-[480px] rounded-md border border-border overflow-hidden bg-white">
+              <iframe
+                title="Chatbot iframe preview"
+                src={`${getSiteOrigin()}/chatbot/${previewToken}`}
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              />
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-text-heading mb-2">
+              In-page widget (dev)
+            </div>
+            <div className="relative w-full min-h-[400px] bg-transparent rounded overflow-hidden border border-dashed border-border/60">
+              <ChatWidget
+                embedToken={previewToken}
+                widgetRole={previewWidgetRole}
+                defaultOpen
+                allowLauncher={false}
+                title="Chatbot Preview"
+                subtitle="Public embed experience"
+                inlineMode
+              />
+            </div>
           </div>
         </div>
       )}

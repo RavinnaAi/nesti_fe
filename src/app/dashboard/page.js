@@ -29,9 +29,39 @@ import LeadDetailsModal from "@/components/dashboard/LeadDetailsModal";
 
 export default function DashboardPage() {
   const { user, token } = useAppSelector((state) => state.auth);
-  const coverImage = useAppSelector((state) => state.profile.personalInfo?.coverImage);
+  const personalInfo = useAppSelector((state) => state.profile.personalInfo);
+  const coverImage = personalInfo?.coverImage;
   const { isAuthenticated, profile } = useAuthGuard();
   const activeUser = profile?.user || profile?.data || user;
+
+  const profileImageUrl =
+    activeUser?.profileImage ||
+    activeUser?.profile_image ||
+    profile?.user?.profileImage ||
+    profile?.user?.profile_image;
+
+  const avatarInitials = useMemo(() => {
+    const displayName =
+      activeUser?.name ||
+      [activeUser?.first_name, activeUser?.last_name].filter(Boolean).join(" ").trim() ||
+      [activeUser?.firstName, activeUser?.lastName].filter(Boolean).join(" ").trim() ||
+      [personalInfo?.firstName, personalInfo?.lastName].filter(Boolean).join(" ").trim() ||
+      activeUser?.email ||
+      personalInfo?.email ||
+      "";
+    if (!displayName) return "?";
+    return displayName
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase())
+      .join("");
+  }, [activeUser, personalInfo]);
+
+  const welcomeFirstName =
+    activeUser?.firstName || activeUser?.first_name || personalInfo?.firstName || "";
+
+  const [isMounted, setIsMounted] = useState(false);
   const [leadType, setLeadType] = useState("buyers");
   const [leadStatus, setLeadStatus] = useState("active");
   const [matchFilter, setMatchFilter] = useState("");
@@ -46,6 +76,10 @@ export default function DashboardPage() {
     enabled: Boolean(token),
     queryFn: () => fetchConversations({ token }),
   });
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Detection logic for new leads (0-5 minutes)
   useEffect(() => {
@@ -233,8 +267,21 @@ export default function DashboardPage() {
     ];
   }, [conversations]);
 
+  // Avoid hydration mismatch: server has no sessionStorage token; client may. First paint must match server.
+  if (!isMounted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 flex items-center justify-center px-6">
+        <p className="text-sm text-text-muted">Loading workspace…</p>
+      </div>
+    );
+  }
+
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 flex items-center justify-center px-6">
+        <p className="text-sm text-text-muted">Redirecting…</p>
+      </div>
+    );
   }
 
   const heroStyle = coverImage
@@ -263,16 +310,16 @@ export default function DashboardPage() {
           style={heroStyle}
         >
           <div className="relative">
-            <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
-              {profile?.user?.profileImage ? (
+            <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-lg md:text-xl font-bold text-primary-dark">
+              {profileImageUrl ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
-                  src={profile?.user?.profileImage}
-                  alt="Profile avatar"
+                  src={profileImageUrl}
+                  alt=""
                   className="w-full h-full object-cover"
                 />
               ) : (
-                (profile?.personalInfo?.firstName || "N").slice(0, 1).toUpperCase()
+                avatarInitials
               )}
             </div>
           </div>
@@ -284,7 +331,7 @@ export default function DashboardPage() {
               </div>
               <h1 className="text-3xl text-white/80 font-bold">
                 Welcome back
-                {activeUser?.firstName ? `, ${activeUser.firstName}` : "!"}
+                {welcomeFirstName ? `, ${welcomeFirstName}` : "!"}
               </h1>
               <p className="text-white/80 text-sm md:text-base">
                 Track your pipeline, nurture hot leads, and close faster.
@@ -501,6 +548,6 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
       <CalendarSettingsModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)} />
-    </div >
+    </div>
   );
 }

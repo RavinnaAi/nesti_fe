@@ -8,13 +8,17 @@ export default function ChatbotByTokenPage({ params }) {
   const token = params?.token;
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
+  const [widgetRole, setWidgetRole] = useState("agent");
 
   useEffect(() => {
     let mounted = true;
     const run = async () => {
       try {
-        await resolveEmbedToken(token);
-        if (mounted) setStatus("ok");
+        const json = await resolveEmbedToken(token);
+        if (mounted) {
+          setWidgetRole(json?.widget_role || "agent");
+          setStatus("ok");
+        }
       } catch (err) {
         if (mounted) {
           setError(err?.message || "This chatbot link is not working.");
@@ -51,7 +55,7 @@ export default function ChatbotByTokenPage({ params }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <ChatWidget embedToken={token} defaultOpen allowLauncher={false} />
+      <ChatWidget embedToken={token} widgetRole={widgetRole} defaultOpen allowLauncher={false} />
     </div>
   );
 }

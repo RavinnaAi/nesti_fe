@@ -8,8 +8,6 @@ import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import {
-  fetchConversations,
-  fetchConversationMessages,
   fetchReferrals,
   createReferral,
   updateReferral,
@@ -19,6 +17,8 @@ import {
   runClosingCalculator,
   fetchCalculatorRuns,
 } from "@/lib/chatClient";
+import { fetchLeads, fetchLeadById, fetchLeadConversation } from "@/lib/leadsClient";
+import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import LeadListItem from "@/components/leads/LeadListItem";
 import MessageBubble from "@/components/leads/MessageBubble";
 import LeadActionSection from "@/components/leads/LeadActionSection";
@@ -35,8 +35,12 @@ const normalizeList = (data) => {
   return [];
 };
 
-const getConversationId = (conversation) =>
-  conversation?.id || conversation?.conversation_id || conversation?.conversationId;
+/** Active chat thread id for referrals, nurture, calculators. */
+const getActionConversationId = (lead) =>
+  lead?.conversation_id || lead?.conversationId || "";
+
+const getLeadMatchId = (lead) =>
+  lead?.lead_match_id || lead?.id || "";
 
 const getConversationMeta = (conversation) => {
   // Check for matched status in multiple possible fields
@@ -60,8 +64,13 @@ const getConversationMeta = (conversation) => {
       conversation?.lead_intent ||
       conversation?.intent_label ||
       "Unknown",
-    leadScore: conversation?.lead_score ?? conversation?.leadScore ?? "—",
-    leadGrade: conversation?.lead_grade ?? conversation?.leadGrade ?? "—",
+    leadScore:
+      conversation?.lead_score ??
+      conversation?.leadScore ??
+      conversation?.score ??
+      "—",
+    leadGrade:
+      conversation?.lead_grade ?? conversation?.leadGrade ?? conversation?.grade ?? "—",
     channel: conversation?.channel || conversation?.source || "web",
     qualified: conversation?.is_qualified ?? conversation?.isQualified ?? false,
     isMatched,
@@ -111,7 +120,7 @@ export default function LeadsPage() {
   const { isAuthenticated } = useAuthGuard();
   const { token } = useAppSelector((state) => state.auth);
   const queryClient = useQueryClient();
-  const [selectedId, setSelectedId] = useState("");
+  const [selectedLeadId, setSelectedLeadId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
@@ -145,18 +154,24 @@ export default function LeadsPage() {
   const [showAdvicePopup, setShowAdvicePopup] = useState(false);
 
   // Reset popup when selection changes
-  // We use useEffect to watch selectedId 
+  // We use useEffect to watch selectedLeadId 
   // (or can just rely on the effect below if we want strict sync)
 
-  const conversationsQuery = useQuery({
-    queryKey: ["chat-conversations", token],
+  const leadsQuery = useQuery({
+    queryKey: ["leads", token],
     enabled: Boolean(token),
-    queryFn: () => fetchConversations({ token }),
+    queryFn: () => fetchLeads({ token, page: 1, limit: 100 }),
   });
 
+  const leadRows = useMemo(() => {
+    const raw = leadsQuery.data?.leads;
+    if (Array.isArray(raw)) return raw;
+    return normalizeList(leadsQuery.data);
+  }, [leadsQuery.data]);
+
   const conversations = useMemo(
-    () => normalizeList(conversationsQuery.data),
-    [conversationsQuery.data]
+    () => leadRows.map((row) => leadApiRowToConversationShape(row)).filter(Boolean),
+    [leadRows]
   );
 
   const filteredConversations = useMemo(() => {
@@ -171,18 +186,34 @@ export default function LeadsPage() {
     });
   }, [conversations, intentFilter, gradeFilter, channelFilter, matchFilter, searchTerm]);
 
-  const selectedConversation = useMemo(
-    () => conversations.find((conversation) => getConversationId(conversation) === selectedId),
-    [conversations, selectedId]
-  );
-
-  const messagesQuery = useQuery({
-    queryKey: ["chat-messages", token, selectedId],
-    enabled: Boolean(token && selectedId),
-    queryFn: () => fetchConversationMessages({ token, conversationId: selectedId }),
+  const leadDetailQuery = useQuery({
+    queryKey: ["lead-detail", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId),
+    queryFn: () => fetchLeadById({ token, id: selectedLeadId }),
   });
 
-  const messages = useMemo(() => normalizeList(messagesQuery.data), [messagesQuery.data]);
+  const selectedConversation = useMemo(() => {
+    const base = conversations.find((c) => String(getLeadMatchId(c)) === String(selectedLeadId));
+    const detailLead = leadDetailQuery.data?.lead;
+    if (!base && !detailLead) return null;
+    const merged = detailLead ? { ...(base || {}), ...detailLead } : base;
+    return leadApiRowToConversationShape(merged);
+  }, [conversations, selectedLeadId, leadDetailQuery.data]);
+
+  const actionConversationId = getActionConversationId(selectedConversation);
+
+  const messagesQuery = useQuery({
+    queryKey: ["lead-conversation", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId),
+    queryFn: () =>
+      fetchLeadConversation({ token, leadId: selectedLeadId, page: 1, limit: 200 }),
+  });
+
+  const messages = useMemo(() => {
+    const raw = messagesQuery.data?.messages;
+    if (Array.isArray(raw)) return raw;
+    return normalizeList(messagesQuery.data);
+  }, [messagesQuery.data]);
 
   const conversationMeta = useMemo(() => extractMeta(selectedConversation), [selectedConversation]);
   const messageMeta = useMemo(() => {
@@ -201,11 +232,13 @@ export default function LeadsPage() {
 
   const referrals = useMemo(() => normalizeList(referralsQuery.data), [referralsQuery.data]);
   const conversationReferrals = useMemo(() => {
-    if (!selectedId) return referrals;
+    if (!actionConversationId) return referrals;
     return referrals.filter(
-      (ref) => String(ref?.conversation_id || ref?.conversationId || "") === String(selectedId)
+      (ref) =>
+        String(ref?.conversation_id || ref?.conversationId || "") ===
+        String(actionConversationId)
     );
-  }, [referrals, selectedId]);
+  }, [referrals, actionConversationId]);
 
   const nurtureLogsQuery = useQuery({
     queryKey: ["chat-nurture-logs", token],
@@ -239,7 +272,7 @@ export default function LeadsPage() {
         token,
         payload: {
           ...referralForm,
-          conversation_id: selectedId || undefined,
+          conversation_id: actionConversationId || undefined,
         },
       }),
     onSuccess: () => {
@@ -271,7 +304,7 @@ export default function LeadsPage() {
         token,
         payload: {
           ...nurtureForm,
-          conversation_id: selectedId || undefined,
+          conversation_id: actionConversationId || undefined,
         },
       }),
     onSuccess: () => {
@@ -288,7 +321,7 @@ export default function LeadsPage() {
         token,
         payload: {
           ...mortgageForm,
-          conversation_id: selectedId || undefined,
+          conversation_id: actionConversationId || undefined,
         },
       }),
     onSuccess: () => {
@@ -304,7 +337,7 @@ export default function LeadsPage() {
         token,
         payload: {
           ...closingForm,
-          conversation_id: selectedId || undefined,
+          conversation_id: actionConversationId || undefined,
         },
       }),
     onSuccess: () => {
@@ -346,7 +379,7 @@ export default function LeadsPage() {
           </div>
           <button
             type="button"
-            onClick={() => conversationsQuery.refetch()}
+            onClick={() => leadsQuery.refetch()}
             className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
           >
             <RefreshCw size={14} /> Refresh
@@ -417,28 +450,28 @@ export default function LeadsPage() {
             </div>
 
             <div className="space-y-3">
-              {conversationsQuery.isLoading ? (
+              {leadsQuery.isLoading ? (
                 <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-                  Loading conversations...
+                  Loading leads...
                 </div>
-              ) : conversationsQuery.isError ? (
+              ) : leadsQuery.isError ? (
                 <div className="rounded-md border border-border bg-white p-4 text-sm text-red-600">
-                  Failed to load conversations.
+                  Failed to load leads.
                 </div>
               ) : filteredConversations.length === 0 ? (
                 <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-                  No conversations found.
+                  No leads found.
                 </div>
               ) : (
                 filteredConversations.map((conversation) => {
-                  const id = getConversationId(conversation);
+                  const id = getLeadMatchId(conversation);
                   return (
                     <LeadListItem
                       key={id}
                       conversation={conversation}
-                      active={id === selectedId}
+                      active={String(id) === String(selectedLeadId)}
                       onSelect={(newId) => {
-                        setSelectedId(newId);
+                        setSelectedLeadId(newId);
                         setShowAdvicePopup(true); // Show popup when selecting a lead
                       }}
                     />
@@ -594,7 +627,9 @@ export default function LeadsPage() {
                 <button
                   type="button"
                   onClick={() => createReferralMutation.mutate()}
-                  disabled={!selectedId || createReferralMutation.isLoading}
+                  disabled={
+                    !selectedLeadId || !actionConversationId || createReferralMutation.isLoading
+                  }
                   className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
                 >
                   {createReferralMutation.isLoading ? "Saving..." : "Create referral"}
@@ -699,7 +734,9 @@ export default function LeadsPage() {
                   <button
                     type="button"
                     onClick={() => nurtureMutation.mutate()}
-                    disabled={!selectedId || nurtureMutation.isLoading}
+                    disabled={
+                      !selectedLeadId || !actionConversationId || nurtureMutation.isLoading
+                    }
                     className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
                   >
                     {nurtureMutation.isLoading ? "Sending..." : "Send nurture"}
@@ -752,7 +789,9 @@ export default function LeadsPage() {
                 <button
                   type="button"
                   onClick={() => mortgageMutation.mutate()}
-                  disabled={!selectedId || mortgageMutation.isLoading}
+                  disabled={
+                    !selectedLeadId || !actionConversationId || mortgageMutation.isLoading
+                  }
                   className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
                 >
                   {mortgageMutation.isLoading ? "Running..." : "Run mortgage"}
@@ -776,7 +815,9 @@ export default function LeadsPage() {
                   <button
                     type="button"
                     onClick={() => closingMutation.mutate()}
-                    disabled={!selectedId || closingMutation.isLoading}
+                    disabled={
+                      !selectedLeadId || !actionConversationId || closingMutation.isLoading
+                    }
                     className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
                   >
                     {closingMutation.isLoading ? "Running..." : "Run closing cost"}

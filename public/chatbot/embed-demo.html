@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Nesti chatbot embed test</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    iframe { width: 100%; height: 620px; border: 1px solid #ccc; border-radius: 8px; }
+    code { background: #f4f4f5; padding: 2px 6px; border-radius: 4px; }
+    .hint { color: #52525b; font-size: 14px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Embed test (same origin as Next)</h1>
+  <p>
+    Open this file via your dev server, not as a disk path. Example:
+    <br />
+    <code>http://localhost:3000/chatbot/embed-demo.html?token=YOUR_EMBED_TOKEN</code>
+  </p>
+  <p class="hint">
+    If you open HTML as <code>file:///...</code>, the browser often blocks or breaks requests to
+    <code>http://localhost:3000</code>. Use a local HTTP server instead (see README in repo).
+  </p>
+  <iframe id="nesti-frame" title="Nesti chatbot"></iframe>
+  <script>
+    (function () {
+      var token = new URLSearchParams(window.location.search).get("token");
+      var el = document.getElementById("nesti-frame");
+      if (!token || token === "YOUR_EMBED_TOKEN") {
+        el.replaceWith(document.createTextNode("Add ?token=… to the URL (your embed token from Settings)."));
+        return;
+      }
+      el.src = "/chatbot/" + encodeURIComponent(token);
+    })();
+  </script>
+</body>
+</html>

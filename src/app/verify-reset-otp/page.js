@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useState, useEffect, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { toast } from "react-toastify";
@@ -9,34 +9,64 @@ import { CheckCircle2, XCircle, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
 import { useVerifyResetOTP, useForgotPassword } from "@/hooks/useAuthApi";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { setResetOtp } from "@/store/authSlice";
+import { setResetToken, setResetEmail } from "@/store/authSlice";
 
-export default function VerifyResetOTPPage() {
+function VerifyResetOTPContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const emailParam = searchParams.get("email")?.trim().toLowerCase() || "";
   const dispatch = useAppDispatch();
   const resetEmail = useAppSelector((state) => state.auth.resetEmail);
+  const resetToken = useAppSelector((state) => state.auth.resetToken);
   const [verificationStatus, setVerificationStatus] = useState("idle"); // "idle" | "success" | "error"
   const [errorMessage, setErrorMessage] = useState("");
   const [resendSuccess, setResendSuccess] = useState(false);
-  const [otp, setOtp] = useState(["", "", "", "", "", ""]); // 6 digits for password reset
+  const [otp, setOtp] = useState(["", "", "", "", ""]); // 5 digits — matches backend randomOtp()
   const [email, setEmail] = useState("");
   const otpInputRefs = useRef([]);
+  const isVerifyingRef = useRef(false);
+  const isResendingRef = useRef(false);
+  const hasNavigatedToResetRef = useRef(false);
   const verifyResetMutation = useVerifyResetOTP();
   const resendMutation = useForgotPassword();
-  const verifying = verifyResetMutation.isLoading;
+  const verifying =
+    verifyResetMutation.isPending || verifyResetMutation.isLoading;
 
+  // Resolve email from Redux and/or ?email= (avoids false "no email" redirect on client nav / refresh)
   useEffect(() => {
-    if (resetEmail) {
-      setEmail(resetEmail);
+    const fromStore = resetEmail?.trim().toLowerCase() || "";
+    const fromQuery = emailParam;
+    const resolved = fromStore || fromQuery;
+
+    if (resolved) {
+      setEmail(resolved);
+      if (!fromStore && fromQuery) {
+        dispatch(setResetEmail(fromQuery));
+      }
       return;
     }
 
-    toast.error("Please request a password reset first.");
-    router.push("/forgot-password");
-  }, [resetEmail, router]);
+    toast.error("Please request a password reset first.", {
+      toastId: "verify-reset-otp-no-email",
+    });
+    router.replace("/forgot-password");
+  }, [resetEmail, emailParam, router, dispatch]);
+
+  // Navigate only after reset token is committed (avoids racing useAuthGuard / double client navigations)
+  useEffect(() => {
+    if (
+      verificationStatus !== "success" ||
+      !resetToken ||
+      hasNavigatedToResetRef.current
+    ) {
+      return;
+    }
+    hasNavigatedToResetRef.current = true;
+    router.replace("/reset-password");
+  }, [verificationStatus, resetToken, router]);
 
   const getOtpString = () => otp.join("").replace(/\D/g, "");
-  const isOtpComplete = () => getOtpString().length === 6;
+  const isOtpComplete = () => getOtpString().length === 5;
 
   const handleVerifyOTP = async () => {
     const code = getOtpString();
@@ -47,27 +77,30 @@ export default function VerifyResetOTPPage() {
       );
       return;
     }
-    if (code.length !== 6) {
-      toast.error("OTP must be 6 digits.");
+    if (code.length !== 5) {
+      toast.error("OTP must be 5 digits.");
       return;
     }
+    if (isVerifyingRef.current || verifying) return;
+    isVerifyingRef.current = true;
 
     setVerificationStatus("idle");
     setErrorMessage("");
 
     try {
-      await verifyResetMutation.mutateAsync({
+      const data = await verifyResetMutation.mutateAsync({
         email,
         otp: code,
       });
-      dispatch(setResetOtp(code));
+      dispatch(setResetToken(data?.resetToken || null));
       setVerificationStatus("success");
-      router.push(`/reset-password`);
     } catch (error) {
       setVerificationStatus("error");
       setErrorMessage(
         error?.message || "Verification failed. Please try again."
       );
+    } finally {
+      isVerifyingRef.current = false;
     }
   };
 
@@ -78,17 +111,26 @@ export default function VerifyResetOTPPage() {
       );
       return;
     }
+    if (
+      isResendingRef.current ||
+      resendMutation.isPending ||
+      resendMutation.isLoading
+    )
+      return;
+    isResendingRef.current = true;
 
     setResendSuccess(false);
 
     try {
       await resendMutation.mutateAsync(email);
       setResendSuccess(true);
-      setOtp(["", "", "", "", "", ""]);
+      setOtp(["", "", "", "", ""]);
       setVerificationStatus("idle");
       setErrorMessage("");
     } catch (error) {
       // errors handled by mutation toast
+    } finally {
+      isResendingRef.current = false;
     }
   };
 
@@ -99,33 +141,27 @@ export default function VerifyResetOTPPage() {
     newOtp[index] = value.slice(-1);
     setOtp(newOtp);
 
-    // Auto-focus next input
-    if (value && index < 5) {
+    if (value && index < 4) {
       otpInputRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleOTPBlur = (index) => {
-    // Only verify if it's the last input (index 5) and all OTP digits are complete
-    if (index === 5 && isOtpComplete() && !verifying) {
-      handleVerifyOTP();
-    }
-  };
-
   const handleOTPKeyDown = (index, e) => {
-    // Backspace on empty -> go back
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       otpInputRefs.current[index - 1]?.focus();
     }
-    // Enter from any input -> submit if OTP is complete
-    if (e.key === "Enter" && isOtpComplete() && !verifying) {
+    if (
+      e.key === "Enter" &&
+      isOtpComplete() &&
+      !verifying &&
+      !isVerifyingRef.current
+    ) {
       e.preventDefault();
       handleVerifyOTP();
     }
-    // Arrow navigation
     if (e.key === "ArrowLeft" && index > 0)
       otpInputRefs.current[index - 1]?.focus();
-    if (e.key === "ArrowRight" && index < 5)
+    if (e.key === "ArrowRight" && index < 4)
       otpInputRefs.current[index + 1]?.focus();
   };
 
@@ -134,22 +170,20 @@ export default function VerifyResetOTPPage() {
     const pastedData = e.clipboardData
       .getData("text")
       .replace(/\D/g, "")
-      .slice(0, 6);
+      .slice(0, 5);
     if (!pastedData) return;
 
-    const newOtp = ["", "", "", "", "", ""];
+    const newOtp = ["", "", "", "", ""];
     pastedData.split("").forEach((char, i) => {
-      if (i < 6) newOtp[i] = char;
+      if (i < 5) newOtp[i] = char;
     });
     setOtp(newOtp);
 
-    // Focus last or next empty
     const nextEmpty = newOtp.findIndex((v) => !v);
     if (nextEmpty !== -1) {
       otpInputRefs.current[nextEmpty]?.focus();
     } else {
-      // If all digits are filled, focus the last input
-      otpInputRefs.current[5]?.focus();
+      otpInputRefs.current[4]?.focus();
     }
   };
 
@@ -160,18 +194,16 @@ export default function VerifyResetOTPPage() {
     if (verificationStatus === "error") {
       return errorMessage || "Please check your OTP and try again.";
     }
-    return email
-      ? `Please enter the 6-digit code we sent to ${email}`
-      : "Please enter the 6-digit code we sent to your email.";
+    // Email is shown in the card below — don’t repeat it in the subtitle.
+    return "Please enter the 5-digit code we sent to your email.";
   };
 
   return (
     <AuthLayout>
-      {/* Left - Form Section */}
       <div className="w-full md:w-[45%] px-6 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16 space-y-6 bg-background">
-        {/* Back Button */}
         <Link
           href="/forgot-password"
+          prefetch={false}
           className="inline-flex items-center gap-2 text-sm text-text-body hover:text-primary transition-colors duration-200"
         >
           <ArrowLeft size={16} />
@@ -185,7 +217,6 @@ export default function VerifyResetOTPPage() {
           <p className="text-sm sm:text-base text-text-body">{getSubtitle()}</p>
         </div>
 
-        {/* Email Display */}
         {email && (
           <div className="flex items-center gap-2 p-3 bg-background-light/50 rounded-md border border-border">
             <Mail className="text-primary" size={18} />
@@ -193,13 +224,12 @@ export default function VerifyResetOTPPage() {
           </div>
         )}
 
-        {/* OTP Input Section */}
         {verificationStatus !== "success" && (
           <div className="space-y-4">
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                if (isOtpComplete() && !verifying) {
+                if (isOtpComplete() && !verifying && !isVerifyingRef.current) {
                   handleVerifyOTP();
                 }
               }}
@@ -219,22 +249,21 @@ export default function VerifyResetOTPPage() {
                     maxLength={1}
                     value={digit}
                     onChange={(e) => handleOTPChange(index, e.target.value)}
-                    onBlur={() => handleOTPBlur(index)}
                     onKeyDown={(e) => handleOTPKeyDown(index, e)}
                     onPaste={index === 0 ? handlePaste : undefined}
                     disabled={verifying}
-                    className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 ${verificationStatus === "error"
+                    className={`w-14 h-14 text-center text-2xl font-bold border-2 rounded-md transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-primary/20 ${
+                      verificationStatus === "error"
                         ? "border-red-300 bg-red-50"
                         : digit
                           ? "border-primary bg-primary/5"
                           : "border-border bg-background-light/50"
-                      } disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary`}
+                    } disabled:opacity-50 disabled:cursor-not-allowed hover:border-primary`}
                     aria-label={`Digit ${index + 1}`}
                   />
                 ))}
               </div>
 
-              {/* Error Message */}
               {verificationStatus === "error" && errorMessage && (
                 <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-md">
                   <XCircle className="text-red-500" size={18} />
@@ -242,7 +271,6 @@ export default function VerifyResetOTPPage() {
                 </div>
               )}
 
-              {/* Verify Button */}
               <motion.button
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
@@ -258,17 +286,21 @@ export default function VerifyResetOTPPage() {
               </motion.button>
             </form>
 
-            {/* Resend OTP */}
             <div className="text-center">
               <p className="text-sm text-text-body mb-2">
                 Didn&apos;t receive the code?
               </p>
               <button
+                type="button"
                 onClick={handleResendOTP}
-                disabled={resendMutation.isLoading || resendSuccess}
+                disabled={
+                  resendMutation.isPending ||
+                  resendMutation.isLoading ||
+                  resendSuccess
+                }
                 className="text-sm text-primary font-semibold hover:text-primary-dark transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {resendMutation.isLoading ? (
+                {resendMutation.isPending || resendMutation.isLoading ? (
                   <span className="flex items-center gap-2 justify-center">
                     <Loader2 className="animate-spin" size={16} />
                     Sending...
@@ -283,7 +315,6 @@ export default function VerifyResetOTPPage() {
           </div>
         )}
 
-        {/* Success State */}
         {verificationStatus === "success" && (
           <div className="flex flex-col items-center justify-center py-8 space-y-4">
             <motion.div
@@ -303,11 +334,11 @@ export default function VerifyResetOTPPage() {
           </div>
         )}
 
-        {/* Back to Login Link */}
         <div className="text-center text-sm text-text-body pt-2">
           Remember your password?{" "}
           <Link
             href="/log-in"
+            prefetch={false}
             className="text-primary font-semibold hover:text-primary-dark hover:underline transition-all duration-200"
           >
             Back to Login
@@ -315,9 +346,7 @@ export default function VerifyResetOTPPage() {
         </div>
       </div>
 
-      {/* Right - Visual Section */}
       <div className="w-full md:w-[55%] relative bg-gradient-to-br from-primary-light/20 via-primary/10 to-primary-dark/20 overflow-hidden">
-        {/* Decorative Background Elements */}
         <div className="absolute inset-0">
           <motion.div
             animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
@@ -331,7 +360,6 @@ export default function VerifyResetOTPPage() {
           />
         </div>
 
-        {/* Content Container */}
         <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 md:p-12 lg:p-16">
           <motion.div
             initial={{ opacity: 0, y: 30 }}
@@ -379,7 +407,6 @@ export default function VerifyResetOTPPage() {
             </div>
           </motion.div>
 
-          {/* Floating Elements */}
           <motion.div
             animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
             transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
@@ -393,5 +420,13 @@ export default function VerifyResetOTPPage() {
         </div>
       </div>
     </AuthLayout>
+  );
+}
+
+export default function VerifyResetOTPPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background" />}>
+      <VerifyResetOTPContent />
+    </Suspense>
   );
 }

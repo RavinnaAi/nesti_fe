@@ -1,17 +1,30 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { Send, X, MessageCircle, Loader2, RotateCcw } from "lucide-react";
 import {
   clearChatSession,
   getOrCreateSessionId,
   getVisitorId,
+  resetChatIdentity,
   sendChatMessage,
   setVisitorId,
 } from "@/lib/chatClient";
 import { motion, AnimatePresence } from "framer-motion";
 import QuickReplyButtons from "./QuickReplyButtons";
 import ConversationProgress from "./ConversationProgress";
+import AgentLeadOnboarding from "./AgentLeadOnboarding";
+import {
+  agentUserSummaryLine,
+  buildAgentFormContactOverride,
+  buildAgentFormData,
+  buildAgentOpeningMessage,
+  emptyAgentLeadDraft,
+  LEAD_STEP_LABELS,
+  PRE_CHAT_STEPS,
+  widgetRoleToChatAgentType,
+} from "./agentLeadCapture";
+import { parseInlineMarkdownLinks } from "@/lib/chatMarkdown";
 
 const formatTime = (date) =>
   date.toLocaleTimeString([], {
@@ -21,6 +34,7 @@ const formatTime = (date) =>
 
 export default function ChatWidget({
   embedToken,
+  widgetRole,
   defaultOpen = true,
   allowLauncher = true,
   launcherLabel = "Open chat",
@@ -29,6 +43,9 @@ export default function ChatWidget({
   inlineMode = false,
   initialGreeting = "Hello! How can I help with your real estate journey today?",
 }) {
+  const resolvedRole = widgetRole || "agent";
+  const useAgentLeadForm = resolvedRole === "agent";
+
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
@@ -37,10 +54,22 @@ export default function ChatWidget({
   const [visitorId, setVisitorIdState] = useState("");
   const [error, setError] = useState("");
   const [step, setStep] = useState(0);
-  const [emotionalState, setEmotionalState] = useState("confident");
-  const [nextAction, setNextAction] = useState("continue");
   const [quickReplies, setQuickReplies] = useState([]);
   const messagesEndRef = useRef(null);
+
+  const [leadFlowStep, setLeadFlowStep] = useState(() =>
+    resolvedRole !== "agent" ? "chat" : "intent",
+  );
+  const [chosenIntent, setChosenIntent] = useState(null);
+  const [leadDraft, setLeadDraft] = useState(() => emptyAgentLeadDraft());
+  const [formValidationError, setFormValidationError] = useState("");
+  const [leadFormContact, setLeadFormContact] = useState(null);
+
+  useEffect(() => {
+    if (widgetRole && widgetRole !== "agent") {
+      setLeadFlowStep("chat");
+    }
+  }, [widgetRole]);
 
   useEffect(() => {
     const sid = getOrCreateSessionId();
@@ -50,6 +79,7 @@ export default function ChatWidget({
   }, []);
 
   useEffect(() => {
+    if (useAgentLeadForm && leadFlowStep !== "chat") return;
     if (!initialGreeting || messages.length) return;
     setMessages([
       {
@@ -58,13 +88,13 @@ export default function ChatWidget({
         timestamp: new Date(),
       },
     ]);
-  }, [initialGreeting, messages.length]);
+  }, [useAgentLeadForm, leadFlowStep, initialGreeting, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, leadFlowStep]);
 
-  const addMessage = (role, content) => {
+  const addMessage = useCallback((role, content) => {
     setMessages((prev) => [
       ...prev,
       {
@@ -73,7 +103,38 @@ export default function ChatWidget({
         timestamp: new Date(),
       },
     ]);
-  };
+  }, []);
+
+  const applyChatPayload = useCallback(
+    (payload, currentVisitorId) => {
+      const meta = payload?.meta || {};
+      const reply = payload?.reply ?? payload?.response;
+      const intent = meta.intent ?? payload?.intent;
+      const action = meta.next_action ?? payload?.next_action;
+      const extracted = payload?.extracted_data || meta.extracted_data || {};
+
+      if (intent === "buy" || intent === "sell") setStep(1);
+      if (extracted?.budget || extracted?.timeline) setStep(2);
+      if (action === "collect_contact") setStep(3);
+      if (action === "offer_booking") setStep(4);
+
+      if (action === "collect_contact") {
+        setQuickReplies(["Share email", "Share phone", "Maybe later"]);
+      } else {
+        setQuickReplies([]);
+      }
+
+      const returnedVisitor =
+        meta.visitorId || payload?.visitor_id || payload?.visitorId || meta.visitor_id;
+      if (returnedVisitor && !currentVisitorId) {
+        setVisitorId(returnedVisitor);
+        setVisitorIdState(returnedVisitor);
+      }
+
+      addMessage("assistant", reply || "Thanks! How else can I help?");
+    },
+    [addMessage],
+  );
 
   const handleSend = async (overrideText = null) => {
     const text = overrideText || input.trim();
@@ -91,33 +152,56 @@ export default function ChatWidget({
         sessionId,
         embedToken,
         visitorId,
+        agentType: widgetRoleToChatAgentType(resolvedRole),
+        formContact: leadFormContact || undefined,
       });
 
       const payload = response?.data || response;
-      const reply = payload.response;
-      const intent = payload.intent;
-      const emotion = payload.emotional_state;
-      const action = payload.next_action;
+      applyChatPayload(payload, visitorId);
+    } catch (err) {
+      setError(err?.message || "Request failed.");
+    } finally {
+      setTimeout(() => setLoading(false), 400);
+    }
+  };
 
-      setEmotionalState(emotion || "confident");
-      setNextAction(action || "continue");
+  const handleStartChatFromForm = async () => {
+    if (!chosenIntent || !sessionId || !embedToken || loading) return;
 
-      // Dynamic Step Progression
-      if (intent === "buy" || intent === "sell") setStep(1);
-      if (payload.extracted_data?.budget || payload.extracted_data?.timeline) setStep(2);
-      if (action === "collect_contact") setStep(3);
-      if (action === "offer_booking") setStep(4);
+    const name = leadDraft.name.trim();
+    const phone = leadDraft.phone.trim();
+    const email = leadDraft.email.trim();
+    if (!name || !phone || !email) {
+      setFormValidationError("Please add your name, phone, and email to continue.");
+      return;
+    }
+    setFormValidationError("");
 
-      if (action === "collect_contact" && !quickReplies.length) {
-        setQuickReplies(["Share email", "Share phone", "Maybe later"]);
-      }
+    const formData = buildAgentFormData(chosenIntent, leadDraft);
+    const formContact = buildAgentFormContactOverride(formData);
+    const opening = buildAgentOpeningMessage(chosenIntent, formData);
+    const summary = agentUserSummaryLine(chosenIntent, formData);
 
-      const returnedVisitor = payload.meta?.visitorId || payload.visitorId;
-      if (returnedVisitor && !visitorId) {
-        setVisitorId(returnedVisitor);
-        setVisitorIdState(returnedVisitor);
-      }
-      addMessage("assistant", reply || "Thanks! How else can I help?");
+    setLeadFormContact(formContact);
+    setLeadFlowStep("chat");
+    setMessages([{ role: "user", content: summary, timestamp: new Date() }]);
+    setLoading(true);
+    setError("");
+    setQuickReplies([]);
+
+    try {
+      const response = await sendChatMessage({
+        message: opening,
+        sessionId,
+        embedToken,
+        visitorId,
+        agentType: widgetRoleToChatAgentType(resolvedRole),
+        formContact,
+      });
+      const payload = response?.data || response;
+      applyChatPayload(payload, visitorId);
+    } catch (err) {
+      setError(err?.message || "Request failed.");
     } finally {
       setTimeout(() => setLoading(false), 400);
     }
@@ -135,12 +219,94 @@ export default function ChatWidget({
     try {
       await clearChatSession(sessionId);
       setMessages([]);
+      setLeadFormContact(null);
+      setStep(0);
+      setQuickReplies([]);
+      if (useAgentLeadForm) {
+        setLeadFlowStep("intent");
+        setChosenIntent(null);
+        setLeadDraft(emptyAgentLeadDraft());
+        setFormValidationError("");
+      }
     } catch (err) {
       setError(err?.message || "Unable to clear conversation.");
     }
   };
 
+  /** Clears server thread, new session + visitor, full reset (agent = back to step 1). */
+  const handleStartNewRequest = async () => {
+    if (!sessionId) return;
+    setError("");
+    setFormValidationError("");
+    try {
+      await clearChatSession(sessionId);
+    } catch (_err) {
+      /* still reset locally */
+    }
+    const { sessionId: nextSid } = resetChatIdentity();
+    setSessionId(nextSid);
+    setVisitorIdState("");
+    setMessages([]);
+    setLeadFormContact(null);
+    setStep(0);
+    setQuickReplies([]);
+    setInput("");
+    if (useAgentLeadForm) {
+      setLeadFlowStep("intent");
+      setChosenIntent(null);
+      setLeadDraft(emptyAgentLeadDraft());
+    }
+  };
+
+  const onboardingGoBack = useCallback(() => {
+    setFormValidationError("");
+    if (leadFlowStep === "contact") setLeadFlowStep("intent");
+    else if (leadFlowStep === "property") setLeadFlowStep("contact");
+    else if (leadFlowStep === "qualify") setLeadFlowStep("property");
+    else if (leadFlowStep === "reach") setLeadFlowStep("qualify");
+  }, [leadFlowStep]);
+
+  const onboardingGoForward = useCallback(() => {
+    setFormValidationError("");
+    if (leadFlowStep === "intent") {
+      if (!chosenIntent) {
+        setFormValidationError("Please select whether you are buying or selling.");
+        return;
+      }
+      setLeadFlowStep("contact");
+      return;
+    }
+    if (leadFlowStep === "contact") {
+      const name = leadDraft.name.trim();
+      const phone = leadDraft.phone.trim();
+      const email = leadDraft.email.trim();
+      if (!name || !phone || !email) {
+        setFormValidationError("Please fill in your name, phone, and email.");
+        return;
+      }
+      setLeadFlowStep("property");
+      return;
+    }
+    if (leadFlowStep === "property") {
+      setLeadFlowStep("qualify");
+      return;
+    }
+    if (leadFlowStep === "qualify") {
+      setLeadFlowStep("reach");
+    }
+  }, [leadFlowStep, chosenIntent, leadDraft]);
+
   const disabledSend = !input.trim() || loading || !embedToken;
+
+  const headerSubtitle =
+    useAgentLeadForm && leadFlowStep !== "chat"
+      ? (() => {
+          const i = PRE_CHAT_STEPS.indexOf(leadFlowStep);
+          const n = i >= 0 ? i + 1 : 1;
+          const label = LEAD_STEP_LABELS[leadFlowStep] || "";
+          return `Step ${n} of ${PRE_CHAT_STEPS.length} · ${label}`;
+        })()
+      : subtitle;
 
   const header = (
     <div className="bg-white border-b border-border px-5 py-4 flex items-center justify-between">
@@ -150,7 +316,7 @@ export default function ChatWidget({
         </div>
         <div>
           <h3 className="font-semibold text-text-heading">{title}</h3>
-          <p className="text-xs text-text-muted">{subtitle}</p>
+          <p className="text-xs text-text-muted">{headerSubtitle}</p>
         </div>
       </div>
       <div className="flex items-center gap-2">
@@ -169,7 +335,7 @@ export default function ChatWidget({
     </div>
   );
 
-  const body = (
+  const chatBody = (
     <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-background-light scrollbar-hide">
       <AnimatePresence initial={false}>
         {messages.map((msg, idx) => {
@@ -188,15 +354,22 @@ export default function ChatWidget({
                 </div>
               )}
               <div
-                className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm relative ${isUser
-                  ? "bg-primary text-white"
-                  : "bg-white border border-border text-text-heading"
-                  }`}
+                className={`max-w-[85%] rounded-2xl px-4 py-2.5 shadow-sm relative ${
+                  isUser
+                    ? "bg-primary text-white"
+                    : "bg-white border border-border text-text-heading"
+                }`}
               >
-                <p className="text-sm whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                <p className="text-sm whitespace-pre-wrap leading-relaxed [&_a]:underline [&_a]:font-semibold break-words">
+                  {parseInlineMarkdownLinks(
+                    msg.content,
+                    isUser ? "text-white underline" : "text-primary",
+                  )}
+                </p>
                 <p
-                  className={`text-[9px] mt-1 font-medium tracking-wide ${isUser ? "text-white/70" : "text-text-muted text-right"
-                    }`}
+                  className={`text-[9px] mt-1 font-medium tracking-wide ${
+                    isUser ? "text-white/70" : "text-text-muted text-right"
+                  }`}
                 >
                   {formatTime(msg.timestamp || new Date())}
                 </p>
@@ -210,7 +383,7 @@ export default function ChatWidget({
         })}
       </AnimatePresence>
 
-      {loading && (
+      {loading && leadFlowStep === "chat" && (
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -243,13 +416,13 @@ export default function ChatWidget({
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyPress={handleKeyPress}
+          onKeyDown={handleKeyPress}
           placeholder={embedToken ? "Type your message..." : "Embed token missing"}
           disabled={loading || !embedToken}
           className="flex-1 px-4 py-2 border border-border rounded-xl bg-background-light focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-50"
         />
         <button
-          onClick={handleSend}
+          onClick={() => handleSend()}
           disabled={disabledSend}
           className="px-4 py-2 bg-primary text-white rounded-xl hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-sm"
           aria-label="Send message"
@@ -260,15 +433,40 @@ export default function ChatWidget({
 
       {messages.length > 0 && (
         <button
-          onClick={handleClear}
+          onClick={useAgentLeadForm ? handleStartNewRequest : handleClear}
           className="text-xs text-text-muted hover:text-text-heading mt-2 transition inline-flex items-center gap-1"
         >
           <RotateCcw size={12} />
-          Clear conversation
+          {useAgentLeadForm ? "Start new request" : "Clear conversation"}
         </button>
       )}
     </div>
   );
+
+  const mainPanel =
+    useAgentLeadForm && leadFlowStep !== "chat" ? (
+      <AgentLeadOnboarding
+        step={leadFlowStep}
+        chosenIntent={chosenIntent}
+        onChooseIntent={(v) => {
+          setFormValidationError("");
+          setChosenIntent(v);
+        }}
+        draft={leadDraft}
+        onFieldChange={(field, value) => setLeadDraft((d) => ({ ...d, [field]: value }))}
+        onBack={onboardingGoBack}
+        onForward={onboardingGoForward}
+        onStartChat={handleStartChatFromForm}
+        onStartOver={handleStartNewRequest}
+        validationError={formValidationError}
+      />
+    ) : (
+      <>
+        {leadFlowStep === "chat" ? <ConversationProgress step={step} /> : null}
+        {chatBody}
+        {footer}
+      </>
+    );
 
   return (
     <>
@@ -286,16 +484,15 @@ export default function ChatWidget({
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          className={`${inlineMode
-            ? "relative w-full h-[600px] max-h-[70vh]"
-            : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[85vh] z-50"
-            } bg-transparent rounded-[2rem] shadow-2xl flex flex-col border border-border overflow-hidden backdrop-blur-sm`}
+          className={`${
+            inlineMode
+              ? "relative w-full h-[600px] max-h-[70vh]"
+              : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[85vh] z-50"
+          } bg-transparent rounded-[2rem] shadow-2xl flex flex-col border border-border overflow-hidden backdrop-blur-sm`}
         >
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full min-h-0">
             {header}
-            <ConversationProgress step={step} />
-            {body}
-            {footer}
+            {mainPanel}
           </div>
         </motion.div>
       )}
