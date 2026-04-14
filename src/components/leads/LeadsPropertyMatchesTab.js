@@ -330,6 +330,20 @@ export default function LeadsPropertyMatchesTab({
     return s.startsWith("$") ? s : `$${s}`;
   };
 
+  /** Table: show only CRM budget string from matched lead (no listing/list price fallback). */
+  const getMatchBudgetDisplay = (match) => {
+    const ml = getMatchedLead(match);
+    const rawBudget = ml?.property_budget;
+    if (rawBudget == null || String(rawBudget).trim() === "") return "—";
+    const s = String(rawBudget).trim();
+    if (/^\d[\d,]*$/.test(s)) {
+      const n = parseInt(s.replace(/,/g, ""), 10);
+      if (Number.isFinite(n) && n > 0) return formatPriceLabel(n);
+    }
+    const fb = formatProfileBudget(rawBudget);
+    return fb || readable(s) || "—";
+  };
+
   return (
     <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
       {selectedConversation ? (
@@ -344,148 +358,201 @@ export default function LeadsPropertyMatchesTab({
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {propertyMatches.slice(0, 8).map((match, idx) => {
-                  const rowId = matchRowId(match, idx);
-                  const isOpen = selectedMatch && matchRowId(selectedMatch.match, selectedMatch.idx) === rowId;
-                  const summaryInline = getMatchSummaryInline(match, idx);
-                  const headline = String(match?.match_headline ?? match?.matchHeadline ?? "").trim();
-                  const party = getMatchPartyContact(match);
-                  const showSelectedLeadChips = !showMatchedLeadDetailPanel(match);
-                  return (
-                    <button
-                      key={rowId}
-                      type="button"
-                      aria-expanded={isOpen}
-                      onClick={() => toggleMatch(match, idx)}
-                      className={`rounded-md border bg-background-light/50 px-3 py-2.5 text-left transition hover:border-primary/40 ${
-                        isOpen ? "border-primary/50 ring-2 ring-primary/25" : "border-border/60"
-                      }`}
-                    >
-                      <div className="flex items-start justify-between gap-2 pointer-events-none">
-                        <div className="min-w-0 flex-1">
-                          <div className="text-[10px] uppercase tracking-wide text-text-muted">
-                            {matchPartySectionLabel(match?.source)}
-                          </div>
-                          <div className="text-xs font-semibold text-text-heading leading-tight mt-0.5">
-                            {party.name
-                              ? readable(party.name)
-                              : getMatchedLead(match)
-                                ? "Contact not on file"
-                                : "—"}
-                          </div>
-                          <div className="text-[11px] text-primary-dark mt-1 break-all">
-                            {party.email || (getMatchedLead(match) ? "—" : "No email")}
-                          </div>
-                          {party.phone ? (
-                            <div className="text-[11px] text-text-muted mt-0.5">{party.phone}</div>
-                          ) : getMatchedLead(match) ? (
-                            <div className="text-[11px] text-text-muted mt-0.5">—</div>
-                          ) : null}
-                        </div>
-                        {getMatchScore(match) !== null && getMatchScore(match) !== undefined ? (
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-md bg-green-50 border border-green-200 text-green-700 shrink-0">
-                            Match {getMatchScore(match)}
-                          </span>
-                        ) : null}
-                      </div>
-
-                      {showSelectedLeadChips ? (
-                      <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[10px] text-text-muted pointer-events-none">
-                        <span className="w-full text-[9px] uppercase tracking-wide text-text-muted/80 mb-0.5">This lead</span>
-                        {listMeta.isMatched === true ? (
-                          <span className="inline-flex items-center gap-0.5 rounded-md bg-green-50 text-green-700 border border-green-200 px-1.5 py-0.5">
-                            <CheckCircle2 size={10} />
-                            Matched
-                          </span>
-                        ) : listMeta.isMatched === false ? (
-                          <span className="inline-flex items-center gap-0.5 rounded-md bg-red-50 text-red-700 border border-red-200 px-1.5 py-0.5">
-                            <XCircle size={10} />
-                            Mismatched
-                          </span>
-                        ) : null}
-                        {listMeta.leadGrade ? (
-                          <span
-                            className={`inline-flex items-center gap-0.5 rounded-md px-1.5 py-0.5 ${
-                              String(listMeta.leadGrade).toLowerCase() === "hot"
-                                ? "bg-red-50 text-red-700 border border-red-200"
-                                : String(listMeta.leadGrade).toLowerCase() === "warm"
-                                  ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                  : "bg-blue-50 text-blue-700 border border-blue-200"
-                            }`}
-                          >
-                            <Flame size={10} />
-                            {String(listMeta.leadGrade).toUpperCase()}
-                          </span>
-                        ) : null}
-                        {listMeta.qualified ? (
-                          <span className="inline-flex items-center gap-0.5 rounded-md bg-primary/10 text-primary border border-primary/20 px-1.5 py-0.5">
-                            <BadgeCheck size={10} />
-                            Qualified
-                          </span>
-                        ) : null}
-                        {listMeta.intent ? (
-                          <span className="px-1.5 py-0.5 rounded-md border border-border/60 bg-background-light/50">
-                            {String(listMeta.intent).charAt(0).toUpperCase() + String(listMeta.intent).slice(1)}
-                          </span>
-                        ) : null}
-                        {listMeta.leadScore !== null && listMeta.leadScore !== undefined ? (
-                          <span
-                            className={`px-1.5 py-0.5 rounded-md ${
-                              Number(listMeta.leadScore) >= 70
-                                ? "bg-green-50 border border-green-200 text-green-700"
-                                : Number(listMeta.leadScore) >= 40
-                                  ? "bg-amber-50 border border-amber-200 text-amber-800"
-                                  : "bg-red-50 border border-red-200 text-red-700"
-                            }`}
-                          >
-                            Score {listMeta.leadScore}
-                          </span>
-                        ) : null}
-                        {listMeta.location ? (
-                          <span className="px-1.5 py-0.5 rounded-md border border-border/60 bg-background-light/50 max-w-[140px] truncate">
-                            {listMeta.location}
-                          </span>
-                        ) : null}
-                        {listMeta.timeline ? (
-                          <span className="px-1.5 py-0.5 rounded-md border border-border/60 bg-background-light/50">
-                            Timeline: {listMeta.timeline}
-                          </span>
-                        ) : null}
-                        {listMeta.budget ? (
-                          <span className="px-1.5 py-0.5 rounded-md border border-border/60 bg-background-light/50">
-                            Budget: {listMeta.budget}
-                          </span>
-                        ) : null}
-                        {listMeta.channel ? (
-                          <span className="px-1.5 py-0.5 rounded-md border border-border/60 bg-background-light/50 inline-flex items-center gap-0.5">
-                            <MessageCircle size={9} />
-                            {listMeta.channel}
-                          </span>
-                        ) : null}
-                      </div>
-                      ) : null}
-
-                      <div className="mt-2 border-t border-border/40 pt-1.5 pointer-events-none">
-                        <p className="text-[11px] font-medium leading-snug text-text-heading line-clamp-2">{summaryInline}</p>
-                        {headline && headline.toLowerCase() !== String(summaryInline).toLowerCase() ? (
-                          <p className="mt-1 text-[10px] leading-snug text-text-muted">{headline}</p>
-                        ) : null}
-                      </div>
-                    </button>
-                  );
-                })}
+              <div className="overflow-x-auto rounded-lg border border-border/60 bg-white shadow-sm">
+                <table className="min-w-[720px] w-full border-collapse text-left text-[11px] text-text-body">
+                  <thead>
+                    <tr className="border-b border-border/70 bg-background-light/30">
+                      <th className="whitespace-nowrap px-2.5 py-2 text-[9px] font-semibold uppercase tracking-wider text-text-muted sm:px-3">
+                        Party
+                      </th>
+                      <th className="whitespace-nowrap px-2.5 py-2 text-[9px] font-semibold uppercase tracking-wider text-text-muted sm:px-3">
+                        Location
+                      </th>
+                      <th className="whitespace-nowrap px-2.5 py-2 text-[9px] font-semibold uppercase tracking-wider text-text-muted sm:px-3">
+                        Property
+                      </th>
+                      <th className="whitespace-nowrap px-2.5 py-2 text-[9px] font-semibold uppercase tracking-wider text-text-muted sm:px-3">
+                        Budget
+                      </th>
+                      <th className="whitespace-nowrap px-2.5 py-2 text-[9px] font-semibold uppercase tracking-wider text-text-muted sm:px-3">
+                        Match
+                      </th>
+                      <th className="min-w-[120px] max-w-[200px] px-2.5 py-2 text-[9px] font-semibold uppercase tracking-wider text-text-muted sm:px-3">
+                        Summary
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {propertyMatches.slice(0, 8).map((match, idx) => {
+                      const rowId = matchRowId(match, idx);
+                      const isOpen = selectedMatch && matchRowId(selectedMatch.match, selectedMatch.idx) === rowId;
+                      const summaryInline = getMatchSummaryInline(match, idx);
+                      const headline = String(match?.match_headline ?? match?.matchHeadline ?? "").trim();
+                      const party = getMatchPartyContact(match);
+                      const showSelectedLeadChips = !showMatchedLeadDetailPanel(match);
+                      const loc = getMatchLocation(match);
+                      const typ = getMatchType(match);
+                      const budgetLabel = getMatchBudgetDisplay(match);
+                      const score = getMatchScore(match);
+                      const onRowActivate = () => toggleMatch(match, idx);
+                      return (
+                        <tr
+                          key={rowId}
+                          role="button"
+                          tabIndex={0}
+                          aria-expanded={isOpen}
+                          onClick={onRowActivate}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter" || e.key === " ") {
+                              e.preventDefault();
+                              onRowActivate();
+                            }
+                          }}
+                          className={`cursor-pointer border-b border-border/40 transition-colors last:border-b-0 hover:bg-primary/[0.04] focus-visible:bg-primary/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/25 focus-visible:ring-inset ${
+                            isOpen ? "bg-primary/[0.07]" : ""
+                          }`}
+                        >
+                          <td className="align-top px-2.5 py-1.5 sm:px-3">
+                            <div className="text-[11px] font-semibold text-text-heading">
+                              {party.name
+                                ? readable(party.name)
+                                : getMatchedLead(match)
+                                  ? "Contact not on file"
+                                  : "—"}
+                            </div>
+                            <div className="mt-0.5 max-w-[260px] space-y-0.5 text-[10px]">
+                              <div className="truncate text-text-heading" title={party.email || ""}>
+                                {party.email || (getMatchedLead(match) ? "—" : "No email")}
+                              </div>
+                              {party.phone ? (
+                                <div className="truncate text-text-muted" title={party.phone}>
+                                  {party.phone}
+                                </div>
+                              ) : getMatchedLead(match) ? (
+                                <div className="text-text-muted">—</div>
+                              ) : null}
+                            </div>
+                            {showSelectedLeadChips ? (
+                              <div className="mt-1 flex max-w-[240px] flex-wrap items-center gap-0.5 text-[9px] text-text-muted">
+                                <span className="mr-0.5 text-[8px] uppercase tracking-wide text-text-muted/90">This lead</span>
+                                {listMeta.isMatched === true ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded border bg-green-50 text-green-700 border-green-200/80 px-1 py-px">
+                                    <CheckCircle2 size={9} />
+                                    Matched
+                                  </span>
+                                ) : listMeta.isMatched === false ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded border bg-red-50 text-red-700 border-red-200/80 px-1 py-px">
+                                    <XCircle size={9} />
+                                    Mismatched
+                                  </span>
+                                ) : null}
+                                {listMeta.leadGrade ? (
+                                  <span
+                                    className={`inline-flex items-center gap-0.5 rounded border px-1 py-px ${
+                                      String(listMeta.leadGrade).toLowerCase() === "hot"
+                                        ? "bg-red-50 text-red-700 border border-red-200"
+                                        : String(listMeta.leadGrade).toLowerCase() === "warm"
+                                          ? "bg-amber-50 text-amber-800 border border-amber-200"
+                                          : "bg-blue-50 text-blue-700 border border-blue-200"
+                                    }`}
+                                  >
+                                    <Flame size={9} />
+                                    {String(listMeta.leadGrade).toUpperCase()}
+                                  </span>
+                                ) : null}
+                                {listMeta.qualified ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded border bg-primary/10 text-primary border-primary/20 px-1 py-px">
+                                    <BadgeCheck size={9} />
+                                    Qualified
+                                  </span>
+                                ) : null}
+                                {listMeta.intent ? (
+                                  <span className="rounded border border-border/60 bg-background-light/50 px-1 py-px">
+                                    {String(listMeta.intent).charAt(0).toUpperCase() + String(listMeta.intent).slice(1)}
+                                  </span>
+                                ) : null}
+                                {listMeta.leadScore !== null && listMeta.leadScore !== undefined ? (
+                                  <span
+                                    className={`rounded border px-1 py-px ${
+                                      Number(listMeta.leadScore) >= 70
+                                        ? "border-green-200 bg-green-50 text-green-700"
+                                        : Number(listMeta.leadScore) >= 40
+                                          ? "border-amber-200 bg-amber-50 text-amber-800"
+                                          : "border-red-200 bg-red-50 text-red-700"
+                                    }`}
+                                  >
+                                    Score {listMeta.leadScore}
+                                  </span>
+                                ) : null}
+                                {listMeta.location ? (
+                                  <span className="max-w-[100px] truncate rounded border border-border/60 bg-background-light/50 px-1 py-px">
+                                    {listMeta.location}
+                                  </span>
+                                ) : null}
+                                {listMeta.timeline ? (
+                                  <span className="rounded border border-border/60 bg-background-light/50 px-1 py-px">
+                                    Timeline: {listMeta.timeline}
+                                  </span>
+                                ) : null}
+                                {listMeta.budget ? (
+                                  <span className="rounded border border-border/60 bg-background-light/50 px-1 py-px">
+                                    Budget: {listMeta.budget}
+                                  </span>
+                                ) : null}
+                                {listMeta.channel ? (
+                                  <span className="inline-flex items-center gap-0.5 rounded border border-border/60 bg-background-light/50 px-1 py-px">
+                                    <MessageCircle size={8} />
+                                    {listMeta.channel}
+                                  </span>
+                                ) : null}
+                              </div>
+                            ) : null}
+                          </td>
+                          <td className="align-middle whitespace-nowrap px-2.5 py-1.5 text-[11px] text-text-heading sm:px-3">
+                            {loc ? readable(loc) : "—"}
+                          </td>
+                          <td className="align-middle px-2.5 py-1.5 text-[11px] text-text-heading sm:px-3">
+                            {typ ? readable(typ.replace(/_/g, " ")) : "—"}
+                          </td>
+                          <td className="align-middle whitespace-nowrap px-2.5 py-1.5 text-[11px] tabular-nums text-text-heading sm:px-3">
+                            {budgetLabel}
+                          </td>
+                          <td className="align-middle px-2.5 py-1.5 sm:px-3">
+                            {score !== null && score !== undefined ? (
+                              <span
+                                className="inline-flex items-center rounded-full border border-green-200/90 bg-green-50 px-2 py-px text-[9px] font-semibold tabular-nums text-green-800"
+                                title={`Match score ${score}`}
+                              >
+                                {score}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="align-middle px-2.5 py-1.5 sm:px-3">
+                            <div
+                              className="max-w-[200px] truncate text-[10px] font-medium leading-snug text-text-heading"
+                              title={headline || summaryInline}
+                            >
+                              {headline || summaryInline || "—"}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
 
               {selectedMatch && typeof document !== "undefined"
                 ? createPortal(
                     <div
-                      className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-black/45 p-2 sm:p-4"
+                      className="fixed inset-0 z-[100] flex min-h-0 items-center justify-center overflow-y-auto bg-black/40 p-2 sm:p-4"
                       role="presentation"
                       onClick={() => setSelectedMatch(null)}
                     >
                       <div
-                        className="my-auto flex max-h-[min(92dvh,92vh)] min-h-0 w-[calc(100vw-1rem)] max-w-lg flex-col overflow-hidden rounded-xl border border-border bg-white shadow-2xl sm:w-full"
+                        className="my-auto flex max-h-[min(92dvh,92vh)] min-h-0 w-[calc(100vw-1rem)] max-w-lg flex-col overflow-hidden rounded-2xl border border-border/80 bg-white shadow-xl shadow-black/5 ring-1 ring-black/[0.03] sm:w-full"
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="match-detail-heading"
@@ -496,7 +563,7 @@ export default function LeadsPropertyMatchesTab({
                             <h3 id="match-detail-heading" className="text-sm font-semibold leading-tight text-text-heading sm:text-base">
                               {getListingHeading(selectedMatch.match, selectedMatch.idx)}
                             </h3>
-                            <p className="mt-0.5 text-[11px] text-text-muted sm:text-xs">Match details & next steps</p>
+                            <p className="mt-0.5 text-[11px] text-text-muted sm:text-xs">Match details</p>
                           </div>
                           <button
                             type="button"
@@ -508,9 +575,9 @@ export default function LeadsPropertyMatchesTab({
                           </button>
                         </div>
 
-                        <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto overscroll-contain px-3 py-2.5 sm:space-y-3 sm:px-4 sm:py-3">
+                        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain px-3 py-3 sm:px-4 sm:py-4">
                           {showMatchedLeadDetailPanel(selectedMatch.match) ? (
-                            <div className="rounded-lg border border-border/60 bg-background-light/30 p-2.5 sm:p-3">
+                            <div className="rounded-xl border border-border/50 bg-background-light/25 p-2.5 sm:p-3">
                               <div className="text-[11px] font-semibold text-text-heading sm:text-xs">
                                 {matchPartySectionLabel(selectedMatch.match?.source)}
                               </div>
@@ -560,7 +627,7 @@ export default function LeadsPropertyMatchesTab({
                               </div>
                             </div>
                           ) : (
-                            <div className="rounded-lg border border-border/60 bg-background-light/20 p-2.5 sm:p-3">
+                            <div className="rounded-xl border border-border/50 bg-background-light/20 p-2.5 sm:p-3">
                               <div className="text-[11px] font-semibold text-text-heading sm:text-xs">Lead open in workspace</div>
                               <p className="mt-0.5 text-[10px] text-text-muted">
                                 Qualification and intent for the lead you selected in the list.
@@ -604,24 +671,6 @@ export default function LeadsPropertyMatchesTab({
                             </div>
                           ) : null}
 
-                          <div className="space-y-1.5 rounded-lg border border-border/60 bg-background-light/40 p-2.5 sm:p-3">
-                            <div className="text-[11px] font-semibold text-text-heading sm:text-xs">Professional & next steps</div>
-                            <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
-                              <ModalKeyValue label="Professional" value={propertyMatchesPayload?.user_name || "—"} />
-                              <ModalKeyValue label="Primary channel" value={propertyMatchesPayload?.next_steps?.primary_action?.channel || "—"} />
-                              <ModalKeyValue label="Primary next step" value={propertyMatchesPayload?.next_steps?.primary_action?.title || "—"} />
-                              <ModalKeyValue
-                                label="Secondary steps"
-                                value={
-                                  Array.isArray(propertyMatchesPayload?.next_steps?.secondary_actions) &&
-                                  propertyMatchesPayload.next_steps.secondary_actions.length
-                                    ? propertyMatchesPayload.next_steps.secondary_actions.map((s) => s?.title).filter(Boolean).join(", ")
-                                    : "—"
-                                }
-                              />
-                            </div>
-                          </div>
-
                           <div>
                             <div className="mb-0.5 text-[11px] font-semibold text-text-heading sm:text-xs">Suggestion</div>
                             <p className="text-[11px] leading-snug text-text-body sm:text-xs">
@@ -629,7 +678,7 @@ export default function LeadsPropertyMatchesTab({
                             </p>
                           </div>
 
-                          <div className="rounded-lg border border-border/60 bg-white px-2.5 py-2 sm:px-3">
+                          <div className="rounded-xl border border-border/50 bg-background-light/15 px-2.5 py-2.5 sm:px-3">
                             <div className="text-[9px] uppercase tracking-wide text-text-muted">Suggested first message</div>
                             <p className="mt-1 max-h-[40vh] overflow-y-auto whitespace-pre-wrap text-[11px] leading-snug text-text-body sm:text-xs">
                               {propertyMatchesPayload?.next_steps?.primary_action?.suggested_first_message ||
