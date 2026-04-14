@@ -75,6 +75,7 @@ export const API_ENDPOINTS = {
     list: withBaseUrl("/api/leads"),
     detail: withBaseUrl((id) => `/api/leads/${id}`),
     conversation: withBaseUrl((id) => `/api/leads/${id}/conversation`),
+    propertyMatches: withBaseUrl((id) => `/api/leads/${id}/property-matches`),
   },
   chat: {
     /** Public embed POST (no Bearer); body includes embedToken. */

@@ -25,7 +25,33 @@ const getLeadMeta = (conversation) => {
     }
   }
 
-  return { leadScore, leadGrade, intent, channel, qualified, isMatched, last_message_content };
+  const signals =
+    conversation?.signals ||
+    conversation?.meta?.signals ||
+    conversation?.metadata?.signals ||
+    {};
+  const timeline = conversation?.timeline || signals?.timeline || null;
+  const budget = conversation?.budget || signals?.budget || null;
+  const location =
+    conversation?.location ||
+    conversation?.city ||
+    signals?.location ||
+    null;
+
+  return { leadScore, leadGrade, intent, channel, qualified, isMatched, last_message_content, timeline, budget, location };
+};
+
+const formatUpdatedTime = (conversation) => {
+  const value =
+    conversation?.updated_at ||
+    conversation?.updatedAt ||
+    conversation?.created_at ||
+    conversation?.createdAt ||
+    null;
+  if (!value) return "";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "";
+  return d.toLocaleString();
 };
 
 export default function LeadListItem({ conversation, active, onSelect }) {
@@ -48,7 +74,9 @@ export default function LeadListItem({ conversation, active, onSelect }) {
     conversation?.city ||
     "No contact info";
 
-  const { leadScore, leadGrade, intent, channel, qualified, isMatched, last_message_content } = getLeadMeta(conversation);
+  const { leadScore, leadGrade, intent, channel, qualified, isMatched, last_message_content, timeline, budget, location } =
+    getLeadMeta(conversation);
+  const updatedAtLabel = formatUpdatedTime(conversation);
 
   return (
     <button
@@ -63,8 +91,8 @@ export default function LeadListItem({ conversation, active, onSelect }) {
     >
       <div className="flex items-start justify-between flex-wrap gap-3">
         <div>
-          <div className="text-sm font-semibold text-text-heading">{name}</div>
-          <div className="text-xs text-primary-dark mt-1">
+          <div className="text-sm font-semibold text-text-heading leading-tight">{name}</div>
+          <div className="text-xs text-primary-dark mt-1 break-all">
             {conversation?.email || last_message_content?.contact?.email || "No email"}
           </div>
           <div className="text-xs text-text-muted mt-1">
@@ -78,17 +106,17 @@ export default function LeadListItem({ conversation, active, onSelect }) {
               Matched
             </span>
           ) : isMatched === false ? (
-            <span className="inline-flex items-center gap-1 rounded-md bg-red-200 text-red-700 border border-red-200 px-2 py-0.5">
+            <span className="inline-flex items-center gap-1 rounded-md bg-red-50 text-red-700 border border-red-200 px-2 py-0.5">
               <XCircle size={12} />
               Mismatched
             </span>
           ) : null}
           {leadGrade ? (
             <span className={`inline-flex items-center gap-1 rounded-md px-2 py-0.5 ${String(leadGrade).toLowerCase() === "hot"
-              ? "bg-red-200 text-red-700 border border-red-200"
+              ? "bg-red-50 text-red-700 border border-red-200"
               : String(leadGrade).toLowerCase() === "warm"
-                ? "bg-yellow-200 text-yellow-700 border border-yellow-200"
-                : "bg-blue-200 text-blue-700 border border-blue-200"
+                ? "bg-amber-50 text-amber-800 border border-amber-200"
+                : "bg-blue-50 text-blue-700 border border-blue-200"
               }`}>
               <Flame size={12} />
               {String(leadGrade).toUpperCase()}
@@ -102,27 +130,34 @@ export default function LeadListItem({ conversation, active, onSelect }) {
           ) : null}
         </div>
       </div>
+
       <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] text-text-muted">
-        {intent ? <span className="px-2 py-0.5 rounded-md bg-background-light">{intent?.charAt(0).toUpperCase() + intent?.slice(1)}</span> : null}
+        {intent ? <span className="px-2 py-0.5 rounded-md border border-border/60 bg-background-light/50">{intent?.charAt(0).toUpperCase() + intent?.slice(1)}</span> : null}
         {leadScore !== null && leadScore !== undefined ? (
           <span
             className={`px-2 py-0.5 rounded-md ${Number(leadScore) >= 70
-              ? "bg-green-100 text-green-700"
+              ? "bg-green-50 border border-green-200 text-green-700"
               : Number(leadScore) >= 40
-                ? "bg-yellow-100 text-yellow-700"
-                : "bg-red-100 text-red-700"
+                ? "bg-amber-50 border border-amber-200 text-amber-800"
+                : "bg-red-50 border border-red-200 text-red-700"
               }`}
           >
             Score {leadScore}
           </span>
         ) : null}
+        {location ? <span className="px-2 py-0.5 rounded-md border border-border/60 bg-background-light/50">{location}</span> : null}
+        {timeline ? <span className="px-2 py-0.5 rounded-md border border-border/60 bg-background-light/50">Timeline: {timeline}</span> : null}
+        {budget ? <span className="px-2 py-0.5 rounded-md border border-border/60 bg-background-light/50">Budget: {budget}</span> : null}
         {channel ? (
-          <span className="px-2 py-0.5 rounded-md bg-background-light">
+          <span className="px-2 py-0.5 rounded-md border border-border/60 bg-background-light/50">
             <MessageCircle size={10} className="inline-block mr-1" />
             {channel}
           </span>
         ) : null}
       </div>
+      {updatedAtLabel ? (
+        <div className="mt-2 text-[11px] text-text-muted">Updated: {updatedAtLabel}</div>
+      ) : null}
     </button>
   );
 }

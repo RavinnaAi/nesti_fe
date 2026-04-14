@@ -21,7 +21,7 @@ export async function fetchLeads({ token, ...query }) {
 
 export async function fetchLeadById({ token, id }) {
   return apiClient({
-    url: API_ENDPOINTS.leads.detail(id),
+    url: withQuery(API_ENDPOINTS.leads.detail(id), { include_conversion: 1 }),
     method: "GET",
     token,
   });
@@ -30,6 +30,14 @@ export async function fetchLeadById({ token, id }) {
 export async function fetchLeadConversation({ token, leadId, ...query }) {
   return apiClient({
     url: withQuery(API_ENDPOINTS.leads.conversation(leadId), query),
+    method: "GET",
+    token,
+  });
+}
+
+export async function fetchLeadPropertyMatches({ token, leadId, ...query }) {
+  return apiClient({
+    url: withQuery(API_ENDPOINTS.leads.propertyMatches(leadId), query),
     method: "GET",
     token,
   });

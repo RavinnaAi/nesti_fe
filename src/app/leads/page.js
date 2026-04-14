@@ -1,9 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Filter, RefreshCw, CheckCircle2, XCircle, Users, DollarSign, Scale, Info } from "lucide-react";
+import { Filter, RefreshCw } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
@@ -17,15 +16,18 @@ import {
   runClosingCalculator,
   fetchCalculatorRuns,
 } from "@/lib/chatClient";
-import { fetchLeads, fetchLeadById, fetchLeadConversation } from "@/lib/leadsClient";
+import { fetchLeads, fetchLeadById, fetchLeadConversation, fetchLeadPropertyMatches } from "@/lib/leadsClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import LeadListItem from "@/components/leads/LeadListItem";
-import MessageBubble from "@/components/leads/MessageBubble";
-import LeadActionSection from "@/components/leads/LeadActionSection";
-import LeadScoreCard from "@/components/leads/LeadScoreCard";
 import SelectDropdown from "@/components/ui/SelectDropdown";
-import LeadMetaModal from "@/components/leads/LeadMetaModal";
-import LeadActionPopup from "@/components/leads/LeadActionPopup";
+import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
+import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
+import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
+import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
+import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
+import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
+import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
+import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -120,13 +122,14 @@ export default function LeadsPage() {
   const { isAuthenticated } = useAuthGuard();
   const { token } = useAppSelector((state) => state.auth);
   const queryClient = useQueryClient();
+  const [hydrated, setHydrated] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
   const [gradeFilter, setGradeFilter] = useState("");
   const [channelFilter, setChannelFilter] = useState("");
   const [matchFilter, setMatchFilter] = useState("");
-  const [metaModal, setMetaModal] = useState(null); // { title, data }
+  const [activeTab, setActiveTab] = useState("lead_profile");
 
   const [referralForm, setReferralForm] = useState({
     target_vertical: "realtor",
@@ -150,12 +153,13 @@ export default function LeadsPage() {
   });
   const [closingForm, setClosingForm] = useState({ price: "" });
 
-  // Popup visibility state - resets when a new lead is selected
-  const [showAdvicePopup, setShowAdvicePopup] = useState(false);
+  useEffect(() => {
+    setActiveTab("lead_profile");
+  }, [selectedLeadId]);
 
-  // Reset popup when selection changes
-  // We use useEffect to watch selectedLeadId 
-  // (or can just rely on the effect below if we want strict sync)
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const leadsQuery = useQuery({
     queryKey: ["leads", token],
@@ -214,6 +218,21 @@ export default function LeadsPage() {
     if (Array.isArray(raw)) return raw;
     return normalizeList(messagesQuery.data);
   }, [messagesQuery.data]);
+
+  const propertyMatchesQuery = useQuery({
+    queryKey: ["lead-property-matches", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId && activeTab === "property_matches"),
+    queryFn: () =>
+      fetchLeadPropertyMatches({ token, leadId: selectedLeadId, page: 1, limit: 12 }),
+  });
+
+  const propertyMatches = useMemo(() => {
+    const d = propertyMatchesQuery.data;
+    const raw = d?.property_matches ?? d?.propertyMatches;
+    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(d)) return d;
+    return normalizeList(d);
+  }, [propertyMatchesQuery.data]);
 
   const conversationMeta = useMemo(() => extractMeta(selectedConversation), [selectedConversation]);
   const messageMeta = useMemo(() => {
@@ -365,6 +384,11 @@ export default function LeadsPage() {
     return Array.from(values).filter(Boolean);
   }, [conversations]);
 
+  // Keep SSR and first client render identical to avoid hydration mismatch on auth-gated pages.
+  if (!hydrated) {
+    return <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+  }
+
   if (!isAuthenticated) return null;
 
   return (
@@ -472,7 +496,6 @@ export default function LeadsPage() {
                       active={String(id) === String(selectedLeadId)}
                       onSelect={(newId) => {
                         setSelectedLeadId(newId);
-                        setShowAdvicePopup(true); // Show popup when selecting a lead
                       }}
                     />
                   );
@@ -482,372 +505,92 @@ export default function LeadsPage() {
           </div>
 
           <div className="lg:col-span-8 space-y-6">
-            <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
-              <div>
-                <div className="text-sm font-semibold text-text-heading">Conversation</div>
-                <p className="text-xs text-text-muted">
-                  {selectedConversation ? "Latest messages and lead metadata" : "Select a lead to view messages"}
-                </p>
-              </div>
-              {selectedConversation && (
-                <LeadScoreCard
-                  score={getConversationMeta(selectedConversation).leadScore}
-                  grade={getConversationMeta(selectedConversation).leadGrade}
-                  breakdown={{
-                    timeline: (messageMeta?.ai_metadata?.score_updates?.timeline_score ?? extractMeta(selectedConversation).timeline_score) || 0,
-                    budget: (messageMeta?.ai_metadata?.score_updates?.budget_score ?? extractMeta(selectedConversation).budget_score) || 0,
-                    engagement: (messageMeta?.ai_metadata?.score_updates?.engagement_score ?? extractMeta(selectedConversation).engagement_score) || 0
-                  }}
-                  reasons={extractMeta(selectedConversation).lead_reasons || extractMeta(selectedConversation).all_reasons || []}
-                />
-              )}
+            <LeadsWorkspaceTabs activeTab={activeTab} onChange={setActiveTab} />
 
+            {activeTab === "lead_details" ? (
+              <LeadsDetailsTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+                messageMeta={messageMeta}
+                getConversationMeta={getConversationMeta}
+                conversationMeta={conversationMeta}
+                formatMetaEntries={formatMetaEntries}
+                onOpenMeta={() => {}}
+              />
+            ) : null}
 
+            {activeTab === "conversation" ? (
+              <LeadsConversationTab
+                selectedConversation={selectedConversation}
+                messageMeta={messageMeta}
+                messagesQuery={messagesQuery}
+                messages={messages}
+                formatMetaEntries={formatMetaEntries}
+                onOpenMeta={() => {}}
+              />
+            ) : null}
 
-              {selectedConversation ? (
-                <>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    {getConversationMeta(selectedConversation).isMatched === true ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 font-semibold shadow-sm">
-                        <CheckCircle2 size={14} />
-                        Matched Lead
-                      </span>
-                    ) : getConversationMeta(selectedConversation).isMatched === false ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 font-semibold shadow-sm">
-                        <XCircle size={14} />
-                        Mismatched Lead
-                      </span>
-                    ) : null}
-                    {Object.entries(getConversationMeta(selectedConversation))
-                      .filter(([key]) => key !== "isMatched" && getConversationMeta(selectedConversation)[key] !== "—")
-                      .map(([key, value]) => (
-                        <span
-                          key={key}
-                          className="flex align-middle items-center gap-1"
-                        >
-                          <span className="text-text-muted font-normal ">{String(key).replace(/_/g, ' ')}:</span>
-                          <span className="px-3 py-1 rounded bg-primary/80 border border-primary/20  text-white font-medium">{String(value).replace(/_/g, ' ')}</span>
-                        </span>
-                      ))}
-                  </div>
-                  {formatMetaEntries(conversationMeta).length > 0 ? (
-                    <div className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/10">
-                      <div className="text-xs font-bold text-text-heading flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        Conversation Metadata
-                      </div>
-                      <button
-                        onClick={() => setMetaModal({ title: "Conversation Metadata", data: conversationMeta })}
-                        className="p-1.5 rounded-md bg-white border border-primary/20 text-primary hover:bg-primary/5 transition-colors shadow-sm"
-                      >
-                        <Info size={14} />
-                      </button>
-                    </div>
-                  ) : null}
-                  {formatMetaEntries(messageMeta).length > 0 ? (
-                    <div className="flex items-center justify-between p-3 rounded-md bg-indigo-50 border border-indigo-100/50">
-                      <div className="text-xs font-bold text-indigo-700/80 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                        Latest AI Message Insights
-                      </div>
-                      <button
-                        onClick={() => setMetaModal({ title: "Latest AI Message Insights", data: messageMeta })}
-                        className="p-1.5 rounded-md bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors shadow-sm"
-                      >
-                        <Info size={14} />
-                      </button>
-                    </div>
-                  ) : null}
-                  <div className="h-[360px] overflow-y-auto rounded-md border border-border/60 bg-background-light/40 p-4 space-y-3">
-                    {messagesQuery.isLoading ? (
-                      <div className="text-sm text-text-muted">Loading messages...</div>
-                    ) : messagesQuery.isError ? (
-                      <div className="text-sm text-red-600">Failed to load messages.</div>
-                    ) : messages.length === 0 ? (
-                      <div className="text-sm text-text-muted">No messages yet.</div>
-                    ) : (
-                      messages.map((message, index) => (
-                        <MessageBubble key={`${index}-${message?.id || "msg"}`} message={message} />
-                      ))
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm text-text-muted">Choose a lead to load the conversation.</div>
-              )}
-            </div>
+            {activeTab === "actions" ? (
+              <LeadsAiActionsTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+              />
+            ) : null}
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <LeadActionSection
-                title="Referrals"
-                subtitle="Connect this lead to another professional."
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  <SelectDropdown
-                    placeholder="Select vertical"
-                    value={referralForm.target_vertical}
-                    onChange={(value) =>
-                      setReferralForm((prev) => ({ ...prev, target_vertical: value }))
-                    }
-                    options={[
-                      { value: "realtor", label: "Realtor", icon: Users },
-                      { value: "mortgage", label: "Mortgage Broker", icon: DollarSign },
-                      { value: "lawyer", label: "Real Estate Lawyer", icon: Scale },
-                    ]}
-                    size="small"
-                  />
-                  <input
-                    type="text"
-                    value={referralForm.target_user_id}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, target_user_id: event.target.value }))
-                    }
-                    placeholder="Target user id"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="text"
-                    value={referralForm.status}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, status: event.target.value }))
-                    }
-                    placeholder="Status"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="text"
-                    value={referralForm.notes}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, notes: event.target.value }))
-                    }
-                    placeholder="Notes"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => createReferralMutation.mutate()}
-                  disabled={
-                    !selectedLeadId || !actionConversationId || createReferralMutation.isLoading
-                  }
-                  className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
-                >
-                  {createReferralMutation.isLoading ? "Saving..." : "Create referral"}
-                </button>
-                <div className="space-y-2 text-xs">
-                  {conversationReferrals.length === 0 ? (
-                    <div className="text-text-muted">No referrals yet.</div>
-                  ) : (
-                    conversationReferrals.map((referral) => (
-                      <button
-                        key={referral?.id}
-                        type="button"
-                        onClick={() => setActiveReferralId(String(referral?.id))}
-                        className={`w-full text-left rounded-md border px-3 py-2 ${String(referral?.id) === String(activeReferralId)
-                          ? "border-primary bg-primary/5"
-                          : "border-border"
-                          }`}
-                      >
-                        <div className="font-semibold text-text-heading">
-                          {referral?.target_vertical || "Referral"}
-                        </div>
-                        <div className="text-text-muted">
-                          Status: {referral?.status || "—"}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-                {activeReferralId ? (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={referralUpdate.status}
-                      onChange={(event) =>
-                        setReferralUpdate((prev) => ({ ...prev, status: event.target.value }))
-                      }
-                      placeholder="Update status"
-                      className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                    />
-                    <input
-                      type="text"
-                      value={referralUpdate.notes}
-                      onChange={(event) =>
-                        setReferralUpdate((prev) => ({ ...prev, notes: event.target.value }))
-                      }
-                      placeholder="Update notes"
-                      className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateReferralMutation.mutate()}
-                      disabled={updateReferralMutation.isLoading}
-                      className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-                    >
-                      {updateReferralMutation.isLoading ? "Updating..." : "Update referral"}
-                    </button>
-                  </div>
-                ) : null}
-              </LeadActionSection>
+            {activeTab === "property_matches" ? (
+              <LeadsPropertyMatchesTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+                propertyMatches={propertyMatches}
+                propertyMatchesQuery={propertyMatchesQuery}
+                propertyMatchesPayload={propertyMatchesQuery.data || null}
+              />
+            ) : null}
 
-              <LeadActionSection
-                title="Nurture email"
-                subtitle="Send a nurture message and log it for this conversation."
-              >
-                <div className="space-y-2">
-                  <input
-                    type="email"
-                    value={nurtureForm.to_email}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, to_email: event.target.value }))
-                    }
-                    placeholder="Recipient email"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <input
-                    type="text"
-                    value={nurtureForm.subject}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, subject: event.target.value }))
-                    }
-                    placeholder="Subject"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <textarea
-                    rows={3}
-                    value={nurtureForm.body}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, body: event.target.value }))
-                    }
-                    placeholder="Message body"
-                    className="rounded-md border border-border px-2 py-2 text-xs w-full"
-                  />
-                  <input
-                    type="text"
-                    value={nurtureForm.template_key}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, template_key: event.target.value }))
-                    }
-                    placeholder="Template key (optional)"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => nurtureMutation.mutate()}
-                    disabled={
-                      !selectedLeadId || !actionConversationId || nurtureMutation.isLoading
-                    }
-                    className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
-                  >
-                    {nurtureMutation.isLoading ? "Sending..." : "Send nurture"}
-                  </button>
-                  <div className="text-xs text-text-muted">
-                    {nurtureLogs.length ? `Logs: ${nurtureLogs.length}` : "No nurture logs yet."}
-                  </div>
-                </div>
-              </LeadActionSection>
+            {activeTab === "lead_profile" ? (
+              <LeadsProfileTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+              />
+            ) : null}
 
-              <LeadActionSection title="Mortgage calculator" subtitle="Log a mortgage estimate.">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    value={mortgageForm.price}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, price: event.target.value }))
-                    }
-                    placeholder="Price"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={mortgageForm.down_payment}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, down_payment: event.target.value }))
-                    }
-                    placeholder="Down payment"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={mortgageForm.annual_rate}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, annual_rate: event.target.value }))
-                    }
-                    placeholder="Annual rate %"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={mortgageForm.amort_years}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, amort_years: event.target.value }))
-                    }
-                    placeholder="Amort years"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => mortgageMutation.mutate()}
-                  disabled={
-                    !selectedLeadId || !actionConversationId || mortgageMutation.isLoading
-                  }
-                  className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-                >
-                  {mortgageMutation.isLoading ? "Running..." : "Run mortgage"}
-                </button>
-                <div className="text-xs text-text-muted">
-                  {mortgageRuns.length ? `Runs: ${mortgageRuns.length}` : "No mortgage runs yet."}
-                </div>
-              </LeadActionSection>
+            {activeTab === "others" ? (
+              <LeadsActionsTab
+                referralForm={referralForm}
+                setReferralForm={setReferralForm}
+                createReferralMutation={createReferralMutation}
+                selectedLeadId={selectedLeadId}
+                actionConversationId={actionConversationId}
+                conversationReferrals={conversationReferrals}
+                activeReferralId={activeReferralId}
+                setActiveReferralId={setActiveReferralId}
+                referralUpdate={referralUpdate}
+                setReferralUpdate={setReferralUpdate}
+                updateReferralMutation={updateReferralMutation}
+                mortgageForm={mortgageForm}
+                setMortgageForm={setMortgageForm}
+                mortgageMutation={mortgageMutation}
+                mortgageRuns={mortgageRuns}
+                closingForm={closingForm}
+                setClosingForm={setClosingForm}
+                closingMutation={closingMutation}
+                closingRuns={closingRuns}
+              />
+            ) : null}
 
-              <LeadActionSection title="Closing cost" subtitle="Log a closing cost estimate.">
-                <div className="space-y-2">
-                  <input
-                    type="number"
-                    value={closingForm.price}
-                    onChange={(event) =>
-                      setClosingForm((prev) => ({ ...prev, price: event.target.value }))
-                    }
-                    placeholder="Price"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => closingMutation.mutate()}
-                    disabled={
-                      !selectedLeadId || !actionConversationId || closingMutation.isLoading
-                    }
-                    className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-                  >
-                    {closingMutation.isLoading ? "Running..." : "Run closing cost"}
-                  </button>
-                  <div className="text-xs text-text-muted">
-                    {closingRuns.length ? `Runs: ${closingRuns.length}` : "No closing runs yet."}
-                  </div>
-                </div>
-              </LeadActionSection>
-            </div>
+            {activeTab === "nurture" ? (
+              <LeadsNurtureTab
+                nurtureForm={nurtureForm}
+                setNurtureForm={setNurtureForm}
+                nurtureMutation={nurtureMutation}
+                selectedLeadId={selectedLeadId}
+                actionConversationId={actionConversationId}
+                nurtureLogs={nurtureLogs}
+              />
+            ) : null}
           </div>
         </div>
       </div>
-      <AnimatePresence>
-        {metaModal && (
-          <LeadMetaModal
-            title={metaModal.title}
-            meta={metaModal.data}
-            onClose={() => setMetaModal(null)}
-          />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {selectedConversation && showAdvicePopup && messageMeta?.ai_metadata && (
-          <LeadActionPopup
-            aiMetadata={messageMeta.ai_metadata}
-            onClose={() => setShowAdvicePopup(false)}
-          />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
