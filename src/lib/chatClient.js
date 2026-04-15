@@ -108,6 +108,38 @@ export async function sendChatMessage({
   return json;
 }
 
+export async function fetchChatPropertyMatches({
+  sessionId,
+  embedToken,
+  visitorId,
+  formContact,
+  page = 1,
+  limit = 5,
+}) {
+  const payload = {
+    id: sessionId,
+    embedToken,
+    visitorId: visitorId || undefined,
+    page,
+    limit,
+    ...(formContact && typeof formContact === "object" && Object.keys(formContact).length
+      ? { formContact }
+      : {}),
+  };
+
+  const response = await fetch(apiUrl("/api/chat/property-matches"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  const json = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(json));
+  }
+  return json;
+}
+
 export async function clearChatSession(sessionId) {
   const response = await fetch(
     apiUrl(`/api/chat/clear/${encodeURIComponent(String(sessionId || ""))}`),

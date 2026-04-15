@@ -2,7 +2,15 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { BadgeCheck, CheckCircle2, Flame, MessageCircle, X, XCircle } from "lucide-react";
+import { BadgeCheck, CheckCircle2, MessageCircle, X, XCircle } from "lucide-react";
+import {
+  LeadGradeIcon,
+  displayLeadGradeLabel,
+  leadGradeChipClasses,
+  leadIntentChipClasses,
+  leadScoreFallbackChipClasses,
+  resolveDisplayLeadGrade,
+} from "@/lib/leadGradeUi";
 
 export default function LeadsPropertyMatchesTab({
   selectedConversation,
@@ -12,11 +20,17 @@ export default function LeadsPropertyMatchesTab({
   propertyMatchesPayload = null,
 }) {
   const [selectedMatch, setSelectedMatch] = useState(null); // { match, idx }
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 7;
 
   const selectedLeadKey = String(selectedConversation?.id || selectedConversation?.lead_match_id || "");
   useEffect(() => {
     setSelectedMatch(null);
   }, [selectedLeadKey]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [selectedLeadKey, propertyMatches.length]);
 
   useEffect(() => {
     if (!selectedMatch) return;
@@ -259,6 +273,12 @@ export default function LeadsPropertyMatchesTab({
     setSelectedMatch((cur) => (cur && matchRowId(cur.match, cur.idx) === id ? null : { match, idx }));
   };
 
+  const totalPages = Math.max(1, Math.ceil(propertyMatches.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const pageStart = (currentPage - 1) * PAGE_SIZE;
+  const pageEnd = pageStart + PAGE_SIZE;
+  const paginatedMatches = propertyMatches.slice(pageStart, pageEnd);
+
   const contact = lead?.contact && typeof lead.contact === "object" ? lead.contact : {};
   const property = lead?.property && typeof lead.property === "object" ? lead.property : {};
   const qualification = lead?.qualification && typeof lead.qualification === "object" ? lead.qualification : {};
@@ -383,8 +403,9 @@ export default function LeadsPropertyMatchesTab({
                     </tr>
                   </thead>
                   <tbody>
-                    {propertyMatches.slice(0, 8).map((match, idx) => {
-                      const rowId = matchRowId(match, idx);
+                    {paginatedMatches.map((match, idx) => {
+                      const globalIdx = pageStart + idx;
+                      const rowId = matchRowId(match, globalIdx);
                       const isOpen = selectedMatch && matchRowId(selectedMatch.match, selectedMatch.idx) === rowId;
                       const summaryInline = getMatchSummaryInline(match, idx);
                       const headline = String(match?.match_headline ?? match?.matchHeadline ?? "").trim();
@@ -394,7 +415,7 @@ export default function LeadsPropertyMatchesTab({
                       const typ = getMatchType(match);
                       const budgetLabel = getMatchBudgetDisplay(match);
                       const score = getMatchScore(match);
-                      const onRowActivate = () => toggleMatch(match, idx);
+                      const onRowActivate = () => toggleMatch(match, globalIdx);
                       return (
                         <tr
                           key={rowId}
@@ -446,19 +467,21 @@ export default function LeadsPropertyMatchesTab({
                                     Mismatched
                                   </span>
                                 ) : null}
-                                {listMeta.leadGrade ? (
-                                  <span
-                                    className={`inline-flex items-center gap-0.5 rounded border px-1 py-px ${
-                                      String(listMeta.leadGrade).toLowerCase() === "hot"
-                                        ? "bg-red-50 text-red-700 border border-red-200"
-                                        : String(listMeta.leadGrade).toLowerCase() === "warm"
-                                          ? "bg-amber-50 text-amber-800 border border-amber-200"
-                                          : "bg-blue-50 text-blue-700 border border-blue-200"
-                                    }`}
-                                  >
-                                    <Flame size={9} />
-                                    {String(listMeta.leadGrade).toUpperCase()}
-                                  </span>
+                                {resolveDisplayLeadGrade(listMeta.leadGrade, listMeta.leadScore) ? (
+                                  (() => {
+                                    const displayLeadGrade = resolveDisplayLeadGrade(
+                                      listMeta.leadGrade,
+                                      listMeta.leadScore,
+                                    );
+                                    return (
+                                      <span
+                                        className={`inline-flex items-center gap-0.5 rounded border px-1 py-px ${leadGradeChipClasses(displayLeadGrade)}`}
+                                      >
+                                        <LeadGradeIcon grade={displayLeadGrade} size={9} />
+                                        {displayLeadGradeLabel(displayLeadGrade)}
+                                      </span>
+                                    );
+                                  })()
                                 ) : null}
                                 {listMeta.qualified ? (
                                   <span className="inline-flex items-center gap-0.5 rounded border bg-primary/10 text-primary border-primary/20 px-1 py-px">
@@ -467,22 +490,21 @@ export default function LeadsPropertyMatchesTab({
                                   </span>
                                 ) : null}
                                 {listMeta.intent ? (
-                                  <span className="rounded border border-border/60 bg-background-light/50 px-1 py-px">
+                                  <span className={`rounded border px-1 py-px ${leadIntentChipClasses(listMeta.intent)}`}>
                                     {String(listMeta.intent).charAt(0).toUpperCase() + String(listMeta.intent).slice(1)}
                                   </span>
                                 ) : null}
                                 {listMeta.leadScore !== null && listMeta.leadScore !== undefined ? (
-                                  <span
-                                    className={`rounded border px-1 py-px ${
-                                      Number(listMeta.leadScore) >= 70
-                                        ? "border-green-200 bg-green-50 text-green-700"
-                                        : Number(listMeta.leadScore) >= 40
-                                          ? "border-amber-200 bg-amber-50 text-amber-800"
-                                          : "border-red-200 bg-red-50 text-red-700"
-                                    }`}
-                                  >
-                                    Score {listMeta.leadScore}
-                                  </span>
+                                  (() => {
+                                    const g = resolveDisplayLeadGrade(listMeta.leadGrade, listMeta.leadScore);
+                                    const scoreCls = g ? leadGradeChipClasses(g) : leadScoreFallbackChipClasses(listMeta.leadScore);
+                                    return (
+                                      <span className={`inline-flex items-center gap-0.5 rounded border px-1 py-px ${scoreCls}`}>
+                                        {g ? <LeadGradeIcon grade={g} size={8} className="shrink-0 opacity-90" /> : null}
+                                        Score {listMeta.leadScore}
+                                      </span>
+                                    );
+                                  })()
                                 ) : null}
                                 {listMeta.location ? (
                                   <span className="max-w-[100px] truncate rounded border border-border/60 bg-background-light/50 px-1 py-px">
@@ -542,6 +564,33 @@ export default function LeadsPropertyMatchesTab({
                     })}
                   </tbody>
                 </table>
+              </div>
+              <div className="flex items-center justify-between rounded-lg border border-border/60 bg-white px-3 py-2 text-[10px] text-text-muted">
+                <div>
+                  Showing {propertyMatches.length ? pageStart + 1 : 0}-{Math.min(pageEnd, propertyMatches.length)} of{" "}
+                  {propertyMatches.length}
+                </div>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    disabled={currentPage <= 1}
+                    className="rounded border border-border/70 px-2 py-1 text-text-heading disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Prev
+                  </button>
+                  <span className="px-1 text-text-heading">
+                    Page {currentPage} / {totalPages}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={currentPage >= totalPages}
+                    className="rounded border border-border/70 px-2 py-1 text-text-heading disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Next
+                  </button>
+                </div>
               </div>
 
               {selectedMatch && typeof document !== "undefined"

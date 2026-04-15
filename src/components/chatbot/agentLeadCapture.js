@@ -3,11 +3,11 @@
 export const PRE_CHAT_STEPS = ["intent", "contact", "property", "qualify", "reach"];
 
 export const LEAD_STEP_LABELS = {
-  intent: "Your goal",
-  contact: "Personal info",
+  intent: "Intent",
+  contact: "Info",
   property: "Property",
-  qualify: "Qualification",
-  reach: "Contact preferences",
+  qualify: "Qualify",
+  reach: "Contact",
 };
 
 export const emptyAgentLeadDraft = () => ({
@@ -152,10 +152,129 @@ export function buildAgentOpeningMessage(chosenIntent, formData) {
   return parts.join(" ");
 }
 
+function humanizeEnum(value) {
+  if (value == null || value === "") return "";
+  return String(value).replace(/_/g, " ").trim();
+}
+
+function displayField(value) {
+  if (value == null || value === "") return "";
+  const s = typeof value === "string" ? value.trim() : String(value).trim();
+  if (!s) return "";
+  return s.replace(/_/g, " ");
+}
+
+/**
+ * Short paragraph copy for the first user bubble — essentials only (`**Label:**` markdown for bold).
+ * @returns {{ headline: string, paragraphs: string[] }}
+ */
+export function buildLeadProfileNarrative(chosenIntent, formData) {
+  const headline =
+    chosenIntent === "buy" ? "Looking to buy a home" : "Planning to sell a property";
+  /** @type {string[]} */
+  const paragraphs = [];
+
+  const name = displayField(formData.name);
+  const email = displayField(formData.email);
+  const phone = displayField(formData.phone);
+  const contactBits = [];
+  if (name) contactBits.push(`**Name:** ${name}`);
+  if (email) contactBits.push(`**Email:** ${email}`);
+  if (phone) contactBits.push(`**Phone:** ${phone}`);
+  if (contactBits.length) paragraphs.push(contactBits.join(" · "));
+
+  if (chosenIntent === "buy") {
+    const bits = [];
+    const loc = displayField(formData.location);
+    const budget = displayField(formData.budget);
+    if (loc) bits.push(`**Location:** ${loc}`);
+    if (budget) bits.push(`**Budget:** ${budget}`);
+    const ptype = displayField(formData.property_type);
+    const beds = displayField(formData.beds);
+    const baths = displayField(formData.baths);
+    const homeParts = [];
+    if (ptype) homeParts.push(ptype);
+    if (beds && baths) homeParts.push(`${beds} bed / ${baths} bath`);
+    else if (beds) homeParts.push(`${beds} bed`);
+    else if (baths) homeParts.push(`${baths} bath`);
+    if (homeParts.length) bits.push(`**Property:** ${homeParts.join(" · ")}`);
+    if (bits.length) paragraphs.push(bits.join(" · "));
+  } else {
+    const bits = [];
+    const addr = displayField(formData.address);
+    const price = displayField(formData.price);
+    if (addr) bits.push(`**Address:** ${addr}`);
+    if (price) bits.push(`**Target price:** ${price}`);
+    const ptype = displayField(formData.property_type);
+    const beds = displayField(formData.beds);
+    const baths = displayField(formData.baths);
+    const homeParts = [];
+    if (ptype) homeParts.push(ptype);
+    if (beds && baths) homeParts.push(`${beds} bed / ${baths} bath`);
+    else if (beds) homeParts.push(`${beds} bed`);
+    else if (baths) homeParts.push(`${baths} bath`);
+    if (homeParts.length) bits.push(`**Property:** ${homeParts.join(" · ")}`);
+    if (bits.length) paragraphs.push(bits.join(" · "));
+  }
+
+  const timeline = displayField(formData.timeline);
+  if (timeline) paragraphs.push(`**Timeline:** ${timeline}`);
+
+  return { headline, paragraphs };
+}
+
+/**
+ * Short multi-line summary shown as the first user bubble after onboarding
+ * (the full narrative is sent separately as `buildAgentOpeningMessage`).
+ */
 export function agentUserSummaryLine(chosenIntent, formData) {
-  return chosenIntent === "buy"
-    ? `Buyer · ${formData.name} · ${formData.email}`
-    : `Seller · ${formData.name} · ${formData.email}`;
+  const name = String(formData.name || "").trim() || "—";
+  const headline =
+    chosenIntent === "buy" ? "Looking to buy a home" : "Planning to sell a property";
+
+  const lines = [headline, name];
+
+  const email = String(formData.email || "").trim();
+  const phone = String(formData.phone || "").trim();
+  const contactLine = [email, phone].filter(Boolean).join(" · ");
+  if (contactLine) lines.push(contactLine);
+
+  if (chosenIntent === "buy") {
+    const bits = [];
+    const loc = String(formData.location || "").trim();
+    if (loc) bits.push(loc);
+    const budget = String(formData.budget || "").trim();
+    if (budget) bits.push(`Budget ${budget}`);
+    const beds = formData.beds != null && String(formData.beds).trim() ? String(formData.beds).trim() : "";
+    const baths = formData.baths != null && String(formData.baths).trim() ? String(formData.baths).trim() : "";
+    if (beds || baths) {
+      const bb = [beds ? `${beds} bed` : null, baths ? `${baths} bath` : null].filter(Boolean).join(" · ");
+      if (bb) bits.push(bb);
+    }
+    const ptype = String(formData.property_type || "").trim();
+    if (ptype) bits.push(ptype);
+    if (bits.length) lines.push(bits.join(" · "));
+  } else {
+    const bits = [];
+    const addr = String(formData.address || "").trim();
+    if (addr) bits.push(addr);
+    const price = String(formData.price || "").trim();
+    if (price) bits.push(`Target ${price}`);
+    const beds = formData.beds != null && String(formData.beds).trim() ? String(formData.beds).trim() : "";
+    const baths = formData.baths != null && String(formData.baths).trim() ? String(formData.baths).trim() : "";
+    if (beds || baths) {
+      const bb = [beds ? `${beds} bed` : null, baths ? `${baths} bath` : null].filter(Boolean).join(" · ");
+      if (bb) bits.push(bb);
+    }
+    const ptype = String(formData.property_type || "").trim();
+    if (ptype) bits.push(ptype);
+    if (bits.length) lines.push(bits.join(" · "));
+  }
+
+  const timeline = humanizeEnum(formData.timeline);
+  if (timeline) lines.push(`Timeline: ${timeline}`);
+
+  return lines.join("\n");
 }
 
 export function widgetRoleToChatAgentType(widgetRole) {

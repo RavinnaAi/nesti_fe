@@ -9,6 +9,7 @@ export default function ChatbotByTokenPage({ params }) {
   const [status, setStatus] = useState("loading");
   const [error, setError] = useState("");
   const [widgetRole, setWidgetRole] = useState("agent");
+  const [widgetTitle, setWidgetTitle] = useState("Real Estate Assistant");
 
   useEffect(() => {
     let mounted = true;
@@ -17,6 +18,8 @@ export default function ChatbotByTokenPage({ params }) {
         const json = await resolveEmbedToken(token);
         if (mounted) {
           setWidgetRole(json?.widget_role || "agent");
+          const configuredName = String(json?.widget_settings?.display_name || "").trim();
+          setWidgetTitle(configuredName || "Real Estate Assistant");
           setStatus("ok");
         }
       } catch (err) {
@@ -55,7 +58,13 @@ export default function ChatbotByTokenPage({ params }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <ChatWidget embedToken={token} widgetRole={widgetRole} defaultOpen allowLauncher={false} />
+      <ChatWidget
+        embedToken={token}
+        widgetRole={widgetRole}
+        title={widgetTitle}
+        defaultOpen
+        allowLauncher
+      />
     </div>
   );
 }

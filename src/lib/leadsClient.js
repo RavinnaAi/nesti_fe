@@ -42,3 +42,11 @@ export async function fetchLeadPropertyMatches({ token, leadId, ...query }) {
     token,
   });
 }
+
+export async function deleteLeadById({ token, id }) {
+  return apiClient({
+    url: API_ENDPOINTS.leads.remove(id),
+    method: "DELETE",
+    token,
+  });
+}

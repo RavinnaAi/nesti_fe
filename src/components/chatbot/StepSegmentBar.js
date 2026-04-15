@@ -12,7 +12,7 @@ export default function StepSegmentBar({ steps, activeIndex }) {
 
   return (
     <div
-      className="grid w-full gap-0 rounded-xl border border-slate-200 bg-white shadow-sm overflow-hidden divide-x divide-slate-200"
+      className="grid w-full gap-0 rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden divide-x divide-slate-200"
       style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
       role="navigation"
       aria-label="Progress"
@@ -23,7 +23,7 @@ export default function StepSegmentBar({ steps, activeIndex }) {
         return (
           <div
             key={s.key}
-            className={`min-h-[3rem] sm:min-h-[3.25rem] flex items-center justify-center px-1 py-2 sm:px-1.5 transition-colors ${
+            className={`min-h-[2.25rem] sm:min-h-[2.5rem] flex items-center justify-center px-1 py-1 sm:px-1.5 transition-colors ${
               active
                 ? "bg-primary/15 text-primary"
                 : done
@@ -34,7 +34,7 @@ export default function StepSegmentBar({ steps, activeIndex }) {
             <span
               className={`block w-full text-center leading-snug ${
                 active ? "font-bold" : done ? "font-semibold" : "font-medium"
-              } text-[9px] sm:text-[10px]`}
+              } text-[10px] sm:text-[11px]`}
             >
               {s.label}
             </span>

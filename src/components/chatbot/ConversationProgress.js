@@ -14,7 +14,7 @@ export default function ConversationProgress({ step = 0 }) {
   const activeIndex = Math.min(Math.max(0, step), CHAT_PROGRESS_STEPS.length - 1);
 
   return (
-    <div className="px-5 py-3 bg-white border-b border-border/50 shrink-0">
+    <div className="px-4 py-2 bg-white border-b border-border/50 shrink-0">
       <StepSegmentBar steps={CHAT_PROGRESS_STEPS} activeIndex={activeIndex} />
     </div>
   );

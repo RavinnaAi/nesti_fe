@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Filter, RefreshCw } from "lucide-react";
+import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
+import { RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
@@ -16,10 +16,15 @@ import {
   runClosingCalculator,
   fetchCalculatorRuns,
 } from "@/lib/chatClient";
-import { fetchLeads, fetchLeadById, fetchLeadConversation, fetchLeadPropertyMatches } from "@/lib/leadsClient";
+import {
+  fetchLeads,
+  fetchLeadById,
+  fetchLeadConversation,
+  fetchLeadPropertyMatches,
+  deleteLeadById,
+} from "@/lib/leadsClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import LeadListItem from "@/components/leads/LeadListItem";
-import SelectDropdown from "@/components/ui/SelectDropdown";
 import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
 import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
 import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
@@ -126,10 +131,8 @@ export default function LeadsPage() {
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
-  const [gradeFilter, setGradeFilter] = useState("");
-  const [channelFilter, setChannelFilter] = useState("");
-  const [matchFilter, setMatchFilter] = useState("");
   const [activeTab, setActiveTab] = useState("lead_profile");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [referralForm, setReferralForm] = useState({
     target_vertical: "realtor",
@@ -181,14 +184,34 @@ export default function LeadsPage() {
   const filteredConversations = useMemo(() => {
     return conversations.filter((conversation) => {
       const meta = getConversationMeta(conversation);
-      if (intentFilter && String(meta.intent) !== intentFilter) return false;
-      if (gradeFilter && String(meta.leadGrade) !== gradeFilter) return false;
-      if (channelFilter && String(meta.channel) !== channelFilter) return false;
-      if (matchFilter === "matched" && meta.isMatched !== true) return false;
-      if (matchFilter === "mismatched" && meta.isMatched !== false) return false;
+      const intent = String(meta.intent || "").trim().toLowerCase();
+      if (intentFilter && intent !== intentFilter) return false;
       return matchesSearch(conversation, searchTerm);
     });
-  }, [conversations, intentFilter, gradeFilter, channelFilter, matchFilter, searchTerm]);
+  }, [conversations, intentFilter, searchTerm]);
+
+  const propertyMatchCountQueries = useQueries({
+    queries: filteredConversations.map((conversation) => {
+      const leadId = String(getLeadMatchId(conversation) || "");
+      return {
+        queryKey: ["lead-property-match-count", token, leadId],
+        enabled: Boolean(token && leadId),
+        queryFn: () => fetchLeadPropertyMatches({ token, leadId, page: 1, limit: 1 }),
+        staleTime: 60 * 1000,
+      };
+    }),
+  });
+
+  const propertyMatchCountByLeadId = useMemo(() => {
+    const out = {};
+    filteredConversations.forEach((conversation, idx) => {
+      const leadId = String(getLeadMatchId(conversation) || "");
+      if (!leadId) return;
+      const count = propertyMatchCountQueries[idx]?.data?.match_count;
+      if (typeof count === "number" && Number.isFinite(count)) out[leadId] = count;
+    });
+    return out;
+  }, [filteredConversations, propertyMatchCountQueries]);
 
   const leadDetailQuery = useQuery({
     queryKey: ["lead-detail", token, selectedLeadId],
@@ -223,7 +246,7 @@ export default function LeadsPage() {
     queryKey: ["lead-property-matches", token, selectedLeadId],
     enabled: Boolean(token && selectedLeadId && activeTab === "property_matches"),
     queryFn: () =>
-      fetchLeadPropertyMatches({ token, leadId: selectedLeadId, page: 1, limit: 12 }),
+      fetchLeadPropertyMatches({ token, leadId: selectedLeadId, page: 1, limit: 100 }),
   });
 
   const propertyMatches = useMemo(() => {
@@ -366,23 +389,30 @@ export default function LeadsPage() {
     onError: (err) => toast.error(err?.message || "Failed to run closing cost calculator"),
   });
 
-  const intents = useMemo(() => {
-    const values = new Set();
-    conversations.forEach((conversation) => values.add(String(getConversationMeta(conversation).intent)));
-    return Array.from(values).filter(Boolean);
-  }, [conversations]);
+  const deleteLeadMutation = useMutation({
+    mutationFn: () => deleteLeadById({ token, id: selectedLeadId }),
+    onSuccess: () => {
+      const deletedLeadId = String(selectedLeadId);
+      toast.success("Lead deleted successfully");
+      setShowDeleteConfirm(false);
+      setSelectedLeadId("");
+      queryClient.invalidateQueries({ queryKey: ["leads", token] });
+      queryClient.removeQueries({ queryKey: ["lead-detail", token, deletedLeadId] });
+      queryClient.removeQueries({ queryKey: ["lead-conversation", token, deletedLeadId] });
+      queryClient.removeQueries({ queryKey: ["lead-property-matches", token, deletedLeadId] });
+    },
+    onError: (err) => toast.error(err?.message || "Failed to delete lead"),
+  });
 
-  const grades = useMemo(() => {
-    const values = new Set();
-    conversations.forEach((conversation) => values.add(String(getConversationMeta(conversation).leadGrade)));
-    return Array.from(values).filter(Boolean);
-  }, [conversations]);
+  const handleDeleteLead = () => {
+    if (!selectedLeadId || deleteLeadMutation.isPending) return;
+    setShowDeleteConfirm(true);
+  };
 
-  const channels = useMemo(() => {
-    const values = new Set();
-    conversations.forEach((conversation) => values.add(String(getConversationMeta(conversation).channel)));
-    return Array.from(values).filter(Boolean);
-  }, [conversations]);
+  const handleConfirmDeleteLead = () => {
+    if (!selectedLeadId || deleteLeadMutation.isPending) return;
+    deleteLeadMutation.mutate();
+  };
 
   // Keep SSR and first client render identical to avoid hydration mismatch on auth-gated pages.
   if (!hydrated) {
@@ -401,79 +431,53 @@ export default function LeadsPage() {
               Manage conversations, referrals, nurtures, and calculators.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => leadsQuery.refetch()}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
+          <div className="flex items-center gap-2">
+            {selectedLeadId ? (
+              <button
+                type="button"
+                onClick={handleDeleteLead}
+                disabled={deleteLeadMutation.isPending}
+                className="inline-flex items-center gap-2 text-xs font-semibold text-red-700 border border-red-300 rounded-md px-3 py-2 hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={14} />
+                {deleteLeadMutation.isPending ? "Deleting..." : "Delete Lead"}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              onClick={() => leadsQuery.refetch()}
+              className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
+            >
+              <RefreshCw size={14} /> Refresh
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4 space-y-4">
-            <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-3">
-              <div className="flex items-center gap-2 text-xs text-text-muted">
-                <Filter size={14} />
-                Filter leads
-              </div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, email, phone, city..."
-                className="w-full h-10 rounded-md border border-border/60 bg-background-light/50 px-3 text-sm focus:outline-none"
-              />
-              <div className="flex align-middle flex-wrap gap-2">
-                <SelectDropdown
-                  placeholder="Intent"
+          <div className="lg:col-span-3 space-y-3 lg:sticky lg:top-6 lg:self-start">
+            <div className="rounded-md border border-border bg-white p-3 shadow-sm space-y-2">
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search by name, email, phone, city..."
+                  className="h-8 min-w-0 flex-1 rounded-md border border-border/60 bg-background-light/40 px-2.5 text-[13px] leading-none placeholder:text-[12px] placeholder:text-text-muted/80 focus:outline-none"
+                />
+                <select
                   value={intentFilter}
-                  onChange={setIntentFilter}
-                  options={[
-                    { value: "", label: "All Intents" },
-                    ...intents.map((intent) => ({ value: intent, label: intent })),
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
-                <SelectDropdown
-                  placeholder="Grade"
-                  value={gradeFilter}
-                  onChange={setGradeFilter}
-                  options={[
-                    { value: "", label: "All Grades" },
-                    ...grades.map((grade) => ({ value: grade, label: grade })),
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
-                <SelectDropdown
-                  placeholder="Channel"
-                  value={channelFilter}
-                  onChange={setChannelFilter}
-                  options={[
-                    { value: "", label: "All Channels" },
-                    ...channels.map((channel) => ({ value: channel, label: channel })),
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
-                <SelectDropdown
-                  placeholder="Match Status"
-                  value={matchFilter}
-                  onChange={setMatchFilter}
-                  options={[
-                    { value: "", label: "All Leads" },
-                    { value: "matched", label: "Matched" },
-                    { value: "mismatched", label: "Mismatched" },
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
+                  onChange={(event) => setIntentFilter(event.target.value)}
+                  className="h-8 w-[96px] rounded-md border border-primary/30 bg-primary/5 px-2 text-[12px] font-medium text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  aria-label="Filter by intent"
+                >
+                  <option value="">All</option>
+                  <option value="buy">Buyer</option>
+                  <option value="sell">Seller</option>
+                </select>
               </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-3 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1">
               {leadsQuery.isLoading ? (
                 <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
                   Loading leads...
@@ -494,6 +498,7 @@ export default function LeadsPage() {
                       key={id}
                       conversation={conversation}
                       active={String(id) === String(selectedLeadId)}
+                      propertyMatchCount={propertyMatchCountByLeadId[String(id)]}
                       onSelect={(newId) => {
                         setSelectedLeadId(newId);
                       }}
@@ -504,7 +509,7 @@ export default function LeadsPage() {
             </div>
           </div>
 
-          <div className="lg:col-span-8 space-y-6">
+          <div className="lg:col-span-9 space-y-6">
             <LeadsWorkspaceTabs activeTab={activeTab} onChange={setActiveTab} />
 
             {activeTab === "lead_details" ? (
@@ -591,6 +596,37 @@ export default function LeadsPage() {
           </div>
         </div>
       </div>
+
+      {showDeleteConfirm ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-xl border border-border bg-white shadow-2xl p-5">
+            <h3 className="text-base font-semibold text-text-heading">Delete lead?</h3>
+            <p className="mt-2 text-sm text-text-muted leading-relaxed">
+              This will delete the lead, related conversation, and associated profile data when applicable.
+              This action cannot be undone.
+            </p>
+            <div className="mt-4 flex items-center justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                disabled={deleteLeadMutation.isPending}
+                className="px-3 py-2 text-xs font-semibold text-text-heading border border-border rounded-md hover:bg-background-light transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteLead}
+                disabled={deleteLeadMutation.isPending}
+                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-red-600 rounded-md hover:bg-red-700 transition disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                <Trash2 size={14} />
+                {deleteLeadMutation.isPending ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

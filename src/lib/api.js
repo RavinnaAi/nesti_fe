@@ -74,6 +74,7 @@ export const API_ENDPOINTS = {
   leads: {
     list: withBaseUrl("/api/leads"),
     detail: withBaseUrl((id) => `/api/leads/${id}`),
+    remove: withBaseUrl((id) => `/api/leads/${id}`),
     conversation: withBaseUrl((id) => `/api/leads/${id}/conversation`),
     propertyMatches: withBaseUrl((id) => `/api/leads/${id}/property-matches`),
   },

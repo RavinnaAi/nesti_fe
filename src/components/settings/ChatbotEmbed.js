@@ -405,7 +405,7 @@ export default function ChatbotEmbed() {
                 embedToken={previewToken}
                 widgetRole={previewWidgetRole}
                 defaultOpen
-                allowLauncher={false}
+                allowLauncher
                 title="Chatbot Preview"
                 subtitle="Public embed experience"
                 inlineMode
