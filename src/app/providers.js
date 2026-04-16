@@ -7,6 +7,8 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { store } from "@/store";
 import TrialCountdownBadge from "@/components/ui/TrialCountdownBadge";
+import WorkspaceSocketBridge from "@/components/realtime/WorkspaceSocketBridge";
+import { NotificationsUiProvider } from "@/contexts/NotificationsUiContext";
 
 export default function Providers({ children }) {
   const [queryClient] = useState(
@@ -28,7 +30,9 @@ export default function Providers({ children }) {
     <GoogleOAuthProvider clientId={googleClientId}>
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
-          {children}
+          <NotificationsUiProvider>
+            <WorkspaceSocketBridge>{children}</WorkspaceSocketBridge>
+          </NotificationsUiProvider>
           <TrialCountdownBadge />
           <ReactQueryDevtools initialIsOpen={false} />
         </QueryClientProvider>

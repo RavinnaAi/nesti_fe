@@ -10,10 +10,11 @@ const TABS = [
   { id: "others", label: "Others" },
 ];
 
-export default function LeadsWorkspaceTabs({ activeTab, onChange }) {
+/** Optional actions (e.g. delete) aligned opposite the tab list on one toolbar row. */
+export default function LeadsWorkspaceTabs({ activeTab, onChange, endSlot = null }) {
   return (
-    <div className="rounded-md border border-border bg-white shadow-sm p-2">
-      <div className="flex flex-wrap gap-2">
+    <div className="flex flex-col gap-2 p-2 min-[720px]:flex-row min-[720px]:items-center min-[720px]:justify-between min-[720px]:gap-3">
+      <div className="flex flex-wrap gap-2 min-w-0">
         {TABS.map((tab) => (
           <button
             key={tab.id}
@@ -29,6 +30,11 @@ export default function LeadsWorkspaceTabs({ activeTab, onChange }) {
           </button>
         ))}
       </div>
+      {endSlot ? (
+        <div className="flex shrink-0 items-center min-[720px]:pl-2 self-end min-[720px]:self-auto">
+          {endSlot}
+        </div>
+      ) : null}
     </div>
   );
 }

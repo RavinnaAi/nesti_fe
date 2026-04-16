@@ -211,6 +211,26 @@ export async function updateReferral({ token, id, payload }) {
   });
 }
 
+export async function postNurtureDraft({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.nurtureDraft,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
+export async function postNurtureRefine({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.nurtureRefine,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
 export async function sendNurtureEmail({ token, payload }) {
   const authToken = token || getStoredAuthToken();
   return apiClient({
@@ -221,10 +241,14 @@ export async function sendNurtureEmail({ token, payload }) {
   });
 }
 
-export async function fetchNurtureLogs({ token }) {
+export async function fetchNurtureLogs({ token, leadMatchId }) {
   const authToken = token || getStoredAuthToken();
+  const qs =
+    leadMatchId && String(leadMatchId).trim()
+      ? `?lead_match_id=${encodeURIComponent(String(leadMatchId).trim())}`
+      : "";
   return apiClient({
-    url: API_ENDPOINTS.chat.nurtureLogs,
+    url: `${API_ENDPOINTS.chat.nurtureLogs}${qs}`,
     method: "GET",
     token: authToken,
   });

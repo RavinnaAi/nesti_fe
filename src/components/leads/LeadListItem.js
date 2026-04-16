@@ -1,4 +1,10 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { BadgeCheck, MessageCircle, CheckCircle2, XCircle } from "lucide-react";
+import { useAppSelector } from "@/store";
+import { fetchLeadPropertyMatches } from "@/lib/leadsClient";
 import {
   LeadGradeIcon,
   displayLeadGradeLabel,
@@ -62,9 +68,40 @@ const formatUpdatedTime = (conversation) => {
   return d.toLocaleString();
 };
 
-export default function LeadListItem({ conversation, active, onSelect, propertyMatchCount }) {
+export default function LeadListItem({ conversation, active, onSelect }) {
+  const token = useAppSelector((s) => s.auth.token);
+  const rootRef = useRef(null);
+  const [inView, setInView] = useState(false);
+
+  useEffect(() => {
+    const el = rootRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) setInView(true);
+      },
+      { root: null, rootMargin: "140px 0px", threshold: 0.01 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   // console.log('conversation ', conversation);
   const id = conversation?.id || conversation?.conversation_id || conversation?.conversationId;
+  const leadMatchId = String(conversation?.lead_match_id || conversation?.id || id || "");
+
+  const matchCountQuery = useQuery({
+    queryKey: ["lead-property-match-count", token, leadMatchId],
+    enabled: Boolean(token && leadMatchId && (inView || active)),
+    queryFn: () => fetchLeadPropertyMatches({ token, leadId: leadMatchId, page: 1, limit: 1 }),
+    staleTime: 60 * 1000,
+  });
+
+  const propertyMatchCount =
+    typeof matchCountQuery.data?.match_count === "number" ? matchCountQuery.data.match_count : undefined;
   const visitorId = conversation?.visitor_id || conversation?.visitorId || conversation?.visitor || "";
   const name =
     conversation?.name ||
@@ -92,6 +129,7 @@ export default function LeadListItem({ conversation, active, onSelect, propertyM
 
   return (
     <button
+      ref={rootRef}
       type="button"
       onClick={() => onSelect(id)}
       className={`w-full text-left rounded-md border px-3 py-2.5 transition ${active

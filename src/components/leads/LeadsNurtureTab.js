@@ -1,63 +1,362 @@
 "use client";
 
-import LeadActionSection from "@/components/leads/LeadActionSection";
+import { useState } from "react";
+import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2 } from "lucide-react";
+
+function statusChip(status) {
+  const s = String(status || "").toLowerCase();
+  if (s === "sent") return "bg-emerald-50 text-emerald-800 border-emerald-200";
+  if (s === "failed") return "bg-red-50 text-red-800 border-red-200";
+  return "bg-background-light text-text-muted border-border";
+}
+
+function FieldLabel({ children, htmlFor }) {
+  return (
+    <label
+      htmlFor={htmlFor}
+      className="block text-[11px] font-semibold uppercase tracking-wide text-text-muted mb-1"
+    >
+      {children}
+    </label>
+  );
+}
 
 export default function LeadsNurtureTab({
   nurtureForm,
   setNurtureForm,
   nurtureMutation,
+  nurtureDraftMutation,
+  nurtureRefineMutation,
   selectedLeadId,
   actionConversationId,
   nurtureLogs,
+  nurtureLogsLoading,
 }) {
+  const [panelTab, setPanelTab] = useState("compose");
+  const canAi = Boolean(selectedLeadId);
+  const canRefine =
+    canAi &&
+    nurtureForm.subject?.trim() &&
+    nurtureForm.body?.trim() &&
+    nurtureForm.refine_instruction?.trim();
+  const canSend =
+    canAi &&
+    nurtureForm.subject?.trim() &&
+    nurtureForm.body?.trim() &&
+    !nurtureMutation.isPending;
+
   return (
-    <LeadActionSection
-      title="Nurture email"
-      subtitle="Send a nurture message and log it for this conversation."
-    >
-      <div className="grid grid-cols-2 gap-2">
-        <input
-          type="email"
-          value={nurtureForm.to_email}
-          onChange={(event) => setNurtureForm((prev) => ({ ...prev, to_email: event.target.value }))}
-          placeholder="Recipient email"
-          className="h-9 rounded-md border border-border px-2 text-xs col-span-2"
-        />
-        <input
-          type="text"
-          value={nurtureForm.subject}
-          onChange={(event) => setNurtureForm((prev) => ({ ...prev, subject: event.target.value }))}
-          placeholder="Subject"
-          className="h-9 rounded-md border border-border px-2 text-xs col-span-2"
-        />
-        <textarea
-          rows={4}
-          value={nurtureForm.body}
-          onChange={(event) => setNurtureForm((prev) => ({ ...prev, body: event.target.value }))}
-          placeholder="Message body"
-          className="rounded-md border border-border px-2 py-2 text-xs w-full col-span-2"
-        />
-        <input
-          type="text"
-          value={nurtureForm.template_key}
-          onChange={(event) =>
-            setNurtureForm((prev) => ({ ...prev, template_key: event.target.value }))
-          }
-          placeholder="Template key (optional)"
-          className="h-9 rounded-md border border-border px-2 text-xs col-span-2"
-        />
+    <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden flex flex-col max-h-[min(82vh,calc(100vh-9rem))]">
+      {/* Title bar */}
+      <div className="flex-shrink-0 px-4 py-3 border-b border-border/80 bg-gradient-to-r from-slate-50/90 to-white">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-text-heading tracking-tight">
+              Nurture email
+            </h2>
+            <p className="text-xs text-text-muted mt-0.5 max-w-xl leading-relaxed">
+              Draft from lead context, refine, then send. Uses your workspace email
+              configuration.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 rounded-lg border border-border bg-white p-1 w-full sm:w-[220px]">
+            <button
+              type="button"
+              onClick={() => setPanelTab("compose")}
+              className={`h-8 rounded-md text-xs font-semibold transition-colors ${
+                panelTab === "compose"
+                  ? "bg-primary text-white"
+                  : "text-text-muted hover:bg-slate-100"
+              }`}
+            >
+              Compose
+            </button>
+            <button
+              type="button"
+              onClick={() => setPanelTab("logs")}
+              className={`h-8 rounded-md text-xs font-semibold transition-colors ${
+                panelTab === "logs"
+                  ? "bg-primary text-white"
+                  : "text-text-muted hover:bg-slate-100"
+              }`}
+            >
+              Logs
+            </button>
+          </div>
+        </div>
       </div>
-      <button
-        type="button"
-        onClick={() => nurtureMutation.mutate()}
-        disabled={!selectedLeadId || !actionConversationId || nurtureMutation.isLoading}
-        className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
-      >
-        {nurtureMutation.isLoading ? "Sending..." : "Send nurture"}
-      </button>
-      <div className="text-xs text-text-muted">
-        {nurtureLogs.length ? `Logs: ${nurtureLogs.length}` : "No nurture logs yet."}
+
+      {panelTab === "compose" ? (
+        <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
+        {/* Left: nurture draft inputs */}
+        <div className="lg:col-span-8 lg:border-r border-border/70 flex flex-col min-h-0 min-w-0">
+          {!selectedLeadId ? (
+            <div className="flex-shrink-0 m-3 rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-900">
+              Select a lead in the list to compose a nurture email.
+            </div>
+          ) : null}
+
+          <div className="overflow-y-auto overscroll-contain px-4 pt-3 pb-2 space-y-3 max-h-[420px]">
+            <div className="space-y-3">
+              <div>
+                <FieldLabel htmlFor="nurture-to">To</FieldLabel>
+                <input
+                  id="nurture-to"
+                  type="email"
+                  value={nurtureForm.to_email}
+                  onChange={(e) =>
+                    setNurtureForm((p) => ({ ...p, to_email: e.target.value }))
+                  }
+                  placeholder="recipient@email.com"
+                  disabled={!canAi}
+                  className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm shadow-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-50"
+                />
+              </div>
+              <div>
+                <FieldLabel htmlFor="nurture-subject">Subject</FieldLabel>
+                <input
+                  id="nurture-subject"
+                  type="text"
+                  value={nurtureForm.subject}
+                  onChange={(e) =>
+                    setNurtureForm((p) => ({ ...p, subject: e.target.value }))
+                  }
+                  placeholder="Subject line"
+                  disabled={!canAi}
+                  className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm shadow-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-50"
+                />
+              </div>
+            </div>
+
+            <div>
+              <FieldLabel htmlFor="nurture-body">Message</FieldLabel>
+              <textarea
+                id="nurture-body"
+                rows={7}
+                value={nurtureForm.body}
+                onChange={(e) =>
+                  setNurtureForm((p) => ({ ...p, body: e.target.value }))
+                }
+                placeholder="Plain text body. Calendly or signature may be added when sending."
+                disabled={!canAi}
+                className="w-full h-44 rounded-lg border border-border bg-slate-50/50 px-3 py-2.5 text-[13px] leading-relaxed shadow-inner resize-none focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-50"
+              />
+            </div>
+
+          </div>
+          {/* Pinned actions */}
+          <div className="border-t border-border bg-white/95 backdrop-blur-sm px-4 py-3">
+            <button
+              type="button"
+              onClick={() => nurtureMutation.mutate()}
+              disabled={!canSend}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-primary py-2.5 text-sm font-semibold text-white shadow-md shadow-primary/10 hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed transition-[opacity,filter]"
+            >
+              {nurtureMutation.isPending ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <Send size={18} />
+              )}
+              {nurtureMutation.isPending ? "Sending…" : "Send nurture email"}
+            </button>
+          </div>
+        </div>
+
+        {/* Right: compose tools */}
+        <aside className="lg:col-span-4 border-t border-border/70 bg-slate-50/40 lg:border-l border-border/70 lg:border-t-0 flex flex-col min-h-0 overflow-hidden">
+          <div className="overflow-y-auto overscroll-contain p-3 pr-2 space-y-3 max-h-[520px]">
+            <div className="rounded-lg border border-primary/15 bg-primary/[0.04] p-3 space-y-2">
+              <div className="flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => nurtureDraftMutation.mutate()}
+                  disabled={!canAi || nurtureDraftMutation.isPending}
+                  className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary bg-primary px-3 py-2 text-xs font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {nurtureDraftMutation.isPending ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Sparkles size={14} />
+                  )}
+                  Generate draft
+                </button>
+                <details className="group rounded-md border border-primary/10 bg-white/80 overflow-hidden">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-2 text-[11px] font-semibold text-text-heading hover:bg-primary/[0.04] [&::-webkit-details-marker]:hidden">
+                    <span className="inline-flex items-center gap-1.5 text-text-muted">
+                      <Sparkles size={12} className="text-primary" />
+                      Optional hints
+                    </span>
+                    <ChevronDown
+                      size={14}
+                      className="text-text-muted shrink-0 transition-transform duration-200 group-open:rotate-180"
+                    />
+                  </summary>
+                  <div className="px-2.5 pb-2.5 pt-0 space-y-2 border-t border-primary/5">
+                    <p className="text-[10px] text-text-muted pt-2 leading-snug">
+                      Goal and tone for the model. Leave blank for a default
+                      follow-up.
+                    </p>
+                    <div className="grid gap-2 grid-cols-1">
+                      <input
+                        type="text"
+                        value={nurtureForm.goal}
+                        onChange={(e) =>
+                          setNurtureForm((p) => ({ ...p, goal: e.target.value }))
+                        }
+                        placeholder="Goal (e.g. book a call)"
+                        disabled={!canAi}
+                        className="h-8 rounded-md border border-border bg-white px-2 text-xs disabled:opacity-50"
+                      />
+                      <input
+                        type="text"
+                        value={nurtureForm.tone}
+                        onChange={(e) =>
+                          setNurtureForm((p) => ({ ...p, tone: e.target.value }))
+                        }
+                        placeholder="Tone (e.g. warm, concise)"
+                        disabled={!canAi}
+                        className="h-8 rounded-md border border-border bg-white px-2 text-xs disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+                </details>
+              </div>
+            </div>
+
+            <details className="group rounded-lg border border-border bg-slate-50/60 overflow-hidden">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-3 py-2.5 text-sm font-medium text-text-heading hover:bg-slate-100/80 transition-colors [&::-webkit-details-marker]:hidden">
+                <span className="inline-flex items-center gap-2">
+                  <Wand2 size={15} className="text-primary shrink-0" />
+                  Refine with AI
+                </span>
+                <ChevronDown
+                  size={16}
+                  className="text-text-muted shrink-0 transition-transform duration-200 group-open:rotate-180"
+                />
+              </summary>
+              <div className="px-3 pb-3 pt-0 space-y-2 border-t border-border/80">
+                <textarea
+                  rows={2}
+                  value={nurtureForm.refine_instruction}
+                  onChange={(e) =>
+                    setNurtureForm((p) => ({
+                      ...p,
+                      refine_instruction: e.target.value,
+                    }))
+                  }
+                  placeholder="e.g. Shorten, stronger CTA, more formal…"
+                  disabled={!canAi}
+                  className="mt-2 w-full rounded-md border border-border bg-white px-2.5 py-2 text-xs disabled:opacity-50"
+                />
+                <button
+                  type="button"
+                  onClick={() => nurtureRefineMutation.mutate()}
+                  disabled={!canRefine || nurtureRefineMutation.isPending}
+                  className="inline-flex items-center gap-2 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-text-heading shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {nurtureRefineMutation.isPending ? (
+                    <Loader2 size={14} className="animate-spin" />
+                  ) : (
+                    <Wand2 size={14} />
+                  )}
+                  Apply refinement
+                </button>
+              </div>
+            </details>
+
+            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/90 bg-white px-3 py-2.5 text-sm shadow-sm">
+              <input
+                type="checkbox"
+                checked={nurtureForm.include_property_cards}
+                onChange={(e) =>
+                  setNurtureForm((p) => ({
+                    ...p,
+                    include_property_cards: e.target.checked,
+                  }))
+                }
+                disabled={!canAi}
+                className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+              />
+              <span className="min-w-0">
+                <span className="font-medium text-text-heading text-sm">
+                  Include property match cards
+                </span>
+                <span className="block text-[11px] text-text-muted mt-0.5 leading-snug">
+                  Attach listing cards from matched properties in HTML when
+                  sending.
+                </span>
+              </span>
+            </label>
+
+            {!actionConversationId && selectedLeadId ? (
+              <p className="text-[11px] text-text-muted leading-snug">
+                No conversation id on this lead — email still sends; logging may
+                omit thread linkage.
+              </p>
+            ) : null}
+          </div>
+        </aside>
       </div>
-    </LeadActionSection>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 bg-slate-50/40">
+          {!selectedLeadId ? (
+            <p className="text-sm text-text-muted text-center py-8">
+              Select a lead to view nurture logs.
+            </p>
+          ) : nurtureLogsLoading ? (
+            <div className="flex justify-center py-10 text-text-muted">
+              <Loader2 size={22} className="animate-spin" />
+            </div>
+          ) : !nurtureLogs.length ? (
+            <p className="text-sm text-text-muted text-center py-8">
+              No nurture emails logged for this lead yet.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {nurtureLogs.map((log) => (
+                <div
+                  key={log.id || `${log.sent_at}-${log.subject}`}
+                  className="rounded-lg border border-border/70 bg-white px-3 py-2.5 text-sm shadow-sm"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="inline-flex items-center gap-2 min-w-0">
+                      <History size={13} className="text-text-muted shrink-0" />
+                      <span className="font-medium text-text-heading line-clamp-2">
+                        {log.subject || "—"}
+                      </span>
+                    </div>
+                    <span
+                      className={`shrink-0 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border ${statusChip(
+                        log.status
+                      )}`}
+                    >
+                      {log.status || "—"}
+                    </span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-text-muted">
+                    <span className="inline-flex items-center gap-0.5 min-w-0">
+                      <Mail size={11} className="shrink-0 opacity-70" />
+                      <span className="truncate max-w-[300px]">{log.to_email || "—"}</span>
+                    </span>
+                    {log.sent_at || log.created_at ? (
+                      <span>
+                        ·{" "}
+                        {new Date(log.sent_at || log.created_at).toLocaleString(undefined, {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })}
+                      </span>
+                    ) : null}
+                    {log.meeting_booked ? (
+                      <span className="text-emerald-700 font-medium">Booked</span>
+                    ) : null}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

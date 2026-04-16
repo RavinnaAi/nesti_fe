@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bot, ArrowRight, X, User, Settings, LogOut } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
 
 export default function Header() {
   const pathname = usePathname();
@@ -122,10 +123,9 @@ export default function Header() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${isActive
-                      ? "text-text-body bg-primary/10 font-semibold"
-                      : "text-text-body"
-                      }`}
+                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${
+                      isActive ? "text-text-body bg-primary/10 font-semibold" : "text-text-body"
+                    }`}
                   >
                     {item.label}
                   </Link>
@@ -158,7 +158,9 @@ export default function Header() {
                 </Link>
               </>
             ) : (
-              <div className="relative" ref={profileRef}>
+              <>
+                <NotificationsBell />
+                <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((prev) => !prev)}
                   className="flex items-center gap-3 bg-background-light rounded-md hover:shadow-md transition-all"
@@ -230,12 +232,14 @@ export default function Header() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+                </div>
+              </>
             )}
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            {isAuthenticated ? <NotificationsBell /> : null}
             <motion.button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-text-body hover:text-primary hover:bg-background-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
@@ -357,10 +361,11 @@ export default function Header() {
                     >
                       <Link
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-all duration-200 ${isActive
-                          ? "bg-primary text-white shadow-md"
-                          : "text-text-body hover:bg-primary/10 hover:text-primary"
-                          }`}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-all duration-200 ${
+                          isActive
+                            ? "bg-primary text-white shadow-md"
+                            : "text-text-body hover:bg-primary/10 hover:text-primary"
+                        }`}
                         onClick={() => setIsMenuOpen(false)}
                       >
                         {isActive && (

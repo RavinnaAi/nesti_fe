@@ -86,6 +86,8 @@ export const API_ENDPOINTS = {
     conversationMessages: withBaseUrl((id) => `/api/chat/conversations/${id}/messages`),
     referrals: withBaseUrl("/api/chat/referrals"),
     referral: withBaseUrl((id) => `/api/chat/referrals/${id}`),
+    nurtureDraft: withBaseUrl("/api/chat/nurture/draft"),
+    nurtureRefine: withBaseUrl("/api/chat/nurture/refine"),
     nurtureSend: withBaseUrl("/api/chat/nurture/send"),
     nurtureLogs: withBaseUrl("/api/chat/nurture/logs"),
     calculators: {
@@ -110,7 +112,47 @@ export const API_ENDPOINTS = {
     paymentMethods: withBaseUrl("/api/billing/payment-methods"),
     taxCalculate: withBaseUrl("/api/billing/tax/calculate"),
   },
+  notifications: {
+    list: withBaseUrl("/api/notifications"),
+    detail: (id) => withBaseUrl(`/api/notifications/${id}`),
+    unreadCount: withBaseUrl("/api/notifications/unread-count"),
+    markRead: withBaseUrl((id) => `/api/notifications/${id}/read`),
+    markAllRead: withBaseUrl("/api/notifications/read-all"),
+  },
 };
+
+/**
+ * Origin for Socket.IO (host only, no path).
+ * Tries dedicated realtime env vars, then API URLs.
+ * Hosts without a scheme default to http:// so local `localhost:5000` works (https would fail).
+ */
+export function getSocketOrigin() {
+  const candidates = [
+    process.env.NEXT_PUBLIC_SOCKET_ORIGIN,
+    process.env.NEXT_PUBLIC_WS_ORIGIN,
+    process.env.NEXT_PUBLIC_API_URL,
+    process.env.NEXT_PUBLIC_NODE_BACKEND_URL,
+  ];
+  for (const raw of candidates) {
+    const s = String(raw || "")
+      .trim()
+      .replace(/\/+$/, "");
+    if (!s) continue;
+    try {
+      const withProto = /^https?:\/\//i.test(s) ? s : `http://${s}`;
+      const u = new URL(withProto);
+      return u.origin;
+    } catch {
+      continue;
+    }
+  }
+  return "";
+}
+
+/** @deprecated Prefer getSocketOrigin — kept for compatibility */
+export function getApiOrigin() {
+  return getSocketOrigin();
+}
 
 export async function apiClient({ url, method = "GET", data, token, rawToken = false }) {
   // url can be either a base-relative string ("/route") or an absolute url

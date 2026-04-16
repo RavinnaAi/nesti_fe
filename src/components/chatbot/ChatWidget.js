@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { Send, X, MessageCircle, Loader2, RotateCcw } from "lucide-react";
+import { Send, X, MessageCircle, RotateCcw } from "lucide-react";
 import {
   clearChatSession,
   fetchChatPropertyMatches,
@@ -220,7 +220,7 @@ export default function ChatWidget({
   allowLauncher = true,
   launcherLabel = "Open chat",
   title = "Real Estate Assistant",
-  subtitle = "Online • Ready to help",
+  subtitle = "Ready to help • Secure chat",
   inlineMode = false,
   initialGreeting = "Hello! How can I help with your real estate journey today?",
 }) {
@@ -588,9 +588,12 @@ export default function ChatWidget({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <span className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
+        <span
+          className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100"
+          title="Assistant is available. Messages use HTTPS; realtime agent alerts use Socket.IO only in your logged-in dashboard."
+        >
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          Online
+          Available
         </span>
         {!inlineMode ? (
           <button
@@ -760,16 +763,17 @@ export default function ChatWidget({
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyPress}
           placeholder={embedToken ? "Type your message..." : "Embed token missing"}
-          disabled={loading || !embedToken}
+          disabled={!embedToken}
           className="flex-1 px-4 py-2 border border-border rounded-xl bg-background-light shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary disabled:opacity-50"
         />
         <button
           onClick={() => handleSend()}
           disabled={disabledSend}
-          className="px-4 py-2 bg-primary text-white rounded-xl hover:brightness-95 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-sm"
-          aria-label="Send message"
+          className="px-4 py-2 bg-primary text-white rounded-xl hover:brightness-95 transition disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center shadow-sm disabled:hover:brightness-100"
+          aria-label={loading ? "Waiting for reply…" : "Send message"}
+          aria-busy={loading}
         >
-          {loading ? <Loader2 size={20} className="animate-spin" /> : <Send size={20} />}
+          <Send size={20} aria-hidden />
         </button>
       </div>
 

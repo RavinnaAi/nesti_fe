@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw, Trash2 } from "lucide-react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
@@ -12,6 +13,8 @@ import {
   updateReferral,
   sendNurtureEmail,
   fetchNurtureLogs,
+  postNurtureDraft,
+  postNurtureRefine,
   runMortgageCalculator,
   runClosingCalculator,
   fetchCalculatorRuns,
@@ -123,10 +126,12 @@ const formatMetaEntries = (meta) => {
   return Object.entries(meta).filter(([, value]) => value !== undefined && value !== null);
 };
 
-export default function LeadsPage() {
+function LeadsPageContent() {
   const { isAuthenticated } = useAuthGuard();
   const { token } = useAppSelector((state) => state.auth);
   const queryClient = useQueryClient();
+  const searchParams = useSearchParams();
+  const leadFromUrl = searchParams.get("lead");
   const [hydrated, setHydrated] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -146,7 +151,10 @@ export default function LeadsPage() {
     to_email: "",
     subject: "",
     body: "",
-    template_key: "",
+    refine_instruction: "",
+    goal: "",
+    tone: "",
+    include_property_cards: true,
   });
   const [mortgageForm, setMortgageForm] = useState({
     price: "",
@@ -163,6 +171,15 @@ export default function LeadsPage() {
   useEffect(() => {
     setHydrated(true);
   }, []);
+
+  useEffect(() => {
+    if (!leadFromUrl?.trim()) return;
+    const lid = leadFromUrl.trim();
+    setSelectedLeadId(lid);
+    // So the matching row is visible in the sidebar (filters would hide e.g. a seller when "Buyer" is selected).
+    setIntentFilter("");
+    setSearchTerm("");
+  }, [leadFromUrl]);
 
   const leadsQuery = useQuery({
     queryKey: ["leads", token],
@@ -189,29 +206,6 @@ export default function LeadsPage() {
       return matchesSearch(conversation, searchTerm);
     });
   }, [conversations, intentFilter, searchTerm]);
-
-  const propertyMatchCountQueries = useQueries({
-    queries: filteredConversations.map((conversation) => {
-      const leadId = String(getLeadMatchId(conversation) || "");
-      return {
-        queryKey: ["lead-property-match-count", token, leadId],
-        enabled: Boolean(token && leadId),
-        queryFn: () => fetchLeadPropertyMatches({ token, leadId, page: 1, limit: 1 }),
-        staleTime: 60 * 1000,
-      };
-    }),
-  });
-
-  const propertyMatchCountByLeadId = useMemo(() => {
-    const out = {};
-    filteredConversations.forEach((conversation, idx) => {
-      const leadId = String(getLeadMatchId(conversation) || "");
-      if (!leadId) return;
-      const count = propertyMatchCountQueries[idx]?.data?.match_count;
-      if (typeof count === "number" && Number.isFinite(count)) out[leadId] = count;
-    });
-    return out;
-  }, [filteredConversations, propertyMatchCountQueries]);
 
   const leadDetailQuery = useQuery({
     queryKey: ["lead-detail", token, selectedLeadId],
@@ -283,12 +277,38 @@ export default function LeadsPage() {
   }, [referrals, actionConversationId]);
 
   const nurtureLogsQuery = useQuery({
-    queryKey: ["chat-nurture-logs", token],
-    enabled: Boolean(token),
-    queryFn: () => fetchNurtureLogs({ token }),
+    queryKey: ["chat-nurture-logs", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId),
+    queryFn: () => fetchNurtureLogs({ token, leadMatchId: selectedLeadId }),
   });
 
   const nurtureLogs = useMemo(() => normalizeList(nurtureLogsQuery.data), [nurtureLogsQuery.data]);
+
+  const nurtureSuggestedEmail = useMemo(() => {
+    const c = leadDetailQuery.data?.lead?.contact;
+    const fromLead =
+      c?.email || c?.canonical_email || selectedConversation?.email || selectedConversation?.visitor_email || "";
+    return String(fromLead || "").trim();
+  }, [leadDetailQuery.data?.lead, selectedConversation]);
+
+  useEffect(() => {
+    if (!selectedLeadId) return;
+    setNurtureForm((prev) => ({
+      ...prev,
+      subject: "",
+      body: "",
+      refine_instruction: "",
+      to_email: "",
+    }));
+  }, [selectedLeadId]);
+
+  useEffect(() => {
+    if (!selectedLeadId || !nurtureSuggestedEmail) return;
+    setNurtureForm((prev) => {
+      if (prev.to_email.trim()) return prev;
+      return { ...prev, to_email: nurtureSuggestedEmail };
+    });
+  }, [selectedLeadId, nurtureSuggestedEmail]);
 
   const mortgageRunsQuery = useQuery({
     queryKey: ["chat-calculators", token, "mortgage"],
@@ -340,19 +360,78 @@ export default function LeadsPage() {
     onError: (err) => toast.error(err?.message || "Failed to update referral"),
   });
 
+  const nurtureDraftMutation = useMutation({
+    mutationFn: () =>
+      postNurtureDraft({
+        token,
+        payload: {
+          lead_match_id: selectedLeadId,
+          goal: nurtureForm.goal?.trim() || undefined,
+          tone: nurtureForm.tone?.trim() || undefined,
+        },
+      }),
+    onSuccess: (data) => {
+      const d = data?.draft;
+      if (d) {
+        setNurtureForm((prev) => ({
+          ...prev,
+          subject: d.subject ?? prev.subject,
+          body: d.body_text ?? prev.body,
+        }));
+      }
+      toast.success("Draft ready. Review and send.");
+    },
+    onError: (err) => toast.error(err?.message || "Could not generate draft"),
+  });
+
+  const nurtureRefineMutation = useMutation({
+    mutationFn: () =>
+      postNurtureRefine({
+        token,
+        payload: {
+          lead_match_id: selectedLeadId,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          instruction: nurtureForm.refine_instruction.trim(),
+        },
+      }),
+    onSuccess: (data) => {
+      const d = data?.draft;
+      if (d) {
+        setNurtureForm((prev) => ({
+          ...prev,
+          subject: d.subject ?? prev.subject,
+          body: d.body_text ?? prev.body,
+          refine_instruction: "",
+        }));
+      }
+      toast.success("Refined.");
+    },
+    onError: (err) => toast.error(err?.message || "Could not refine email"),
+  });
+
   const nurtureMutation = useMutation({
     mutationFn: () =>
       sendNurtureEmail({
         token,
         payload: {
-          ...nurtureForm,
+          lead_match_id: selectedLeadId,
           conversation_id: actionConversationId || undefined,
+          to_email: nurtureForm.to_email?.trim() || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
         },
       }),
     onSuccess: () => {
       toast.success("Nurture email sent");
-      setNurtureForm({ to_email: "", subject: "", body: "", template_key: "" });
-      queryClient.invalidateQueries({ queryKey: ["chat-nurture-logs"] });
+      setNurtureForm((prev) => ({
+        ...prev,
+        subject: "",
+        body: "",
+        refine_instruction: "",
+      }));
+      queryClient.invalidateQueries({ queryKey: ["chat-nurture-logs", token, selectedLeadId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
@@ -424,33 +503,11 @@ export default function LeadsPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
       <div className="max-w-7xl mx-auto px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-heading">Leads</h1>
-            <p className="text-sm text-text-muted">
-              Manage conversations, referrals, nurtures, and calculators.
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {selectedLeadId ? (
-              <button
-                type="button"
-                onClick={handleDeleteLead}
-                disabled={deleteLeadMutation.isPending}
-                className="inline-flex items-center gap-2 text-xs font-semibold text-red-700 border border-red-300 rounded-md px-3 py-2 hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Trash2 size={14} />
-                {deleteLeadMutation.isPending ? "Deleting..." : "Delete Lead"}
-              </button>
-            ) : null}
-            <button
-              type="button"
-              onClick={() => leadsQuery.refetch()}
-              className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
-            >
-              <RefreshCw size={14} /> Refresh
-            </button>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold text-text-heading">Leads</h1>
+          <p className="text-sm text-text-muted">
+            Manage conversations, referrals, nurtures, and calculators.
+          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
@@ -498,7 +555,6 @@ export default function LeadsPage() {
                       key={id}
                       conversation={conversation}
                       active={String(id) === String(selectedLeadId)}
-                      propertyMatchCount={propertyMatchCountByLeadId[String(id)]}
                       onSelect={(newId) => {
                         setSelectedLeadId(newId);
                       }}
@@ -510,7 +566,26 @@ export default function LeadsPage() {
           </div>
 
           <div className="lg:col-span-9 space-y-6">
-            <LeadsWorkspaceTabs activeTab={activeTab} onChange={setActiveTab} />
+            <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+              <LeadsWorkspaceTabs
+                activeTab={activeTab}
+                onChange={setActiveTab}
+                endSlot={
+                  selectedLeadId ? (
+                    <button
+                      type="button"
+                      onClick={handleDeleteLead}
+                      disabled={deleteLeadMutation.isPending}
+                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 border border-red-200 rounded-md px-2.5 py-1.5 bg-white hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                      title="Delete this lead"
+                    >
+                      <Trash2 size={14} aria-hidden />
+                      {deleteLeadMutation.isPending ? "Deleting…" : "Delete"}
+                    </button>
+                  ) : null
+                }
+              />
+            </div>
 
             {activeTab === "lead_details" ? (
               <LeadsDetailsTab
@@ -588,9 +663,12 @@ export default function LeadsPage() {
                 nurtureForm={nurtureForm}
                 setNurtureForm={setNurtureForm}
                 nurtureMutation={nurtureMutation}
+                nurtureDraftMutation={nurtureDraftMutation}
+                nurtureRefineMutation={nurtureRefineMutation}
                 selectedLeadId={selectedLeadId}
                 actionConversationId={actionConversationId}
                 nurtureLogs={nurtureLogs}
+                nurtureLogsLoading={nurtureLogsQuery.isLoading}
               />
             ) : null}
           </div>
@@ -628,5 +706,17 @@ export default function LeadsPage() {
         </div>
       ) : null}
     </div>
+  );
+}
+
+export default function LeadsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10" />
+      }
+    >
+      <LeadsPageContent />
+    </Suspense>
   );
 }
