@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2 } from "lucide-react";
+import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2, X } from "lucide-react";
 
 function statusChip(status) {
   const s = String(status || "").toLowerCase();
@@ -33,6 +33,7 @@ export default function LeadsNurtureTab({
   nurtureLogsLoading,
 }) {
   const [panelTab, setPanelTab] = useState("compose");
+  const [selectedLog, setSelectedLog] = useState(null);
   const canAi = Boolean(selectedLeadId);
   const canRefine =
     canAi &&
@@ -316,7 +317,16 @@ export default function LeadsNurtureTab({
               {nurtureLogs.map((log) => (
                 <div
                   key={log.id || `${log.sent_at}-${log.subject}`}
-                  className="rounded-lg border border-border/70 bg-white px-3 py-2.5 text-sm shadow-sm"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedLog(log)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedLog(log);
+                    }
+                  }}
+                  className="rounded-lg border border-border/70 bg-white px-3 py-2.5 text-sm shadow-sm cursor-pointer hover:border-primary/40 hover:bg-primary/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="inline-flex items-center gap-2 min-w-0">
@@ -357,6 +367,62 @@ export default function LeadsNurtureTab({
           )}
         </div>
       )}
+
+      {selectedLog ? (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+          <div className="w-full max-w-2xl rounded-xl border border-border bg-white shadow-2xl max-h-[80vh] overflow-hidden flex flex-col">
+            <div className="flex items-start justify-between gap-3 px-4 py-3 border-b border-border/80">
+              <div>
+                <h3 className="text-base font-semibold text-text-heading">Sent nurture email</h3>
+                <p className="text-xs text-text-muted mt-0.5">
+                  {selectedLog.sent_at || selectedLog.created_at
+                    ? new Date(selectedLog.sent_at || selectedLog.created_at).toLocaleString(
+                        undefined,
+                        { dateStyle: "medium", timeStyle: "short" }
+                      )
+                    : "Timestamp unavailable"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedLog(null)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-muted hover:text-text-heading hover:bg-slate-50"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="px-4 py-3 space-y-3 overflow-y-auto">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">To</p>
+                <p className="text-sm text-text-heading mt-0.5">{selectedLog.to_email || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Subject</p>
+                <p className="text-sm text-text-heading mt-0.5">{selectedLog.subject || "—"}</p>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Status</p>
+                <span
+                  className={`mt-1 inline-flex text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border ${statusChip(
+                    selectedLog.status
+                  )}`}
+                >
+                  {selectedLog.status || "—"}
+                </span>
+              </div>
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Email body</p>
+                <div className="mt-1 rounded-lg border border-border bg-slate-50/60 p-3">
+                  <pre className="whitespace-pre-wrap break-words text-[13px] leading-relaxed text-text-heading font-sans">
+                    {selectedLog.body_text || selectedLog.body || "No email body saved for this log."}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

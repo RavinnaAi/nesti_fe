@@ -37,7 +37,7 @@ export default function RootLayout({ children }) {
           */}
           <Suspense
             fallback={
-              <main className="flex-grow relative z-10">{children}</main>
+              <main className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</main>
             }
           >
             <AppChrome>{children}</AppChrome>

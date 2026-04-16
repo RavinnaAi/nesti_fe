@@ -19,6 +19,30 @@ export async function fetchLeads({ token, ...query }) {
   });
 }
 
+export async function fetchLeadProfiles({ token, ...query }) {
+  return apiClient({
+    url: withQuery(API_ENDPOINTS.leads.profiles, query),
+    method: "GET",
+    token,
+  });
+}
+
+export async function fetchLeadProfileById({ token, profileId }) {
+  return apiClient({
+    url: API_ENDPOINTS.leads.profileDetail(profileId),
+    method: "GET",
+    token,
+  });
+}
+
+export async function fetchLeadsByProfileId({ token, profileId, ...query }) {
+  return apiClient({
+    url: withQuery(API_ENDPOINTS.leads.profileLeads(profileId), query),
+    method: "GET",
+    token,
+  });
+}
+
 export async function fetchLeadById({ token, id }) {
   return apiClient({
     url: withQuery(API_ENDPOINTS.leads.detail(id), { include_conversion: 1 }),

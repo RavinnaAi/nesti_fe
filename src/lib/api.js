@@ -73,6 +73,9 @@ export const API_ENDPOINTS = {
   },
   leads: {
     list: withBaseUrl("/api/leads"),
+    profiles: withBaseUrl("/api/leads/profiles"),
+    profileDetail: withBaseUrl((id) => `/api/leads/profiles/${id}`),
+    profileLeads: withBaseUrl((id) => `/api/leads/profiles/${id}/leads`),
     detail: withBaseUrl((id) => `/api/leads/${id}`),
     remove: withBaseUrl((id) => `/api/leads/${id}`),
     conversation: withBaseUrl((id) => `/api/leads/${id}/conversation`),

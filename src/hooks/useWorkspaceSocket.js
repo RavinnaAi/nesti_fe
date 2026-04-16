@@ -78,12 +78,18 @@ export function useWorkspaceSocket(token, queryClient) {
         console.warn("[workspace-socket] connect_error — check JWT / backend on", origin, err?.message || err);
       }
     });
+    socket.on("disconnect", (reason) => {
+      if (process.env.NODE_ENV === "development") {
+        console.warn("[workspace-socket] disconnected", { reason });
+      }
+    });
 
     return () => {
       socket.off("connect");
       socket.off("workspace:ready", refreshNotifications);
       socket.off("notifications:item", onNotify);
       socket.off("workspace:lead", onLead);
+      socket.off("disconnect");
       socket.disconnect();
     };
   }, [token, queryClient]);

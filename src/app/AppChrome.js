@@ -21,7 +21,7 @@ export default function AppChrome({ children }) {
     <>
       <BackgroundElements variant="default" />
       <Header />
-      <main className="flex-grow relative z-10">{children}</main>
+      <main className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</main>
       <Footer />
       <CustomToastContainer />
     </>

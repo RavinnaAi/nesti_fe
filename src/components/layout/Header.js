@@ -31,6 +31,8 @@ export default function Header() {
         ? [
           { label: "Dashboard", href: "/dashboard" },
           { label: "Leads", href: "/leads" },
+          { label: "Clients", href: "/clients" },
+          { label: "Logs", href: "/nurture-logs" },
           { label: "Analytics", href: "/analytics" },
         ]
         : [

@@ -241,12 +241,15 @@ export async function sendNurtureEmail({ token, payload }) {
   });
 }
 
-export async function fetchNurtureLogs({ token, leadMatchId }) {
+export async function fetchNurtureLogs({ token, leadMatchId, page, limit }) {
   const authToken = token || getStoredAuthToken();
-  const qs =
-    leadMatchId && String(leadMatchId).trim()
-      ? `?lead_match_id=${encodeURIComponent(String(leadMatchId).trim())}`
-      : "";
+  const params = new URLSearchParams();
+  if (leadMatchId && String(leadMatchId).trim()) {
+    params.set("lead_match_id", String(leadMatchId).trim());
+  }
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
   return apiClient({
     url: `${API_ENDPOINTS.chat.nurtureLogs}${qs}`,
     method: "GET",
