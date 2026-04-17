@@ -25,6 +25,66 @@ export default function LeadsDetailsTab({
     return raw.replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
+  const toFiniteNumber = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    const raw = String(value).replace(/[^0-9.-]/g, "").trim();
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const extractRangeNumbers = (value) => {
+    if (value === null || value === undefined) return null;
+    const matches = String(value).match(/-?\d+(?:\.\d+)?/g);
+    if (!matches || matches.length < 2) return null;
+    const low = Number(matches[0]);
+    const high = Number(matches[1]);
+    if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
+    return low <= high ? [low, high] : [high, low];
+  };
+
+  const formatMoney = (value) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const budgetDisplay = (() => {
+    const conversionProperty = leadData?.conversion?.property || {};
+    const min =
+      toFiniteNumber(conversionProperty?.min_budget) ??
+      toFiniteNumber(leadData?.budget_profile?.min_budget) ??
+      toFiniteNumber(property?.min_budget) ??
+      toFiniteNumber(property?.budget_min);
+    const max =
+      toFiniteNumber(conversionProperty?.max_budget) ??
+      toFiniteNumber(leadData?.budget_profile?.max_budget) ??
+      toFiniteNumber(property?.max_budget) ??
+      toFiniteNumber(property?.budget_max);
+    if (min !== null && max !== null) return `${formatMoney(min)} - ${formatMoney(max)}`;
+    if (min !== null) return formatMoney(min);
+    if (max !== null) return formatMoney(max);
+    const single =
+      toFiniteNumber(conversionProperty?.budget) ??
+      toFiniteNumber(conversionProperty?.price) ??
+      toFiniteNumber(property?.budget) ??
+      toFiniteNumber(property?.price) ??
+      toFiniteNumber(leadData?.budget) ??
+      toFiniteNumber(leadData?.price);
+    if (single !== null) return formatMoney(single);
+    const range = extractRangeNumbers(
+      conversionProperty?.budget ??
+        conversionProperty?.price ??
+        property?.budget ??
+        property?.price ??
+        leadData?.budget ??
+        leadData?.price
+    );
+    return range ? `${formatMoney(range[0])} - ${formatMoney(range[1])}` : "—";
+  })();
+
   const appointmentStatus = leadData.appointment_status || "—";
 
   const KeyValue = ({ label, value }) => (
@@ -88,7 +148,7 @@ export default function LeadsDetailsTab({
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <KeyValue label="Intent" value={leadData.intent} />
               <KeyValue label="Location" value={property.location} />
-              <KeyValue label="Budget" value={property.budget ? `$${property.budget}` : property.budget} />
+              <KeyValue label="Budget" value={budgetDisplay} />
               <KeyValue label="Timeline" value={property.timeline} />
               <KeyValue label="Type" value={property.property_type} />
               <KeyValue label="Bedrooms" value={property.bedrooms} />

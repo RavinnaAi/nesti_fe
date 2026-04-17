@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
 import { Calendar, Clock, Video, MoreHorizontal, User, ArrowRight, CheckCircle2, Loader2, RefreshCw, Settings2, Link as LinkIcon, ExternalLink, Lock } from "lucide-react";
 import { motion } from "framer-motion";
 import { fetchBookings } from "@/lib/calendarClient";
@@ -17,7 +18,7 @@ export default function UpcomingMeetings({ onOpenSettings }) {
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState("upcoming"); // "upcoming" or "past"
 
-    const loadMeetings = async () => {
+    const loadMeetings = useCallback(async () => {
         try {
             setLoading(true);
             const data = await fetchBookings(token);
@@ -30,13 +31,13 @@ export default function UpcomingMeetings({ onOpenSettings }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         if (token && canUseCalendar) {
             loadMeetings();
         }
-    }, [token, canUseCalendar]);
+    }, [token, canUseCalendar, loadMeetings]);
 
     const formatDate = (isoString) => {
         const date = new Date(isoString);
@@ -157,9 +158,21 @@ export default function UpcomingMeetings({ onOpenSettings }) {
                                         'bg-gray-50 border-gray-100 text-gray-600'
                                         }`}>
                                         {meeting.provider === 'google' ? (
-                                            <img src={`https://img.logo.dev/google.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} className="w-5 h-5" alt="Google" />
+                                            <Image
+                                                src={`https://img.logo.dev/google.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`}
+                                                width={20}
+                                                height={20}
+                                                className="w-5 h-5"
+                                                alt="Google"
+                                            />
                                         ) : meeting.provider === 'calendly' ? (
-                                            <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} className="w-5 h-5 object-contain" alt="Calendly" />
+                                            <Image
+                                                src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`}
+                                                width={20}
+                                                height={20}
+                                                className="w-5 h-5 object-contain"
+                                                alt="Calendly"
+                                            />
                                         ) : (
                                             <Calendar size={20} />
                                         )}

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useCallback, useEffect, useState } from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
 import { X, Calendar, CheckCircle2, AlertCircle, Loader2, ExternalLink, RefreshCw, Lock } from "lucide-react";
 import { connectCalendar, disconnectCalendar, fetchCalendarStatus } from "@/lib/calendarClient";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -9,7 +10,7 @@ import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { FEATURES } from "@/constants/features";
 
 export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
-    const { profile, token } = useAuthGuard();
+    const { token } = useAuthGuard();
     const { hasFeature } = useFeatureAccess();
     const canUseCalendar = hasFeature(FEATURES.CALENDAR_INTEGRATION);
     const [loading, setLoading] = useState(true);
@@ -18,7 +19,7 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
     const [connections, setConnections] = useState([]);
     const [error, setError] = useState(null);
 
-    const fetchStatus = async () => {
+    const fetchStatus = useCallback(async () => {
         try {
             setLoading(true);
             const res = await fetchCalendarStatus(token);
@@ -29,13 +30,13 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         if (isOpen && token) {
             fetchStatus();
         }
-    }, [isOpen, token]);
+    }, [isOpen, token, fetchStatus]);
 
     const handleConnect = async (provider) => {
         try {
@@ -167,7 +168,13 @@ export default function CalendarSettingsModal({ isOpen, onClose, onUpdate }) {
                             <div className="flex items-center flex-wrap justify-between p-4 rounded-lg border border-border/60 hover:border-border transition-colors bg-white shadow-sm">
                                 <div className="flex items-center gap-3">
                                     <div className="w-10 h-10 rounded-full bg-white border border-gray-100 flex items-center justify-center p-2 shadow-sm">
-                                        <img src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`} alt="Calendly" className="w-full h-full object-contain" />
+                                        <Image
+                                            src={`https://img.logo.dev/calendly.com?token=${process.env.NEXT_PUBLIC_LOGO_DEV_TOKEN}`}
+                                            alt="Calendly"
+                                            width={32}
+                                            height={32}
+                                            className="w-full h-full object-contain"
+                                        />
                                     </div>
                                     <div>
                                         <h4 className="font-semibold text-text-heading text-sm">Calendly</h4>

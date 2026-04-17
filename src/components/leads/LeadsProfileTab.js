@@ -19,6 +19,66 @@ export default function LeadsProfileTab({
     return raw.replace(/\b\w/g, (char) => char.toUpperCase());
   };
 
+  const toFiniteNumber = (value) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value === "number") return Number.isFinite(value) ? value : null;
+    const raw = String(value).replace(/[^0-9.-]/g, "").trim();
+    if (!raw) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  };
+
+  const extractRangeNumbers = (value) => {
+    if (value === null || value === undefined) return null;
+    const matches = String(value).match(/-?\d+(?:\.\d+)?/g);
+    if (!matches || matches.length < 2) return null;
+    const low = Number(matches[0]);
+    const high = Number(matches[1]);
+    if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
+    return low <= high ? [low, high] : [high, low];
+  };
+
+  const formatMoney = (value) =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: 0,
+    }).format(value);
+
+  const budgetDisplay = (() => {
+    const conversionProperty = leadData?.conversion?.property || {};
+    const min =
+      toFiniteNumber(conversionProperty?.min_budget) ??
+      toFiniteNumber(leadData?.budget_profile?.min_budget) ??
+      toFiniteNumber(property?.min_budget) ??
+      toFiniteNumber(property?.budget_min);
+    const max =
+      toFiniteNumber(conversionProperty?.max_budget) ??
+      toFiniteNumber(leadData?.budget_profile?.max_budget) ??
+      toFiniteNumber(property?.max_budget) ??
+      toFiniteNumber(property?.budget_max);
+    if (min !== null && max !== null) return `${formatMoney(min)} - ${formatMoney(max)}`;
+    if (min !== null) return formatMoney(min);
+    if (max !== null) return formatMoney(max);
+    const single =
+      toFiniteNumber(conversionProperty?.budget) ??
+      toFiniteNumber(conversionProperty?.price) ??
+      toFiniteNumber(property?.budget) ??
+      toFiniteNumber(property?.price) ??
+      toFiniteNumber(leadData?.budget) ??
+      toFiniteNumber(leadData?.price);
+    if (single !== null) return formatMoney(single);
+    const range = extractRangeNumbers(
+      conversionProperty?.budget ??
+        conversionProperty?.price ??
+        property?.budget ??
+        property?.price ??
+        leadData?.budget ??
+        leadData?.price
+    );
+    return range ? `${formatMoney(range[0])} - ${formatMoney(range[1])}` : "—";
+  })();
+
   const KeyValue = ({ label, value, noWrap = false }) => (
     <div className="rounded-md border border-border/60 bg-background-light/50 px-3 py-2">
       <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
@@ -65,7 +125,7 @@ export default function LeadsProfileTab({
               <KeyValue label="Intent" value={leadData.intent} />
               <KeyValue label="Lead type" value={leadData.lead_type} />
               <KeyValue label="Status" value={leadData.status} />
-              <KeyValue label="Budget" value={property.budget ? `$${property.budget}` : property.budget} />
+              <KeyValue label="Budget" value={budgetDisplay} />
               <KeyValue label="Timeline" value={property.timeline} />
               <KeyValue label="Property type" value={property.property_type} />
               <KeyValue label="Mortgage status" value={qualification.mortgage_status} />

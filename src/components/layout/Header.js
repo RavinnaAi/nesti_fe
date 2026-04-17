@@ -170,16 +170,6 @@ export default function Header() {
                   <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                     {initials}
                   </div>
-                  {/* <div className="hidden lg:flex flex-col items-start">
-                    <span className="text-sm font-semibold text-text-heading">
-                      {displayName}
-                    </span>
-                    {displayEmail && (
-                      <span className="text-xs text-text-muted">
-                        {displayEmail}
-                      </span>
-                    )}
-                  </div> */}
                 </button>
                 <AnimatePresence>
                   {isProfileOpen && (

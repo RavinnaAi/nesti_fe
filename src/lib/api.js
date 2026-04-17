@@ -122,6 +122,11 @@ export const API_ENDPOINTS = {
     markRead: withBaseUrl((id) => `/api/notifications/${id}/read`),
     markAllRead: withBaseUrl("/api/notifications/read-all"),
   },
+  professionals: {
+    profile: withBaseUrl("/api/professionals"),
+    me: withBaseUrl("/api/professionals/me"),
+    icp: withBaseUrl("/api/professionals/icp"),
+  },
 };
 
 /**

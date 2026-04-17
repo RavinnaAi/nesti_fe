@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ExternalLink, Loader2, User } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -17,9 +17,24 @@ function humanize(value) {
   return String(value).replace(/_/g, " ");
 }
 
+function formatBudgetValue(value) {
+  if (value == null || value === "") return "N/A";
+  const num = Number(String(value).replace(/[$,\s]/g, ""));
+  if (!Number.isFinite(num)) return String(value);
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(num);
+}
+
 export default function ClientProfileLeadsPage() {
   const params = useParams();
+  const router = useRouter();
   const profileId = String(params?.profileId || "").trim();
+  const clientProfilePath = profileId ? `/clients/${encodeURIComponent(profileId)}` : "/clients";
+  const leadWorkspaceHref = (leadId) =>
+    `/leads/${encodeURIComponent(leadId)}?back=${encodeURIComponent(clientProfilePath)}`;
   const { isAuthenticated } = useAuthGuard();
   const token = useAppSelector((s) => s.auth.token);
   const [hydrated, setHydrated] = useState(false);
@@ -79,8 +94,8 @@ export default function ClientProfileLeadsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2.5 pb-3 pt-5 font-body antialiased sm:px-4 sm:pb-4 sm:pt-6">
-      <div className="mx-auto w-full max-w-5xl shrink-0 space-y-4">
+    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2 pb-3 pt-4 font-body antialiased sm:px-3 sm:pb-4 sm:pt-5">
+      <div className="mx-auto w-full max-w-5xl shrink-0 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/clients"
@@ -101,14 +116,14 @@ export default function ClientProfileLeadsPage() {
           </div>
         ) : (
           <>
-            <div className="rounded-lg border border-border/90 bg-white p-4 shadow-sm ring-1 ring-slate-900/[0.02] sm:p-5">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="rounded-lg border border-border/90 bg-white p-3 shadow-sm ring-1 ring-slate-900/[0.02] sm:p-4">
+              <div className="flex flex-wrap items-start justify-between gap-2">
                 <div className="flex min-w-0 items-start gap-2">
                   <div className="mt-0.5 rounded-md bg-primary/10 p-2 text-primary">
                     <User size={20} />
                   </div>
                   <div className="min-w-0">
-                    <h1 className="font-heading text-lg font-bold capitalize text-text-heading sm:text-xl">
+                    <h1 className="font-heading text-base font-bold capitalize text-text-heading sm:text-lg">
                       {displayName}
                     </h1>
                     <p className="mt-1 text-[11px] text-text-muted sm:text-xs">
@@ -121,6 +136,9 @@ export default function ClientProfileLeadsPage() {
                       >
                         {profile.contact.email}
                       </a>
+                    ) : null}
+                    {profile?.contact?.phone ? (
+                      <p className="mt-0.5 text-xs font-medium text-text-muted">{profile.contact.phone}</p>
                     ) : null}
                   </div>
                 </div>
@@ -135,38 +153,81 @@ export default function ClientProfileLeadsPage() {
                   </div>
                 </div>
               </div>
-              <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-2 border-t border-border/70 pt-4 text-[11px] sm:grid-cols-3 sm:text-xs">
-                <div>
-                  <dt className="text-text-muted">Intent</dt>
-                  <dd className="mt-0.5 font-medium capitalize text-text-heading">{humanize(profile?.intent)}</dd>
-                </div>
-                <div>
-                  <dt className="text-text-muted">Location</dt>
-                  <dd className="mt-0.5 font-medium capitalize text-text-heading">
-                    {humanize(profile?.property?.location)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-muted">Timeline</dt>
-                  <dd className="mt-0.5 font-medium capitalize text-text-heading">
-                    {humanize(profile?.property?.timeline)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-muted">Appointment</dt>
-                  <dd className="mt-0.5 font-medium capitalize text-text-heading">
-                    {humanize(profile?.appointment_status)}
-                  </dd>
-                </div>
-                <div>
-                  <dt className="text-text-muted">Leads linked</dt>
-                  <dd className="mt-0.5 font-medium tabular-nums text-text-heading">{linkedCountLabel}</dd>
-                </div>
-              </dl>
+              <div className="mt-3 border-t border-border/70 pt-2">
+                <table className="w-full border-collapse">
+                  <tbody>
+                    <tr className="border-b border-border/50">
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Intent</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.intent)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Location</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.property?.location)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Timeline</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.property?.timeline)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Appointment</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.appointment_status)}
+                      </td>
+                    </tr>
+                    <tr className="border-b border-border/50">
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Leads linked</th>
+                      <td className="px-2 py-1 text-[10px] font-medium tabular-nums text-text-body sm:text-[11px]">
+                        {linkedCountLabel}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Address</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.property?.address)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Type</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.property?.property_type)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Preferred</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.contact?.preferred_contact_method)}
+                      </td>
+                    </tr>
+                    <tr className="border-b border-border/50">
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Best time</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.contact?.best_time_to_contact)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Mortgage</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.qualification?.mortgage_status)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Realtor</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.qualification?.realtor_status)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Viewing</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.qualification?.viewing_readiness)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Motivation</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.qualification?.motivation_reason)}
+                      </td>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Urgency</th>
+                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                        {humanize(profile?.qualification?.urgency_readiness)}
+                      </td>
+                      <td className="px-2 py-1" colSpan={4} />
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div className="overflow-hidden rounded-lg border border-border/90 bg-white shadow-sm">
-              <div className="border-b border-border bg-primary/[0.04] px-3 py-2">
+              <div className="border-b border-border bg-primary/[0.04] px-2.5 py-1.5">
                 <h2 className="font-heading text-sm font-semibold text-text-heading">Leads for this profile</h2>
                 <p className="text-[10px] text-text-muted sm:text-[11px]">
                   Open a lead in the workspace to view conversation, nurture, and matches.
@@ -183,57 +244,83 @@ export default function ClientProfileLeadsPage() {
                 </p>
               ) : (
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[520px] border-collapse text-left text-sm">
+                  <table className="w-full border-collapse text-left text-sm">
                     <thead>
-                      <tr className="border-b border-border text-[10px] font-semibold capitalize tracking-wide text-text-muted sm:text-[11px]">
-                        <th className="min-w-[8rem] px-2 py-2">Lead ID</th>
-                        <th className="px-2 py-2">Grade</th>
-                        <th className="px-2 py-2 text-center">Score</th>
-                        <th className="px-2 py-2">ICP</th>
-                        <th className="px-2 py-2">Status</th>
-                        <th className="px-2 py-2">Updated</th>
-                        <th className="px-2 py-2 text-right">Workspace</th>
+                      <tr className="border-b border-border text-[10px] font-semibold capitalize tracking-wide text-text-muted">
+                        <th className="px-2 py-1.5">Intent</th>
+                        <th className="px-2 py-1.5">Type</th>
+                        <th className="px-2 py-1.5">Location</th>
+                        <th className="px-2 py-1.5">Timeline</th>
+                        <th className="px-2 py-1.5 pr-3 text-right">Budget</th>
+                        <th className="px-2 py-1.5 pl-3">Grade</th>
+                        <th className="px-2 py-1.5 text-center">Score</th>
+                        <th className="px-2 py-1.5">Preferred</th>
+                        <th className="px-2 py-1.5">Best time</th>
+                        <th className="px-2 py-1.5">Appt</th>
+                        <th className="px-2 py-1.5 text-right">Open</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {leads.map((lead) => {
-                        const updated =
-                          lead.updated_at || lead.updatedAt || lead.created_at || lead.createdAt;
-                        const updatedLabel = updated
-                          ? new Date(updated).toLocaleString(undefined, {
-                              dateStyle: "short",
-                              timeStyle: "short",
-                            })
-                          : "—";
-                        const icpTier = lead.icp_fit?.fit_tier || lead.icp_fit?.tier || "—";
+                        const prop = lead.property || {};
+                        const conversionProp = lead.conversion?.property || {};
+                        const rowPropertyType =
+                          conversionProp.property_type || conversionProp.type || prop.property_type || prop.type;
+                        const rowLocation = conversionProp.location || conversionProp.area || prop.location;
+                        const rowTimeline = conversionProp.timeline || prop.timeline;
+                        const rowBudget =
+                          conversionProp.budget ||
+                          conversionProp.property_budget ||
+                          prop.budget ||
+                          prop.expected_price;
                         return (
-                          <tr key={lead.id} className="hover:bg-primary/[0.06]">
-                            <td className="max-w-[10rem] px-2 py-2 sm:max-w-[14rem]">
-                              <span
-                                className="break-all font-mono text-[9px] leading-snug text-text-heading sm:text-[10px]"
-                                title={lead.id}
-                              >
-                                {lead.id}
-                              </span>
+                          <tr
+                            key={lead.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() => router.push(leadWorkspaceHref(lead.id))}
+                            onKeyDown={(event) => {
+                              if (event.key === "Enter" || event.key === " ") {
+                                event.preventDefault();
+                                router.push(leadWorkspaceHref(lead.id));
+                              }
+                            }}
+                            className="hover:bg-primary/[0.06] cursor-pointer"
+                          >
+                            <td className="px-2 py-1.5 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
+                              {humanize(lead.intent)}
                             </td>
-                            <td className="px-2 py-2 text-[11px] font-medium capitalize text-text-heading sm:text-xs">
+                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-heading sm:text-[11px]">
+                              {humanize(rowPropertyType)}
+                            </td>
+                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
+                              {humanize(rowLocation)}
+                            </td>
+                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
+                              {humanize(rowTimeline)}
+                            </td>
+                            <td className="px-2 py-1.5 pr-3 text-right text-[10px] font-medium tabular-nums text-text-heading sm:text-[11px]">
+                              {formatBudgetValue(rowBudget)}
+                            </td>
+                            <td className="px-2 py-1.5 pl-3 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
                               {humanize(lead.grade)}
                             </td>
-                            <td className="px-2 py-2 text-center text-[11px] tabular-nums text-text-heading sm:text-xs">
+                            <td className="px-2 py-1.5 text-center text-[10px] tabular-nums text-text-heading sm:text-[11px]">
                               {lead.score ?? "—"}
                             </td>
-                            <td className="px-2 py-2 text-[11px] capitalize text-text-muted sm:text-xs">
-                              {humanize(icpTier)}
+                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
+                              {humanize(lead?.contact?.preferred_contact_method)}
                             </td>
-                            <td className="px-2 py-2 text-[11px] capitalize text-text-muted sm:text-xs">
-                              {humanize(lead.status)}
+                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
+                              {humanize(lead?.contact?.best_time_to_contact)}
                             </td>
-                            <td className="px-2 py-2 whitespace-nowrap text-[10px] tabular-nums text-text-muted sm:text-[11px]">
-                              {updatedLabel}
+                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
+                              {humanize(lead?.appointment_status)}
                             </td>
-                            <td className="px-2 py-2 text-right">
+                            <td className="px-2 py-1.5 text-right">
                               <Link
-                                href={`/leads?lead=${encodeURIComponent(lead.id)}`}
+                                href={leadWorkspaceHref(lead.id)}
+                                onClick={(event) => event.stopPropagation()}
                                 className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-primary hover:underline sm:text-[11px]"
                               >
                                 Open

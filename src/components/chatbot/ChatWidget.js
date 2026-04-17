@@ -380,7 +380,7 @@ export default function ChatWidget({
         });
       }
     },
-    [addMessage, appendPropertyMatchesMessage, leadFormContact, sessionId],
+    [addMessage, appendPropertyMatchesMessage],
   );
 
   const handleSend = async (overrideText = null) => {

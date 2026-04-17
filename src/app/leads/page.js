@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -27,7 +27,6 @@ import {
   deleteLeadById,
 } from "@/lib/leadsClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
-import LeadListItem from "@/components/leads/LeadListItem";
 import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
 import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
 import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
@@ -126,14 +125,123 @@ const formatMetaEntries = (meta) => {
   return Object.entries(meta).filter(([, value]) => value !== undefined && value !== null);
 };
 
+const formatUpdatedTime = (conversation) => {
+  const value =
+    conversation?.updated_at ||
+    conversation?.updatedAt ||
+    conversation?.created_at ||
+    conversation?.createdAt ||
+    null;
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "—";
+  return d.toLocaleString();
+};
+
+const toFiniteNumber = (value) => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  const raw = String(value).replace(/[^0-9.-]/g, "").trim();
+  if (!raw) return null;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const extractRangeNumbers = (value) => {
+  if (value === null || value === undefined) return null;
+  const matches = String(value).match(/-?\d+(?:\.\d+)?/g);
+  if (!matches || matches.length < 2) return null;
+  const low = Number(matches[0]);
+  const high = Number(matches[1]);
+  if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
+  return low <= high ? [low, high] : [high, low];
+};
+
+const formatMoney = (value) =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+const formatBudgetValue = (conversation) => {
+  const conversionProperty = conversation?.conversion?.property || {};
+  const minCandidate =
+    conversionProperty?.min_budget ??
+    conversation?.budget_profile?.min_budget ??
+    conversation?.property?.min_budget ??
+    conversation?.property?.budget_min;
+  const maxCandidate =
+    conversionProperty?.max_budget ??
+    conversation?.budget_profile?.max_budget ??
+    conversation?.property?.max_budget ??
+    conversation?.property?.budget_max;
+  const singleCandidate =
+    conversionProperty?.budget ??
+    conversionProperty?.price ??
+    conversation?.budget ??
+    conversation?.property?.budget ??
+    conversation?.property?.price ??
+    conversation?.price;
+
+  const min = toFiniteNumber(minCandidate);
+  const max = toFiniteNumber(maxCandidate);
+  if (min !== null && max !== null) return `${formatMoney(min)} - ${formatMoney(max)}`;
+  if (min !== null) return formatMoney(min);
+  if (max !== null) return formatMoney(max);
+
+  const single = toFiniteNumber(singleCandidate);
+  if (single !== null) return formatMoney(single);
+
+  const ranged = extractRangeNumbers(singleCandidate);
+  if (ranged) return `${formatMoney(ranged[0])} - ${formatMoney(ranged[1])}`;
+
+  return "N/A";
+};
+
+const getStatusLabel = (conversation, meta) => {
+  const rawStatus = String(
+    conversation?.status ||
+      conversation?.lead_status ||
+      conversation?.conversion_funnel?.stage ||
+      ""
+  )
+    .trim()
+    .toLowerCase();
+
+  if (rawStatus) return rawStatus.replace(/_/g, " ");
+  if (meta?.isMatched === true) return "matched";
+  if (meta?.isMatched === false) return "mismatched";
+  if (meta?.qualified) return "qualified";
+  return "new";
+};
+
+const getMatchesCount = (conversation) => {
+  const candidates = [
+    conversation?.stats?.total_matches,
+    conversation?.total_matches,
+    conversation?.match_count,
+    conversation?.property_matches_count,
+    conversation?.propertyMatchesCount,
+  ];
+  for (const value of candidates) {
+    const n = toFiniteNumber(value);
+    if (n !== null) return n;
+  }
+  return 0;
+};
+
 function LeadsPageContent() {
   const { isAuthenticated } = useAuthGuard();
+  const router = useRouter();
   const { token } = useAppSelector((state) => state.auth);
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const leadFromUrl = searchParams.get("lead");
+  const leadFromUrl = String(searchParams.get("lead") || "").trim();
+  const pageFromUrl = Number(searchParams.get("page") || "1");
   const [hydrated, setHydrated] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [currentPage, setCurrentPage] = useState(Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1);
   const [searchTerm, setSearchTerm] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
   const [activeTab, setActiveTab] = useState("lead_profile");
@@ -173,19 +281,37 @@ function LeadsPageContent() {
   }, []);
 
   useEffect(() => {
-    if (!leadFromUrl?.trim()) return;
-    const lid = leadFromUrl.trim();
-    setSelectedLeadId(lid);
-    // So the matching row is visible in the sidebar (filters would hide e.g. a seller when "Buyer" is selected).
-    setIntentFilter("");
-    setSearchTerm("");
-  }, [leadFromUrl]);
+    const incomingPage = Number(searchParams.get("page") || "1");
+    if (Number.isFinite(incomingPage) && incomingPage > 0 && incomingPage !== currentPage) {
+      setCurrentPage(incomingPage);
+    }
+  }, [searchParams, currentPage]);
+
+  // Compatibility redirect: old deep links `/leads?lead=<id>` -> `/leads/<id>`.
+  useEffect(() => {
+    if (!leadFromUrl) return;
+    const pageNum = Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1;
+    router.replace(`/leads/${encodeURIComponent(leadFromUrl)}?page=${encodeURIComponent(String(pageNum))}`);
+  }, [leadFromUrl, pageFromUrl, router]);
 
   const leadsQuery = useQuery({
-    queryKey: ["leads", token],
+    queryKey: ["leads", token, currentPage],
     enabled: Boolean(token),
-    queryFn: () => fetchLeads({ token, page: 1, limit: 100 }),
+    queryFn: () => fetchLeads({ token, page: currentPage, limit: 8 }),
   });
+
+  const leadsPagination = useMemo(() => {
+    const p = leadsQuery.data?.pagination || leadsQuery.data?.data?.pagination || {};
+    const current = Number(p.current_page || p.page || currentPage || 1);
+    const totalPages = Number(p.total_pages || p.totalPages || 1);
+    const total = Number(p.total || 0);
+    const hasPrev = typeof p.has_prev_page === "boolean" ? p.has_prev_page : current > 1;
+    const hasNext =
+      typeof p.has_next_page === "boolean"
+        ? p.has_next_page
+        : (Number.isFinite(totalPages) ? current < totalPages : false);
+    return { current, totalPages, total, hasPrev, hasNext };
+  }, [leadsQuery.data, currentPage]);
 
   const leadRows = useMemo(() => {
     const raw = leadsQuery.data?.leads;
@@ -495,36 +621,35 @@ function LeadsPageContent() {
 
   // Keep SSR and first client render identical to avoid hydration mismatch on auth-gated pages.
   if (!hydrated) {
-    return <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+    return <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
   }
 
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="max-w-7xl mx-auto px-6 py-10 space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold text-text-heading">Leads</h1>
-          <p className="text-sm text-text-muted">
-            Manage conversations, referrals, nurtures, and calculators.
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3 space-y-3 lg:sticky lg:top-6 lg:self-start">
-            <div className="rounded-md border border-border bg-white p-3 shadow-sm space-y-2">
+    <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10">
+      <div className="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 space-y-5">
+        <div className="space-y-1">
+          <div className="flex flex-wrap items-start justify-between gap-2">
+            <div>
+              <h1 className="text-[26px] leading-tight font-bold text-text-heading">Leads</h1>
+              <p className="text-sm text-text-muted">
+                Manage conversations, referrals, nurtures, and calculators.
+              </p>
+            </div>
+            <div className="w-full max-w-[540px] sm:pt-1">
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={searchTerm}
                   onChange={(event) => setSearchTerm(event.target.value)}
                   placeholder="Search by name, email, phone, city..."
-                  className="h-8 min-w-0 flex-1 rounded-md border border-border/60 bg-background-light/40 px-2.5 text-[13px] leading-none placeholder:text-[12px] placeholder:text-text-muted/80 focus:outline-none"
+                  className="h-9 min-w-0 flex-1 rounded-md border border-border/60 bg-white px-2.5 text-[13px] leading-none placeholder:text-[12px] placeholder:text-text-muted/80 focus:outline-none"
                 />
                 <select
                   value={intentFilter}
                   onChange={(event) => setIntentFilter(event.target.value)}
-                  className="h-8 w-[96px] rounded-md border border-primary/30 bg-primary/5 px-2 text-[12px] font-medium text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                  className="h-9 w-[96px] rounded-md border border-primary/30 bg-primary/5 px-2 text-[12px] font-medium text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
                   aria-label="Filter by intent"
                 >
                   <option value="">All</option>
@@ -533,45 +658,151 @@ function LeadsPageContent() {
                 </select>
               </div>
             </div>
+          </div>
+        </div>
 
-            <div className="space-y-3 lg:max-h-[calc(100vh-220px)] lg:overflow-y-auto lg:pr-1">
-              {leadsQuery.isLoading ? (
-                <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-                  Loading leads...
-                </div>
-              ) : leadsQuery.isError ? (
-                <div className="rounded-md border border-border bg-white p-4 text-sm text-red-600">
-                  Failed to load leads.
-                </div>
-              ) : filteredConversations.length === 0 ? (
-                <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-                  No leads found.
-                </div>
-              ) : (
-                filteredConversations.map((conversation) => {
-                  const id = getLeadMatchId(conversation);
-                  return (
-                    <LeadListItem
-                      key={id}
-                      conversation={conversation}
-                      active={String(id) === String(selectedLeadId)}
-                      onSelect={(newId) => {
-                        setSelectedLeadId(newId);
-                      }}
-                    />
-                  );
-                })
-              )}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+            {leadsQuery.isLoading ? (
+              <div className="p-4 text-sm text-text-muted">Loading leads...</div>
+            ) : leadsQuery.isError ? (
+              <div className="p-4 text-sm text-red-600">Failed to load leads.</div>
+            ) : filteredConversations.length === 0 ? (
+              <div className="p-4 text-sm text-text-muted">No leads found.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[1040px] table-auto">
+                  <thead className="bg-primary/[0.04] border-b border-border">
+                    <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
+                      <th className="px-3 py-2">Lead</th>
+                      <th className="px-3 py-2">Phone</th>
+                      <th className="px-3 py-2">Intent</th>
+                      <th className="px-3 py-2">Location</th>
+                      <th className="px-3 py-2">Budget</th>
+                      <th className="px-3 py-2">Matches</th>
+                      <th className="px-3 py-2">Score</th>
+                      <th className="px-3 py-2">Grade</th>
+                      <th className="px-3 py-2">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredConversations.map((conversation) => {
+                      const id = String(getLeadMatchId(conversation));
+                      const meta = getConversationMeta(conversation);
+                      const contact = conversation?.contact || {};
+                      const name =
+                        contact?.full_name ||
+                        conversation?.name ||
+                        conversation?.visitor_name ||
+                        conversation?.visitorName ||
+                        "Unknown";
+                      const email =
+                        contact?.email ||
+                        conversation?.email ||
+                        conversation?.visitor_email ||
+                        conversation?.visitorEmail ||
+                        "No email";
+                      const location =
+                        conversation?.location ||
+                        conversation?.city ||
+                        conversation?.property?.location ||
+                        "—";
+                      const phone =
+                        contact?.phone ||
+                        conversation?.phone ||
+                        conversation?.visitor_phone ||
+                        conversation?.visitorPhone ||
+                        "—";
+                      const budget = formatBudgetValue(conversation);
+                      const statusLabel = getStatusLabel(conversation, meta);
+                      const matchesCount = getMatchesCount(conversation);
+                      const isActive = selectedLeadId && String(selectedLeadId) === id;
+
+                      return (
+                        <tr
+                          key={id}
+                          role="button"
+                          tabIndex={0}
+                          onClick={() =>
+                            router.push(
+                              `/leads/${encodeURIComponent(id)}?page=${encodeURIComponent(String(currentPage))}`
+                            )
+                          }
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              router.push(
+                                `/leads/${encodeURIComponent(id)}?page=${encodeURIComponent(String(currentPage))}`
+                              );
+                            }
+                          }}
+                          className={`border-b border-border/70 text-[13px] text-text-body transition cursor-pointer ${
+                            isActive ? "bg-primary/[0.08]" : "hover:bg-primary/[0.05]"
+                          }`}
+                        >
+                          <td className="px-3 py-2.5">
+                            <div className="font-medium text-text-heading truncate">{name}</div>
+                            <div className="text-[11px] text-primary-dark truncate">{email}</div>
+                          </td>
+                          <td className="px-3 py-2.5">{phone}</td>
+                          <td className="px-3 py-2.5 capitalize">{String(meta.intent || "—")}</td>
+                          <td className="px-3 py-2.5">{location}</td>
+                          <td className="px-3 py-2.5">{budget === "N/A" ? <span className="inline-flex rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary-dark">N/A</span> : budget}</td>
+                          <td className="px-3 py-2.5">{matchesCount}</td>
+                          <td className="px-3 py-2.5">{meta.leadScore ?? "—"}</td>
+                          <td className="px-3 py-2.5 capitalize">{String(meta.leadGrade || "—").replace(/_/g, " ")}</td>
+                          <td className="px-3 py-2.5 capitalize">{statusLabel}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-md border border-border bg-white p-3 shadow-sm flex items-center justify-between gap-3">
+            <div className="text-xs text-text-muted">
+              Page {leadsPagination.current} of {leadsPagination.totalPages}
+              {Number.isFinite(leadsPagination.total) && leadsPagination.total > 0
+                ? ` · ${leadsPagination.total} total leads`
+                : ""}
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!leadsPagination.hasPrev || leadsQuery.isFetching}
+                onClick={() => {
+                  const nextPage = Math.max(1, leadsPagination.current - 1);
+                  setCurrentPage(nextPage);
+                  router.push(`/leads?page=${encodeURIComponent(String(nextPage))}`);
+                }}
+                className="h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={!leadsPagination.hasNext || leadsQuery.isFetching}
+                onClick={() => {
+                  const nextPage = leadsPagination.current + 1;
+                  setCurrentPage(nextPage);
+                  router.push(`/leads?page=${encodeURIComponent(String(nextPage))}`);
+                }}
+                className="h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
             </div>
           </div>
 
-          <div className="lg:col-span-9 space-y-6">
-            <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-              <LeadsWorkspaceTabs
-                activeTab={activeTab}
-                onChange={setActiveTab}
-                endSlot={
-                  selectedLeadId ? (
+          {selectedLeadId ? (
+            <div className="space-y-6">
+              <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+                <LeadsWorkspaceTabs
+                  activeTab={activeTab}
+                  onChange={setActiveTab}
+                  endSlot={
                     <button
                       type="button"
                       onClick={handleDeleteLead}
@@ -582,96 +813,96 @@ function LeadsPageContent() {
                       <Trash2 size={14} aria-hidden />
                       {deleteLeadMutation.isPending ? "Deleting…" : "Delete"}
                     </button>
-                  ) : null
-                }
-              />
+                  }
+                />
+              </div>
+
+              {activeTab === "lead_details" ? (
+                <LeadsDetailsTab
+                  selectedConversation={selectedConversation}
+                  lead={leadDetailQuery.data?.lead || null}
+                  messageMeta={messageMeta}
+                  getConversationMeta={getConversationMeta}
+                  conversationMeta={conversationMeta}
+                  formatMetaEntries={formatMetaEntries}
+                  onOpenMeta={() => {}}
+                />
+              ) : null}
+
+              {activeTab === "conversation" ? (
+                <LeadsConversationTab
+                  selectedConversation={selectedConversation}
+                  messageMeta={messageMeta}
+                  messagesQuery={messagesQuery}
+                  messages={messages}
+                  formatMetaEntries={formatMetaEntries}
+                  onOpenMeta={() => {}}
+                />
+              ) : null}
+
+              {activeTab === "actions" ? (
+                <LeadsAiActionsTab
+                  selectedConversation={selectedConversation}
+                  lead={leadDetailQuery.data?.lead || null}
+                />
+              ) : null}
+
+              {activeTab === "property_matches" ? (
+                <LeadsPropertyMatchesTab
+                  selectedConversation={selectedConversation}
+                  lead={leadDetailQuery.data?.lead || null}
+                  propertyMatches={propertyMatches}
+                  propertyMatchesQuery={propertyMatchesQuery}
+                  propertyMatchesPayload={propertyMatchesQuery.data || null}
+                />
+              ) : null}
+
+              {activeTab === "lead_profile" ? (
+                <LeadsProfileTab
+                  selectedConversation={selectedConversation}
+                  lead={leadDetailQuery.data?.lead || null}
+                />
+              ) : null}
+
+              {activeTab === "others" ? (
+                <LeadsActionsTab
+                  referralForm={referralForm}
+                  setReferralForm={setReferralForm}
+                  createReferralMutation={createReferralMutation}
+                  selectedLeadId={selectedLeadId}
+                  actionConversationId={actionConversationId}
+                  conversationReferrals={conversationReferrals}
+                  activeReferralId={activeReferralId}
+                  setActiveReferralId={setActiveReferralId}
+                  referralUpdate={referralUpdate}
+                  setReferralUpdate={setReferralUpdate}
+                  updateReferralMutation={updateReferralMutation}
+                  mortgageForm={mortgageForm}
+                  setMortgageForm={setMortgageForm}
+                  mortgageMutation={mortgageMutation}
+                  mortgageRuns={mortgageRuns}
+                  closingForm={closingForm}
+                  setClosingForm={setClosingForm}
+                  closingMutation={closingMutation}
+                  closingRuns={closingRuns}
+                />
+              ) : null}
+
+              {activeTab === "nurture" ? (
+                <LeadsNurtureTab
+                  nurtureForm={nurtureForm}
+                  setNurtureForm={setNurtureForm}
+                  nurtureMutation={nurtureMutation}
+                  nurtureDraftMutation={nurtureDraftMutation}
+                  nurtureRefineMutation={nurtureRefineMutation}
+                  selectedLeadId={selectedLeadId}
+                  actionConversationId={actionConversationId}
+                  nurtureLogs={nurtureLogs}
+                  nurtureLogsLoading={nurtureLogsQuery.isLoading}
+                />
+              ) : null}
             </div>
-
-            {activeTab === "lead_details" ? (
-              <LeadsDetailsTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-                messageMeta={messageMeta}
-                getConversationMeta={getConversationMeta}
-                conversationMeta={conversationMeta}
-                formatMetaEntries={formatMetaEntries}
-                onOpenMeta={() => {}}
-              />
-            ) : null}
-
-            {activeTab === "conversation" ? (
-              <LeadsConversationTab
-                selectedConversation={selectedConversation}
-                messageMeta={messageMeta}
-                messagesQuery={messagesQuery}
-                messages={messages}
-                formatMetaEntries={formatMetaEntries}
-                onOpenMeta={() => {}}
-              />
-            ) : null}
-
-            {activeTab === "actions" ? (
-              <LeadsAiActionsTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-              />
-            ) : null}
-
-            {activeTab === "property_matches" ? (
-              <LeadsPropertyMatchesTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-                propertyMatches={propertyMatches}
-                propertyMatchesQuery={propertyMatchesQuery}
-                propertyMatchesPayload={propertyMatchesQuery.data || null}
-              />
-            ) : null}
-
-            {activeTab === "lead_profile" ? (
-              <LeadsProfileTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-              />
-            ) : null}
-
-            {activeTab === "others" ? (
-              <LeadsActionsTab
-                referralForm={referralForm}
-                setReferralForm={setReferralForm}
-                createReferralMutation={createReferralMutation}
-                selectedLeadId={selectedLeadId}
-                actionConversationId={actionConversationId}
-                conversationReferrals={conversationReferrals}
-                activeReferralId={activeReferralId}
-                setActiveReferralId={setActiveReferralId}
-                referralUpdate={referralUpdate}
-                setReferralUpdate={setReferralUpdate}
-                updateReferralMutation={updateReferralMutation}
-                mortgageForm={mortgageForm}
-                setMortgageForm={setMortgageForm}
-                mortgageMutation={mortgageMutation}
-                mortgageRuns={mortgageRuns}
-                closingForm={closingForm}
-                setClosingForm={setClosingForm}
-                closingMutation={closingMutation}
-                closingRuns={closingRuns}
-              />
-            ) : null}
-
-            {activeTab === "nurture" ? (
-              <LeadsNurtureTab
-                nurtureForm={nurtureForm}
-                setNurtureForm={setNurtureForm}
-                nurtureMutation={nurtureMutation}
-                nurtureDraftMutation={nurtureDraftMutation}
-                nurtureRefineMutation={nurtureRefineMutation}
-                selectedLeadId={selectedLeadId}
-                actionConversationId={actionConversationId}
-                nurtureLogs={nurtureLogs}
-                nurtureLogsLoading={nurtureLogsQuery.isLoading}
-              />
-            ) : null}
-          </div>
+          ) : null}
         </div>
       </div>
 
@@ -713,7 +944,7 @@ export default function LeadsPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10" />
+        <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />
       }
     >
       <LeadsPageContent />

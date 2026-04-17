@@ -8,6 +8,21 @@ import { Bell, Loader2, X } from "lucide-react";
 import { useAppSelector } from "@/store";
 import { fetchNotificationById, markNotificationReadRequest } from "@/lib/notificationsClient";
 
+function normalizeLeadId(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  let decoded = raw;
+  try {
+    decoded = decodeURIComponent(raw);
+  } catch {
+    decoded = raw;
+  }
+  const fromQuery = decoded.match(/[?&]lead=([a-fA-F0-9]{24})/);
+  if (fromQuery?.[1]) return fromQuery[1];
+  const idMatch = decoded.match(/([a-fA-F0-9]{24})/);
+  return idMatch?.[1] || "";
+}
+
 function severityStyles(sev) {
   const s = String(sev || "").toLowerCase();
   if (s === "critical")
@@ -55,7 +70,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
   useEffect(() => {
     if (!detail?.id || detail.read_at) return;
     markReadMutation.mutate({ nid: detail.id });
-  }, [detail?.id, detail?.read_at]);
+  }, [detail?.id, detail?.read_at, markReadMutation]);
 
   useEffect(() => {
     if (!notification) return;
@@ -75,9 +90,9 @@ export default function NotificationDetailModal({ notification, onClose }) {
 
   const openLeadId =
     display?.action?.type === "open_lead" && display?.action?.lead_match_id
-      ? String(display.action.lead_match_id)
+      ? normalizeLeadId(display.action.lead_match_id)
       : display?.lead_match_id
-        ? String(display.lead_match_id)
+        ? normalizeLeadId(display.lead_match_id)
         : null;
 
   const created =
@@ -216,7 +231,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
               type="button"
               onClick={() => {
                 onClose();
-                router.push(`/leads?lead=${encodeURIComponent(openLeadId)}`);
+                router.push(`/leads/${encodeURIComponent(openLeadId)}`);
               }}
               className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:brightness-95"
             >

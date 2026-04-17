@@ -11,6 +11,7 @@ import BasicsStep from "@/components/settings/businessSteps/BasicsStep";
 import ExperienceStep from "@/components/settings/businessSteps/ExperienceStep";
 import StyleMetricsStep from "@/components/settings/businessSteps/StyleMetricsStep";
 import PreferencesStep from "@/components/settings/businessSteps/PreferencesStep";
+import IcpIntegrationCard from "@/components/settings/IcpIntegrationCard";
 
 const specializationsList = [
   "Residential",
@@ -388,6 +389,7 @@ export default function BusinessInformation() {
           </motion.div>
         ) : null}
       </AnimatePresence>
+      <IcpIntegrationCard />
     </div>
   );
 }

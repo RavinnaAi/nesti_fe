@@ -31,16 +31,19 @@ export function useFeatureAccess(requiredFeature) {
     const isSubscriptionSettings =
       pathname?.startsWith("/settings") || pathname?.startsWith("/checkout");
 
-    // If expired, restrict everything except subscription/settings-related routes.
-    if (accountStatus === ACCOUNT_STATUS.EXPIRED && !isSubscriptionSettings) {
-      router.replace("/settings?tab=subscription&expired=1");
-      return;
-    }
-
-    if (requiredFeature && !canUseRequiredFeature) {
-      // Redirect users without the required feature to subscription tab.
-      router.replace("/settings?tab=subscription&upgrade=1");
-    }
+    // TEMP: Subscription gating checks are intentionally disabled on frontend.
+    // Re-enable by uncommenting the blocks below.
+    //
+    // // If expired, restrict everything except subscription/settings-related routes.
+    // if (accountStatus === ACCOUNT_STATUS.EXPIRED && !isSubscriptionSettings) {
+    //   router.replace("/settings?tab=subscription&expired=1");
+    //   return;
+    // }
+    //
+    // if (requiredFeature && !canUseRequiredFeature) {
+    //   // Redirect users without the required feature to subscription tab.
+    //   router.replace("/settings?tab=subscription&upgrade=1");
+    // }
   }, [user, accountStatus, requiredFeature, canUseRequiredFeature, pathname, router]);
 
   return {

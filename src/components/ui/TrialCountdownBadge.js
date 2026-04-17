@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppSelector } from "@/store";
 import { ACCOUNT_STATUS } from "@/constants/features";
 
-function getRemainingMs(trialEndsAt) {
+function getRemainingMs(trialEndsAt, currentTime = Date.now()) {
   if (!trialEndsAt) return 0;
   try {
     const end = new Date(trialEndsAt).getTime();
-    const now = Date.now();
-    return Math.max(0, end - now);
+    return Math.max(0, end - currentTime);
   } catch {
     return 0;
   }
@@ -43,7 +42,7 @@ export default function TrialCountdownBadge() {
 
   const trialEndsAt = user?.trialEndsAt || user?.trial_ends_at;
 
-  const remainingMs = useMemo(() => getRemainingMs(trialEndsAt), [trialEndsAt, now]);
+  const remainingMs = useMemo(() => getRemainingMs(trialEndsAt, now), [trialEndsAt, now]);
 
   useEffect(() => {
     setIsMounted(true);

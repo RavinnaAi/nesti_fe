@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2, User, Users } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
@@ -49,37 +49,12 @@ function humanize(value) {
   return String(value).replace(/_/g, " ");
 }
 
-function formatIntent(intent) {
-  const s = String(intent || "").trim().toLowerCase();
-  if (!s) return "—";
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
 function appointmentLabel(status) {
   const s = String(status || "").trim().toLowerCase();
   if (!s) return "—";
   return s.replace(/_/g, " ");
 }
 
-const badgeBase =
-  "inline-flex h-[17px] shrink-0 items-center rounded border px-1 text-[7px] font-semibold capitalize leading-none tracking-wide";
-
-function LifecycleBadge({ status }) {
-  const label = String(status || "").replace(/_/g, " ");
-  const raw = String(status || "").trim().toLowerCase();
-  const isNew = raw === "new";
-  return (
-    <span
-      className={`${badgeBase} ${
-        isNew
-          ? "border-sky-200/80 bg-sky-50 text-sky-800"
-          : "border-slate-200/90 bg-slate-50 text-slate-600"
-      }`}
-    >
-      {label}
-    </span>
-  );
-}
 
 const ICP_TIER_OPTIONS = [
   { value: "", label: "All ICP tiers" },
@@ -151,26 +126,6 @@ function IcpTierDropdown({ value, onChange, disabled }) {
       ) : null}
     </div>
   );
-}
-
-function IntentBadge({ intent }) {
-  const raw = String(intent || "").trim().toLowerCase();
-  const label = formatIntent(intent);
-  if (raw === "sell") {
-    return (
-      <span className={`${badgeBase} border-amber-200/90 bg-amber-50 text-amber-900`}>
-        {label}
-      </span>
-    );
-  }
-  if (raw === "buy") {
-    return (
-      <span className={`${badgeBase} border-emerald-200/90 bg-emerald-50 text-emerald-800`}>
-        {label}
-      </span>
-    );
-  }
-  return <span className={`${badgeBase} border-slate-200/90 bg-white text-slate-600`}>{label}</span>;
 }
 
 export default function ClientsPage() {
@@ -265,14 +220,12 @@ export default function ClientsPage() {
                   {profiles.map((profile) => {
                     const p = profile?.property || {};
                     const q = profile?.qualification || {};
-                    const lifecycle = profile?.lifecycle || {};
                     const leadRefs = Array.isArray(profile?.lead_refs) ? profile.lead_refs : [];
                     const leadCount = leadRefs.length;
                     const email = contactEmail(profile);
                     const phone = contactPhone(profile);
                     const displayName = profileDisplayName(profile);
                     const budgetDisplay = getBudgetDisplay(profile);
-
                     return (
                       <tr
                         key={profile.id}
@@ -288,17 +241,16 @@ export default function ClientsPage() {
                         }}
                       >
                         <td className={`${td} !pr-px`}>
-                          <div className="flex min-w-[108px] max-w-[200px] flex-col gap-px">
+                          <div className="flex min-w-[108px] max-w-[220px] items-center gap-2">
+                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+                              <User size={16} strokeWidth={2.2} />
+                            </span>
                             <span
                               className="truncate font-heading text-[12px] font-semibold capitalize leading-tight text-text-heading sm:text-[13px]"
                               title={displayName}
                             >
                               {displayName}
                             </span>
-                            <div className="flex flex-wrap items-center gap-px">
-                              <IntentBadge intent={profile.intent} />
-                              {lifecycle.status ? <LifecycleBadge status={lifecycle.status} /> : null}
-                            </div>
                           </div>
                         </td>
                         <td className={td}>

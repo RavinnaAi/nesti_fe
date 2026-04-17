@@ -1,13 +1,14 @@
 "use client";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { apiClient } from "@/lib/api";
+import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
 
-const PERSONAL_ENDPOINT = "/api/professionals";
-const BUSINESS_ENDPOINT = "/api/professionals";
+const PERSONAL_ENDPOINT = API_ENDPOINTS.professionals.profile;
+const BUSINESS_ENDPOINT = API_ENDPOINTS.professionals.profile;
+const ICP_ENDPOINT = API_ENDPOINTS.professionals.icp;
 
 const toastError = (error) =>
   toast.error(error?.message || "Something went wrong. Please try again.");
@@ -109,6 +110,41 @@ export function useSaveBusinessInfo() {
       dispatch(setBusinessInfo(Object.keys(mapped.business).length ? mapped.business : variables));
       dispatch(setPersonalInfo(mapped.personal));
       toast.success(data?.message || "Business info updated successfully");
+    },
+    onError: toastError,
+  });
+}
+
+export function useIcpProfileQuery() {
+  const { token } = useAppSelector((state) => state.auth);
+
+  return useQuery({
+    queryKey: ["professional-icp"],
+    enabled: Boolean(token),
+    queryFn: () =>
+      apiClient({
+        url: ICP_ENDPOINT,
+        method: "GET",
+        token,
+      }),
+  });
+}
+
+export function useSaveIcpProfile() {
+  const { token } = useAppSelector((state) => state.auth);
+
+  return useMutation({
+    mutationFn: (payload) => {
+      if (!token) throw new Error("missing or invalid Authorization header");
+      return apiClient({
+        url: ICP_ENDPOINT,
+        method: "PUT",
+        data: payload,
+        token,
+      });
+    },
+    onSuccess: (data) => {
+      toast.success(data?.message || "Ideal client profile saved successfully");
     },
     onError: toastError,
   });

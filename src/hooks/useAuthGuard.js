@@ -119,9 +119,12 @@ export function useAuthGuard() {
     const isSettingsRoute = pathname?.startsWith("/settings");
     const isCheckoutRoute = pathname?.startsWith("/checkout");
 
-    if (accountStatus === ACCOUNT_STATUS.EXPIRED && !isSettingsRoute && !isCheckoutRoute) {
-      router.replace("/settings?tab=subscription&expired=1");
-    }
+    // TEMP: Subscription expired redirect is intentionally disabled on frontend.
+    // Re-enable by uncommenting below.
+    //
+    // if (accountStatus === ACCOUNT_STATUS.EXPIRED && !isSettingsRoute && !isCheckoutRoute) {
+    //   router.replace("/settings?tab=subscription&expired=1");
+    // }
   }, [token, profileQuery.data, pathname, router]);
 
   return {
