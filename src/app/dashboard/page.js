@@ -1,31 +1,28 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Users,
-  Flame,
-  Star,
-  Clock3,
-  Search,
-  Filter,
-  User as UserIcon,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  XCircle,
-  Mail,
-  Globe,
-  Activity
-} from "lucide-react";
+import { ShieldCheck } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { motion, AnimatePresence } from "framer-motion";
-import { fetchConversations } from "@/lib/chatClient";
+import { fetchChatAnalyticsFunnel, fetchChatAnalyticsTimeseries, fetchNurtureLogs } from "@/lib/chatClient";
+import { fetchLeads, fetchLeadProfiles } from "@/lib/leadsClient";
+import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
+import { formatLeadLocationLine, getLeadMeta } from "@/lib/leadConversationMeta";
 import NewLeadPopup from "@/components/leads/NewLeadPopup";
-import UpcomingMeetings from "@/components/dashboard/UpcomingMeetings";
-import CalendarSettingsModal from "@/components/dashboard/CalendarSettingsModal";
 import LeadDetailsModal from "@/components/dashboard/LeadDetailsModal";
+import DashboardAnalyticsPanels from "@/components/dashboard/DashboardAnalyticsPanels";
+import DashboardTopTables from "@/components/dashboard/DashboardTopTables";
+
+const ANALYTICS_WINDOW_DAYS = 30;
+
+function normalizeProfilesPayload(data) {
+  if (Array.isArray(data?.lead_profiles)) return data.lead_profiles;
+  if (Array.isArray(data?.items)) return data.items;
+  if (Array.isArray(data)) return data;
+  return [];
+}
 
 export default function DashboardPage() {
   const { user, token } = useAppSelector((state) => state.auth);
@@ -62,19 +59,43 @@ export default function DashboardPage() {
     activeUser?.firstName || activeUser?.first_name || personalInfo?.firstName || "";
 
   const [isMounted, setIsMounted] = useState(false);
-  const [leadType, setLeadType] = useState("buyers");
-  const [leadStatus, setLeadStatus] = useState("active");
-  const [matchFilter, setMatchFilter] = useState("");
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [newLeadToNotify, setNewLeadToNotify] = useState(null);
   const [shownLeadIds, setShownLeadIds] = useState(new Set());
-  const [isCalendarModalOpen, setIsCalendarModalOpen] = useState(false);
 
-  const conversationsQuery = useQuery({
-    queryKey: ["dashboard-conversations", token],
+  const leadsQuery = useQuery({
+    queryKey: ["dashboard-leads", token],
     enabled: Boolean(token),
-    queryFn: () => fetchConversations({ token }),
+    queryFn: () => fetchLeads({ token, page: 1, limit: 100 }),
+    staleTime: 60_000,
+  });
+
+  const analyticsFunnelQuery = useQuery({
+    queryKey: ["dashboard-analytics-funnel", token, ANALYTICS_WINDOW_DAYS],
+    enabled: Boolean(token),
+    queryFn: () => fetchChatAnalyticsFunnel({ token, days: ANALYTICS_WINDOW_DAYS }),
+    staleTime: 60_000,
+  });
+
+  const analyticsTimeseriesQuery = useQuery({
+    queryKey: ["dashboard-analytics-timeseries", token, ANALYTICS_WINDOW_DAYS],
+    enabled: Boolean(token),
+    queryFn: () => fetchChatAnalyticsTimeseries({ token, days: ANALYTICS_WINDOW_DAYS }),
+    staleTime: 60_000,
+  });
+
+  const nurtureLogsChartQuery = useQuery({
+    queryKey: ["dashboard-nurture-logs-chart", token, ANALYTICS_WINDOW_DAYS],
+    enabled: Boolean(token),
+    queryFn: () => fetchNurtureLogs({ token, page: 1, limit: 100 }),
+    staleTime: 60_000,
+  });
+
+  const profilesTopQuery = useQuery({
+    queryKey: ["dashboard-top-profiles", token],
+    enabled: Boolean(token),
+    queryFn: () => fetchLeadProfiles({ token, page: 1, limit: 50 }),
+    staleTime: 60_000,
   });
 
   useEffect(() => {
@@ -83,117 +104,52 @@ export default function DashboardPage() {
 
   // Detection logic for new leads (0-5 minutes)
   useEffect(() => {
-    if (conversationsQuery.data) {
-      const data = conversationsQuery.data;
-      const list = Array.isArray(data) ? data : (data?.data || data?.items || []);
+    if (!leadsQuery.data?.leads) return;
+    const list = Array.isArray(leadsQuery.data.leads) ? leadsQuery.data.leads : [];
 
-      const now = new Date();
-      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
+    const now = new Date();
+    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
 
-      const freshLead = list.find(lead => {
-        const createdAt = new Date(lead.created_at);
-        const leadId = lead.id || lead.conversation_id;
-        return createdAt > fiveMinutesAgo && !shownLeadIds.has(leadId);
-      });
+    const freshLead = list.find((lead) => {
+      const raw = lead?.created_at || lead?.createdAt;
+      if (!raw) return false;
+      const createdAt = new Date(raw);
+      if (Number.isNaN(createdAt.getTime())) return false;
+      const leadId = lead.id || lead._id;
+      return createdAt > fiveMinutesAgo && !shownLeadIds.has(leadId);
+    });
 
-      if (freshLead) {
-        setNewLeadToNotify(freshLead);
-        setShownLeadIds(prev => new Set(prev).add(freshLead.id || freshLead.conversation_id));
+    if (freshLead) {
+      const shaped = leadApiRowToConversationShape(freshLead);
+      if (shaped) {
+        setNewLeadToNotify(shaped);
+        setShownLeadIds((prev) => new Set(prev).add(shaped.id || shaped.conversation_id));
       }
     }
-  }, [conversationsQuery.data, shownLeadIds]);
+  }, [leadsQuery.data, shownLeadIds]);
 
   const conversations = useMemo(() => {
-    const data = conversationsQuery.data;
-    if (!data) return [];
-    if (Array.isArray(data)) return data;
-    if (Array.isArray(data?.data)) return data.data;
-    if (Array.isArray(data?.items)) return data.items;
-    return [];
-  }, [conversationsQuery.data]);
+    const raw = leadsQuery.data?.leads;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(leadApiRowToConversationShape).filter(Boolean);
+  }, [leadsQuery.data]);
 
-  const getLeadMeta = (conversation) => {
-    const leadScore = conversation?.lead_score ?? conversation?.leadScore ?? conversation?.score;
-    const leadGrade = conversation?.lead_grade ?? conversation?.leadGrade ?? "";
-    const intent =
-      conversation?.intent ||
-      conversation?.lead_intent ||
-      conversation?.intent_label ||
-      "";
-    const channel = conversation?.channel || conversation?.source || "web";
-
-    const qualified = conversation?.is_qualified ?? conversation?.isQualified ?? null;
-
-    // Check for matched status in multiple possible fields
-    let isMatched = conversation?.is_matched ?? conversation?.matched ?? qualified;
-    if (isMatched === null) {
-      const matchStatus = conversation?.match_status;
-      if (matchStatus === "matched" || matchStatus === true) {
-        isMatched = true;
-      } else {
-        isMatched = conversation?.meta?.is_matched ??
-          conversation?.meta?.matched ??
-          conversation?.metadata?.is_matched ??
-          conversation?.metadata?.matched ??
-          conversation?.meta?.qualified ??
-          null;
-      }
-    }
-
-    const contact = conversation?.last_message_meta?.contact || conversation?.meta?.contact || {};
-    const email = conversation?.email || conversation?.visitor_email || conversation?.visitorEmail || contact?.email;
-    const nameFromEmail = email ? email.split("@")[0].charAt(0).toUpperCase() + email.split("@")[0].slice(1) : null;
-
-    const name =
-      conversation?.name ||
-      conversation?.visitor_name ||
-      conversation?.visitorName ||
-      nameFromEmail ||
-      (conversation?.visitor_id || conversation?.visitorId
-        ? `Visitor ${String(conversation?.visitor_id || conversation?.visitorId).slice(0, 6)}`
-        : "Unknown visitor");
-
-    return { leadScore, leadGrade, intent, channel, isMatched, qualified, name, email };
+  const parseBudgetNumber = (conversation) => {
+    const raw =
+      conversation?.conversion?.property?.budget ??
+      conversation?.conversion?.property?.price ??
+      conversation?.property?.budget ??
+      conversation?.property?.price ??
+      conversation?.budget ??
+      null;
+    if (raw == null) return null;
+    const nums = String(raw).match(/\d+(?:\.\d+)?/g);
+    if (!nums?.length) return null;
+    const parsed = nums.map((n) => Number(n)).filter((n) => Number.isFinite(n));
+    if (!parsed.length) return null;
+    const avg = parsed.reduce((sum, n) => sum + n, 0) / parsed.length;
+    return Number.isFinite(avg) ? avg : null;
   };
-
-  const matchesSearch = (conversation, term) => {
-    if (!term) return true;
-    const needle = term.toLowerCase();
-    const haystack = [
-      conversation?.name,
-      conversation?.visitor_name,
-      conversation?.visitorName,
-      conversation?.email,
-      conversation?.visitor_email,
-      conversation?.visitorEmail,
-      conversation?.phone,
-      conversation?.visitor_phone,
-      conversation?.visitorPhone,
-      conversation?.city,
-      conversation?.location,
-      conversation?.visitor_id,
-      conversation?.visitorId,
-    ]
-      .filter(Boolean)
-      .join(" ")
-      .toLowerCase();
-    return haystack.includes(needle);
-  };
-
-  const filteredLeads = useMemo(() => {
-    return conversations.filter((conversation) => {
-      const { intent, isMatched } = getLeadMeta(conversation);
-      const status = conversation?.status || "active";
-      const intentLower = String(intent || "").toLowerCase();
-      if (leadType === "buyers" && intentLower.includes("sell") && !intentLower.includes("buy")) return false;
-      if (leadType === "sellers" && intentLower.includes("buy") && !intentLower.includes("sell")) return false;
-      if (leadStatus === "closed" && status !== "closed") return false;
-      if (leadStatus === "active" && status === "closed") return false;
-      if (matchFilter === "matched" && isMatched !== true) return false;
-      if (matchFilter === "mismatched" && isMatched !== false) return false;
-      return matchesSearch(conversation, searchTerm);
-    });
-  }, [conversations, leadType, leadStatus, matchFilter, searchTerm]);
 
   const selectedLead = useMemo(
     () =>
@@ -205,67 +161,151 @@ export default function DashboardPage() {
     [conversations, selectedLeadId]
   );
 
-  const stats = useMemo(() => {
-    const total = conversations.length;
-    const hot = conversations.filter((conversation) => {
-      const grade = String(getLeadMeta(conversation).leadGrade || "").toLowerCase();
-      return grade === "hot";
-    }).length;
-    const matched = conversations.filter((conversation) => {
-      return getLeadMeta(conversation).isMatched === true;
-    }).length;
-    const mismatched = conversations.filter((conversation) => {
-      return getLeadMeta(conversation).isMatched === false;
-    }).length;
-    const scores = conversations
-      .map((conversation) => Number(getLeadMeta(conversation).leadScore))
-      .filter((value) => !Number.isNaN(value));
-    const avgScore = scores.length
-      ? (scores.reduce((sum, val) => sum + val, 0) / scores.length).toFixed(1)
-      : "0.0";
-    const urgent = conversations.filter((conversation) => {
-      const score = Number(getLeadMeta(conversation).leadScore);
-      return !Number.isNaN(score) && score >= 80;
-    }).length;
-    return [
-      {
-        label: "Total Leads",
-        value: total,
-        icon: Users,
-        accent: "bg-primary/10 text-primary",
-      },
-      {
-        label: "Hot Leads",
-        value: hot,
-        icon: Flame,
-        accent: "bg-red-100 text-red-600",
-      },
-      {
-        label: "Matched",
-        value: matched,
-        icon: CheckCircle2,
-        accent: "bg-green-100 text-green-600",
-      },
-      {
-        label: "Mismatched",
-        value: mismatched,
-        icon: XCircle,
-        accent: "bg-red-100 text-red-600",
-      },
-      {
-        label: "Avg Score",
-        value: avgScore,
-        icon: Star,
-        accent: "bg-amber-100 text-amber-600",
-      },
-      {
-        label: "Urgent (0-3m)",
-        value: urgent,
-        icon: Clock3,
-        accent: "bg-orange-100 text-orange-600",
-      },
-    ];
+  const topLeadsRows = useMemo(() => {
+    const gradeRank = (g) => {
+      const x = String(g || "").toLowerCase();
+      if (x === "hot") return 3;
+      if (x === "warm") return 2;
+      if (x === "cold") return 1;
+      return 0;
+    };
+    return [...conversations]
+      .map((c) => {
+        const meta = getLeadMeta(c);
+        const score = Number(meta.leadScore);
+        const id = String(c?.id || c?.conversation_id || c?.conversationId || "").trim();
+        const location = formatLeadLocationLine(c);
+        const intent = String(meta.intent || "").trim() || "—";
+        const grade = meta.leadGrade || "";
+        const sortScore = Number.isFinite(score) && !Number.isNaN(score) ? score : -1;
+        return {
+          id,
+          name: meta.name || "Unknown",
+          email: meta.email || "",
+          intent,
+          grade,
+          scoreLabel: sortScore >= 0 ? String(score) : "—",
+          location: location || "—",
+          sortScore,
+          sortGrade: gradeRank(grade),
+        };
+      })
+      .filter((row) => row.id)
+      .sort((a, b) => {
+        if (b.sortScore !== a.sortScore) return b.sortScore - a.sortScore;
+        return b.sortGrade - a.sortGrade;
+      })
+      .slice(0, 5)
+      .map(({ sortScore: _s, sortGrade: _g, ...row }) => row);
   }, [conversations]);
+
+  const topProfilesRows = useMemo(() => {
+    const list = normalizeProfilesPayload(profilesTopQuery.data);
+    return [...list]
+      .sort((a, b) => {
+        const ca = Array.isArray(a.lead_refs) ? a.lead_refs.length : 0;
+        const cb = Array.isArray(b.lead_refs) ? b.lead_refs.length : 0;
+        return cb - ca;
+      })
+      .slice(0, 5);
+  }, [profilesTopQuery.data]);
+
+  const intentTrend = useMemo(() => {
+    const days = ANALYTICS_WINDOW_DAYS;
+    const byDay = new Map();
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const dt = new Date();
+      dt.setUTCHours(0, 0, 0, 0);
+      dt.setUTCDate(dt.getUTCDate() - i);
+      const key = dt.toISOString().slice(0, 10);
+      byDay.set(key, {
+        date: key,
+        label: `${String(dt.getUTCMonth() + 1).padStart(2, "0")}/${String(dt.getUTCDate()).padStart(2, "0")}`,
+        buyers: 0,
+        sellers: 0,
+      });
+    }
+
+    conversations.forEach((c) => {
+      const rawDate = c?.created_at || c?.createdAt || c?.updated_at || c?.updatedAt;
+      if (!rawDate) return;
+      const dt = new Date(rawDate);
+      if (Number.isNaN(dt.getTime())) return;
+      const key = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()))
+        .toISOString()
+        .slice(0, 10);
+      const row = byDay.get(key);
+      if (!row) return;
+      const intent = String(getLeadMeta(c).intent || "").toLowerCase();
+      if (intent.includes("buy")) row.buyers += 1;
+      else if (intent.includes("sell")) row.sellers += 1;
+    });
+
+    return [...byDay.values()];
+  }, [conversations]);
+
+  const budgetTrend = useMemo(() => {
+    const days = ANALYTICS_WINDOW_DAYS;
+    const byDay = new Map();
+    for (let i = days - 1; i >= 0; i -= 1) {
+      const dt = new Date();
+      dt.setUTCHours(0, 0, 0, 0);
+      dt.setUTCDate(dt.getUTCDate() - i);
+      const key = dt.toISOString().slice(0, 10);
+      byDay.set(key, {
+        date: key,
+        label: `${String(dt.getUTCMonth() + 1).padStart(2, "0")}/${String(dt.getUTCDate()).padStart(2, "0")}`,
+        budget_avg: 0,
+        _sum: 0,
+        _count: 0,
+      });
+    }
+
+    conversations.forEach((c) => {
+      const budget = parseBudgetNumber(c);
+      if (budget == null) return;
+      const rawDate = c?.created_at || c?.createdAt || c?.updated_at || c?.updatedAt;
+      if (!rawDate) return;
+      const dt = new Date(rawDate);
+      if (Number.isNaN(dt.getTime())) return;
+      const key = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()))
+        .toISOString()
+        .slice(0, 10);
+      const row = byDay.get(key);
+      if (!row) return;
+      row._sum += budget;
+      row._count += 1;
+    });
+
+    return [...byDay.values()].map((row) => ({
+      date: row.date,
+      label: row.label,
+      budget_avg: row._count > 0 ? Math.round(row._sum / row._count) : 0,
+    }));
+  }, [conversations]);
+
+  /** Nurture sends per UTC day: merge KPI timeseries with NurtureLog rows (logs backfill before KPI existed). */
+  const chartSeries = useMemo(() => {
+    const base = analyticsTimeseriesQuery.data?.series;
+    if (!Array.isArray(base) || base.length === 0) return [];
+    const logPayload = nurtureLogsChartQuery.data;
+    const items = Array.isArray(logPayload?.items) ? logPayload.items : [];
+    const fromLogs = new Map();
+    items.forEach((log) => {
+      const st = String(log?.status || "sent").toLowerCase();
+      if (st === "failed") return;
+      const raw = log?.sent_at || log?.created_at;
+      if (!raw) return;
+      const dt = new Date(raw);
+      if (Number.isNaN(dt.getTime())) return;
+      const key = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate())).toISOString().slice(0, 10);
+      fromLogs.set(key, (fromLogs.get(key) || 0) + 1);
+    });
+    return base.map((row) => ({
+      ...row,
+      nurture_email_sent: Math.max(Number(row.nurture_email_sent || 0), fromLogs.get(row.date) || 0),
+    }));
+  }, [analyticsTimeseriesQuery.data, nurtureLogsChartQuery.data]);
 
   // Avoid hydration mismatch: server has no sessionStorage token; client may. First paint must match server.
   if (!isMounted) {
@@ -340,188 +380,31 @@ export default function DashboardPage() {
           </div>
         </motion.div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {stats.map(({ label, value, icon: Icon, accent }, idx) => (
-            <motion.div
-              key={label}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2, delay: idx * 0.05 }}
-              className="rounded-md border border-border bg-white shadow-lg shadow-primary/10 p-4 flex items-center justify-between"
-            >
-              <div>
-                <p className="text-xs text-text-muted font-semibold uppercase tracking-wide">
-                  {label}
-                </p>
-                <p className="text-2xl font-bold text-text-heading mt-1">
-                  {value}
-                </p>
-              </div>
-              <div
-                className={`w-11 h-11 rounded-md flex items-center justify-center ${accent}`}
-              >
-                <Icon size={18} />
-              </div>
-            </motion.div>
-          ))}
-        </div>
+        <DashboardAnalyticsPanels
+          windowDays={analyticsTimeseriesQuery.data?.window_days || ANALYTICS_WINDOW_DAYS}
+          funnel={analyticsFunnelQuery.data?.funnel}
+          series={chartSeries}
+          intentTrend={intentTrend}
+          budgetTrend={budgetTrend}
+          isLoading={
+            leadsQuery.isLoading ||
+            analyticsFunnelQuery.isLoading ||
+            analyticsTimeseriesQuery.isLoading
+          }
+          isError={
+            leadsQuery.isError || analyticsFunnelQuery.isError || analyticsTimeseriesQuery.isError
+          }
+        />
 
-        {/* Filters */}
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="inline-flex rounded-md bg-white shadow-sm border border-border/60 overflow-hidden">
-            {["buyers", "sellers"].map((type) => (
-              <button
-                key={type}
-                onClick={() => setLeadType(type)}
-                className={`px-4 py-2 text-sm font-semibold transition-all ${leadType === type
-                  ? "bg-primary-dark text-white"
-                  : "text-text-heading hover:bg-background-light"
-                  }`}
-              >
-                {type === "buyers" ? "Buyer Leads" : "Seller Leads"}
-              </button>
-            ))}
-          </div>
-          <div className="inline-flex rounded-md bg-white shadow-sm border border-border/60 overflow-hidden">
-            {["active", "closed"].map((status) => (
-              <button
-                key={status}
-                onClick={() => setLeadStatus(status)}
-                className={`px-4 py-2 text-sm font-semibold transition-all ${leadStatus === status
-                  ? "bg-primary-dark text-white"
-                  : "text-text-heading hover:bg-background-light"
-                  }`}
-              >
-                {status === "active" ? "Active" : "Closed"}
-              </button>
-            ))}
-          </div>
-          <div className="inline-flex rounded-md bg-white shadow-sm border border-border/60 overflow-hidden">
-            {["", "matched", "mismatched"].map((match) => (
-              <button
-                key={match || "all"}
-                onClick={() => setMatchFilter(match)}
-                className={`px-4 py-2 text-sm font-semibold transition-all flex items-center gap-2 ${matchFilter === match
-                  ? "bg-primary-dark text-white"
-                  : "text-text-heading hover:bg-background-light"
-                  }`}
-              >
-                {match === "" ? (
-                  "All Leads"
-                ) : match === "matched" ? (
-                  <>
-                    <CheckCircle2 size={14} />
-                    Matched
-                  </>
-                ) : (
-                  <>
-                    <XCircle size={14} />
-                    Mismatched
-                  </>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Lead panels */}
-        <div className="bg-white rounded-md border border-border shadow-lg shadow-primary/10 p-5 space-y-4">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3">
-            <div className="relative flex-1">
-              <Search
-                size={18}
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-text-muted"
-              />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, email, phone, or city..."
-                className="w-full h-11 rounded-md border border-border/60 bg-background-light/50 pl-10 pr-3 text-sm focus:ring-0 focus:ring-none focus:outline-none"
-              />
-            </div>
-            <button className="h-11 px-3 inline-flex items-center gap-2 rounded-md border border-border bg-background-light/60 text-sm font-semibold text-text-heading hover:border-primary transition">
-              <Filter size={16} />
-              Filters
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <div className="rounded-md border border-border shadow-inner bg-background-light/60 min-h-[14rem] p-4 space-y-3">
-              {conversationsQuery.isLoading ? (
-                <div className="text-sm text-text-muted">Loading leads...</div>
-              ) : conversationsQuery.isError ? (
-                <div className="text-sm text-red-600">Failed to load leads.</div>
-              ) : filteredLeads.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                  <UserIcon className="text-text-muted/70" size={40} />
-                  <p className="mt-3 text-base font-semibold text-text-heading">
-                    No Leads Found
-                  </p>
-                  <p className="text-sm text-text-muted">
-                    Try adjusting your search or filters
-                  </p>
-                </div>
-              ) : (
-                filteredLeads.slice(0, 6).map((lead) => {
-                  const id = lead?.id || lead?.conversation_id || lead?.conversationId;
-                  const meta = getLeadMeta(lead);
-                  const name = meta.name;
-                  return (
-                    <button
-                      key={`lead-${id}`}
-                      type="button"
-                      onClick={() => setSelectedLeadId(id)}
-                      className={`w-full text-left rounded-md border px-3 py-2 transition ${String(id) === String(selectedLeadId)
-                        ? "border-primary shadow-sm bg-primary/5"
-                        : meta.isMatched === false
-                          ? "border-red-200 bg-red-50/50 hover:border-red-300"
-                          : "border-border bg-white hover:border-primary/40"
-                        }`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-semibold text-text-heading">{name}</div>
-                          <div className="text-xs font-semibold text-text-heading">
-                            {String(meta.intent).charAt(0).toUpperCase() + String(meta.intent).slice(1) || "Unknown intent"} • <span className="text-text-muted font-normal">{meta.channel}</span>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {meta.isMatched === true ? (
-                            <span className="text-[10px] px-2 py-1 rounded-md bg-green-50 text-green-700 border border-green-200 flex items-center gap-1">
-                              <CheckCircle2 size={10} />
-                              Matched
-                            </span>
-                          ) : meta.isMatched === false ? (
-                            <span className="text-[10px] px-2 py-1 rounded-md bg-red-200 text-red-700 border border-red-200 flex items-center gap-1">
-                              <XCircle size={10} />
-                              Mismatched
-                            </span>
-                          ) : null}
-                          {meta.leadGrade ? (
-                            <span className={`text-[10px] px-2 py-1 rounded-md ${String(meta.leadGrade).toLowerCase() === 'hot'
-                              ? 'bg-red-200 border-red-200 border text-red-700'
-                              : String(meta.leadGrade).toLowerCase() === 'warm'
-                                ? 'bg-yellow-200 border-yellow-200 border text-yellow-700'
-                                : 'bg-blue-200 border-blue-200 border text-blue-700'
-                              }`}>
-                              {String(meta.leadGrade).toUpperCase()}
-                            </span>
-                          ) : null}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-            {/* Right Column: Upcoming Meetings */}
-            <div className="space-y-4">
-              <UpcomingMeetings onOpenSettings={() => setIsCalendarModalOpen(true)} />
-            </div>
-          </div>
-        </div>
+        <DashboardTopTables
+          topLeads={topLeadsRows}
+          topProfiles={topProfilesRows}
+          leadsLoading={leadsQuery.isLoading}
+          profilesLoading={profilesTopQuery.isLoading}
+          leadsError={leadsQuery.isError}
+          profilesError={profilesTopQuery.isError}
+          onSelectLead={(id) => setSelectedLeadId(String(id))}
+        />
 
       </div>
       <AnimatePresence>
@@ -547,7 +430,6 @@ export default function DashboardPage() {
           />
         )}
       </AnimatePresence>
-      <CalendarSettingsModal isOpen={isCalendarModalOpen} onClose={() => setIsCalendarModalOpen(false)} />
     </div>
   );
 }

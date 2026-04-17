@@ -101,6 +101,7 @@ export const API_ENDPOINTS = {
     analytics: {
       summary: withBaseUrl("/api/chat/analytics/summary"),
       funnel: withBaseUrl("/api/chat/analytics/funnel"),
+      timeseries: withBaseUrl("/api/chat/analytics/timeseries"),
     },
   },
   calendar: {

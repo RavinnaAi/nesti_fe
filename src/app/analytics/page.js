@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -6,23 +6,12 @@ import { Calendar, RefreshCw } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchAnalyticsSummary, fetchAnalyticsFunnel } from "@/lib/chatClient";
+import { fetchLeads } from "@/lib/leadsClient";
+import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
+import { buildGradeMix, buildMatchBreakdown, buildPropertyTypeMix } from "@/lib/leadConversationMeta";
+import AnalyticsCrmLeadInsights from "@/components/analytics/AnalyticsCrmLeadInsights";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { FEATURES } from "@/constants/features";
-
-const normalizeObject = (data) => {
-  if (!data) return {};
-  if (data?.data && typeof data.data === "object") return data.data;
-  if (typeof data === "object" && !Array.isArray(data)) return data;
-  return {};
-};
-
-const normalizeArray = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.items)) return data.items;
-  return [];
-};
 
 const getDefaultRange = () => {
   const end = new Date();
@@ -54,6 +43,23 @@ export default function AnalyticsPage() {
     enabled: Boolean(token),
     queryFn: () => fetchAnalyticsFunnel({ token, start: startDate, end: endDate }),
   });
+
+  const leadsQuery = useQuery({
+    queryKey: ["analytics-crm-leads", token],
+    enabled: Boolean(token),
+    queryFn: () => fetchLeads({ token, page: 1, limit: 100 }),
+    staleTime: 60_000,
+  });
+
+  const conversations = useMemo(() => {
+    const raw = leadsQuery.data?.leads;
+    if (!Array.isArray(raw)) return [];
+    return raw.map(leadApiRowToConversationShape).filter(Boolean);
+  }, [leadsQuery.data]);
+
+  const gradeMix = useMemo(() => buildGradeMix(conversations), [conversations]);
+  const propertyTypeMix = useMemo(() => buildPropertyTypeMix(conversations), [conversations]);
+  const matchBreakdown = useMemo(() => buildMatchBreakdown(conversations), [conversations]);
 
   const summary = useMemo(() => {
     const data = summaryQuery.data;
@@ -88,6 +94,7 @@ export default function AnalyticsPage() {
             onClick={() => {
               summaryQuery.refetch();
               funnelQuery.refetch();
+              leadsQuery.refetch();
             }}
             className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
           >
@@ -226,6 +233,19 @@ export default function AnalyticsPage() {
                 </div>
               </div>
             </div>
+          )}
+        </div>
+
+        <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
+          {leadsQuery.isError ? (
+            <div className="text-sm text-red-600">Could not load CRM leads for quality charts.</div>
+          ) : (
+            <AnalyticsCrmLeadInsights
+              gradeMix={gradeMix}
+              propertyTypeMix={propertyTypeMix}
+              matchBreakdown={matchBreakdown}
+              isLoading={leadsQuery.isLoading}
+            />
           )}
         </div>
       </div>

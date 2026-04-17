@@ -162,6 +162,36 @@ const buildQueryString = (params = {}) => {
   return `?${query.toString()}`;
 };
 
+export async function fetchChatAnalyticsSummary({ token, days = 30 } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ days: Number.isFinite(days) ? days : 30 });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.analytics.summary}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchChatAnalyticsFunnel({ token, days = 30 } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ days: Number.isFinite(days) ? days : 30 });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.analytics.funnel}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchChatAnalyticsTimeseries({ token, days = 30 } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ days: Number.isFinite(days) ? days : 30 });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.analytics.timeseries}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
 export async function fetchConversations({ token, embedId, start, end } = {}) {
   const authToken = token || getStoredAuthToken();
   const query = buildQueryString({ embed_id: embedId, start, end });
