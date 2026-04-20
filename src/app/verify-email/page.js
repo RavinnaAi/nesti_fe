@@ -50,8 +50,6 @@ export default function VerifyEmailPage() {
     if (storedEmail) {
       setEmail(storedEmail);
     } else {
-      // If no email found, redirect to signup
-      // toast.error("Please sign up first.");
       router.push("/sign-up");
     }
   }, [getEmail, router]);

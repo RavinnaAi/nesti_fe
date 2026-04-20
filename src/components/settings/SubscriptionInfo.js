@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import dynamic from "next/dynamic";
 import { useStrapiQuery } from "@/lib/strapi";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Building, Mail, User, Send, CreditCard, Plus, Loader2, Trash2 } from "lucide-react";
+import { X, Check, Building, Mail, User, Send, CreditCard, Plus, Loader2 } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
@@ -330,9 +330,6 @@ export default function SubscriptionInfo() {
                       </div>
                     </div>
                   </div>
-                  {/* <button className="text-text-muted hover:text-red-500 transition-colors">
-                  <Trash2 size={14} />
-                </button> */}
                 </div>
               ))}
             </div>

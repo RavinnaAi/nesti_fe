@@ -4,11 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, Loader2, User } from "lucide-react";
+import { ArrowLeft, ExternalLink, User } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchLeadProfileById, fetchLeadsByProfileId } from "@/lib/leadsClient";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
+import { ClientProfileCardSkeleton, ProfileLeadsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
 const PAGE_SIZE = 15;
 
@@ -89,7 +90,14 @@ export default function ClientProfileLeadsPage() {
   const budgetDisplay = profile ? getBudgetDisplay(profile) : null;
 
   if (!hydrated) {
-    return <div className="min-h-[30vh] bg-gradient-to-br from-primary/5 via-white to-primary/[0.04]" />;
+    return (
+      <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2 pb-3 pt-4 sm:px-3 sm:pb-4 sm:pt-5">
+        <div className="mx-auto w-full max-w-5xl space-y-3">
+          <ClientProfileCardSkeleton />
+          <p className="text-center text-[11px] font-medium text-primary">Loading…</p>
+        </div>
+      </div>
+    );
   }
   if (!isAuthenticated) return null;
 
@@ -107,9 +115,7 @@ export default function ClientProfileLeadsPage() {
         </div>
 
         {profileQuery.isLoading ? (
-          <div className="flex justify-center py-16 text-text-muted">
-            <Loader2 className="h-8 w-8 animate-spin" />
-          </div>
+          <ClientProfileCardSkeleton />
         ) : profileQuery.isError ? (
           <div className="rounded-lg border border-border bg-white p-6 text-center text-sm text-text-muted">
             {profileQuery.error?.message || "Could not load this profile."}
@@ -235,8 +241,15 @@ export default function ClientProfileLeadsPage() {
               </div>
 
               {leadsQuery.isLoading && !leadsQuery.data ? (
-                <div className="flex justify-center py-12 text-text-muted">
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                <div className="px-2 py-4 sm:px-3">
+                  <ProfileLeadsTableSkeleton rows={6} />
+                  <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
+                    <span
+                      className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                      aria-hidden
+                    />
+                    Loading leads for this profile…
+                  </p>
                 </div>
               ) : leads.length === 0 ? (
                 <p className="px-3 py-8 text-center text-xs text-text-muted">

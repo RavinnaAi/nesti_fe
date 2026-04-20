@@ -74,3 +74,16 @@ export async function deleteLeadById({ token, id }) {
     token,
   });
 }
+
+/**
+ * Record a lead_viewed KPI event. Backend dedupes to one event per lead per UTC day,
+ * so calling this every time a lead is opened is safe.
+ */
+export async function recordLeadView({ token, id }) {
+  if (!token || !id) return null;
+  return apiClient({
+    url: API_ENDPOINTS.leads.recordView(id),
+    method: "POST",
+    token,
+  });
+}

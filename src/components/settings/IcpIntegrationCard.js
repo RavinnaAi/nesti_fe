@@ -207,12 +207,12 @@ export default function IcpIntegrationCard() {
   };
 
   return (
-    <div className="rounded-md border border-border bg-white p-4 space-y-4">
+    <div className="space-y-5">
       <div>
-        <div className="text-sm font-semibold text-text-heading">Ideal Client Profile (ICP)</div>
-        <div className="text-xs text-text-muted">
-          Integrate your ICP so lead scoring and matching aligns with your business goals.
-        </div>
+        <h2 className="text-lg font-bold text-text-heading">Ideal Client Profile (ICP)</h2>
+        <p className="text-sm text-text-muted mt-0.5">
+          Define your ideal clients so lead scoring and matching aligns with your business goals.
+        </p>
       </div>
 
       {icpQuery.isLoading ? (

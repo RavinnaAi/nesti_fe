@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import ChatWidget from "@/components/chatbot/ChatWidget";
 import { resolveEmbedToken } from "@/lib/chatClient";
+import { ChatbotEmbedPageSkeleton } from "@/components/ui/ContentSkeletons";
 
 export default function ChatbotByTokenPage({ params }) {
   const token = params?.token;
@@ -36,11 +37,7 @@ export default function ChatbotByTokenPage({ params }) {
   }, [token]);
 
   if (status === "loading") {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-sm text-text-body">Loading your chatbot…</div>
-      </div>
-    );
+    return <ChatbotEmbedPageSkeleton />;
   }
 
   if (status === "error") {

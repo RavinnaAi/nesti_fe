@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { User, Mail, Phone, Calendar } from "lucide-react";
+import { User, Mail, Phone, Calendar, Camera, ImageIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import FormField from "@/components/auth/FormField";
 import SubmitButton from "@/components/auth/SubmitButton";
@@ -73,7 +73,6 @@ export default function PersonalInfo() {
       Object.values(errors).forEach((msg) => toast.error(msg));
       return;
     }
-    // console.log("savePersonalInfo", storedPersonal);
     const payload = {
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
@@ -82,14 +81,11 @@ export default function PersonalInfo() {
       calendly_link: form.calendlyUrl.trim(),
     };
 
-    // console.log("payload", payload);
-    // return;
-
     setLoading(true);
     try {
       await savePersonalInfo.mutateAsync(payload);
-    } catch (err) {
-      console.error("Personal info update error:", err);
+    } catch {
+      /* error surfaced via toast in useSavePersonalInfo hook */
     } finally {
       setLoading(false);
     }
@@ -138,110 +134,97 @@ export default function PersonalInfo() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-md bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
-          {profileImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profileImage}
-              alt="Profile"
-              className="h-full w-full object-cover"
+    <form onSubmit={handleSubmit} className="space-y-8">
+      {/* ── Section heading ── */}
+      <div>
+        <h2 className="text-lg font-bold text-text-heading">Personal Information</h2>
+        <p className="text-sm text-text-muted mt-0.5">Update your profile photo, cover image, and contact details.</p>
+      </div>
+
+      {/* ── Images row ── */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        {/* Profile photo */}
+        <div className="flex items-center gap-4">
+          <div className="relative group shrink-0">
+            <div className="h-20 w-20 rounded-xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+              {profileImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileImage} alt="Profile" className="h-full w-full object-cover" />
+              ) : (
+                <User className="text-text-muted" size={28} />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition"
+              aria-label="Change profile photo"
+            >
+              <Camera size={18} className="text-white" />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md border border-border bg-white text-xs font-semibold text-text-heading hover:border-primary hover:text-primary transition shadow-sm"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              <Camera size={13} />
+              Change Photo
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
             />
-          ) : (
-            <User className="text-text-muted" size={32} />
-          )}
+            <p className="text-[11px] text-text-muted">JPG, PNG or WEBP. Max 3MB</p>
+          </div>
         </div>
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <User size={16} />
-            Change Photo
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageChange}
-          />
-          <div className="text-xs text-text-muted">
-            JPG, PNG or WEBP. Max 2MB
+
+        {/* Cover image */}
+        <div className="flex items-center gap-4">
+          <div className="relative group shrink-0">
+            <div className="h-20 w-20 rounded-xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+              {coverImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={coverImage} alt="Cover" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="text-text-muted" size={28} />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => coverInputRef.current?.click()}
+              className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/40 opacity-0 group-hover:opacity-100 transition"
+              aria-label="Change cover image"
+            >
+              <Camera size={18} className="text-white" />
+            </button>
+          </div>
+          <div className="space-y-1.5">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-md border border-border bg-white text-xs font-semibold text-text-heading hover:border-primary hover:text-primary transition shadow-sm"
+              onClick={() => coverInputRef.current?.click()}
+            >
+              <ImageIcon size={13} />
+              Change Cover
+            </button>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverChange}
+            />
+            <p className="text-[11px] text-text-muted">JPG, PNG or WEBP. Max 3MB</p>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-md bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
-          {coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverImage}
-              alt="cover"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <User className="text-text-muted" size={32} />
-          )}
-        </div>
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
-            onClick={() => coverInputRef.current?.click()}
-          >
-            <User size={16} />
-            Change Cover
-          </button>
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleCoverChange}
-          />
-          <div className="text-xs text-text-muted">
-            JPG, PNG or WEBP. Max 3MB
-          </div>
-        </div>
-      </div>
-
-      {/* <div className="space-y-2">
-        <div className="h-24 w-full rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
-          {coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverImage}
-              alt="Cover"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <User className="text-text-muted" size={32} />
-          )}
-        </div>
-        <div className="flex items-center gap-3">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
-            onClick={() => coverInputRef.current?.click()}
-          >
-            <User size={16} />
-            Change Cover
-          </button>
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleCoverChange}
-          />
-          <div className="text-xs text-text-muted">JPG, PNG or WEBP. Max 3MB</div>
-        </div>
-      </div> */}
-
+      {/* ── Form fields ── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <FormField
           label="First Name"
@@ -293,7 +276,6 @@ export default function PersonalInfo() {
           icon={Phone}
           focusedField={focusedField}
         />
-
         <FormField
           label="Calendly URL"
           name="calendlyUrl"
@@ -304,11 +286,10 @@ export default function PersonalInfo() {
           placeholder="Enter Calendly URL"
           icon={Calendar}
           focusedField={focusedField}
-        />  
-       
-
+        />
       </div>
 
+      {/* ── Submit ── */}
       <div className="pt-2">
         <SubmitButton loading={loading}>Save changes</SubmitButton>
       </div>

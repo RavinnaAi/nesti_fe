@@ -96,20 +96,31 @@ export function useSaveBusinessInfo() {
   const { token } = useAppSelector((state) => state.auth);
 
   return useMutation({
-    mutationFn: (payload) => {
+    mutationFn: async (input) => {
       if (!token) throw new Error("missing or invalid Authorization header");
-      return apiClient({
+      const { silent, ...payload } = input || {};
+      const data = await apiClient({
         url: BUSINESS_ENDPOINT,
         method: "PUT",
         data: payload,
         token,
       });
+      return { data, silent: Boolean(silent) };
     },
-    onSuccess: (data, variables) => {
+    onSuccess: (result, variables) => {
+      const data = result && typeof result === "object" && "data" in result ? result.data : result;
+      const silent = result && typeof result === "object" && "silent" in result ? result.silent : false;
       const mapped = mapBackendProfileToStore(data);
-      dispatch(setBusinessInfo(Object.keys(mapped.business).length ? mapped.business : variables));
+      const { silent: _omit, ...payloadFallback } = variables || {};
+      dispatch(
+        setBusinessInfo(
+          Object.keys(mapped.business).length ? mapped.business : payloadFallback
+        )
+      );
       dispatch(setPersonalInfo(mapped.personal));
-      toast.success(data?.message || "Business info updated successfully");
+      if (!silent) {
+        toast.success(data?.message || "Business info updated successfully");
+      }
     },
     onError: toastError,
   });

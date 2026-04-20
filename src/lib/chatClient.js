@@ -192,6 +192,16 @@ export async function fetchChatAnalyticsTimeseries({ token, days = 30 } = {}) {
   });
 }
 
+export async function fetchChatAnalyticsLeadTrends({ token, days = 30 } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const query = buildQueryString({ days: Number.isFinite(days) ? days : 30 });
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.analytics.leadTrends}${query}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
 export async function fetchConversations({ token, embedId, start, end } = {}) {
   const authToken = token || getStoredAuthToken();
   const query = buildQueryString({ embed_id: embedId, start, end });

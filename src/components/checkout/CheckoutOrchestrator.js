@@ -303,14 +303,6 @@ export default function CheckoutOrchestrator() {
               </button>
               {taxCalculation ? (
                 <div className="text-xs text-text-muted text-right">
-                  {/* <div>
-                    Estimated tax:{" "}
-                    <span className="font-semibold text-text-heading">
-                      {typeof taxCalculation.amount_tax === "number"
-                        ? `$${(taxCalculation.amount_tax / 100).toFixed(2)}`
-                        : "-"}
-                    </span>
-                  </div> */}
                   <div>
                     Estimated total:{" "}
                     <span className="font-semibold text-text-heading">

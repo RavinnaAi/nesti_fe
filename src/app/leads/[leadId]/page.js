@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useRecordLeadView } from "@/hooks/useRecordLeadView";
 import { useAppSelector } from "@/store";
 import {
   fetchReferrals,
@@ -34,6 +35,7 @@ import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
 import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
+import { LeadDetailPageSkeleton } from "@/components/ui/ContentSkeletons";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -195,6 +197,8 @@ function LeadWorkspacePageContent() {
     enabled: Boolean(token && leadId),
     queryFn: () => fetchLeadById({ token, id: leadId }),
   });
+
+  useRecordLeadView(leadId, { token, enabled: Boolean(leadId) });
 
   const selectedConversation = useMemo(() => {
     const detailLead = leadDetailQuery.data?.lead;
@@ -454,90 +458,100 @@ function LeadWorkspacePageContent() {
           />
         </div>
 
-        {activeTab === "lead_details" ? (
-          <LeadsDetailsTab
-            selectedConversation={selectedConversation}
-            lead={leadDetailQuery.data?.lead || null}
-            messageMeta={messageMeta}
-            getConversationMeta={getConversationMeta}
-            conversationMeta={conversationMeta}
-            formatMetaEntries={formatMetaEntries}
-            onOpenMeta={() => {}}
-          />
-        ) : null}
+        {leadDetailQuery.isLoading ? (
+          <LeadDetailPageSkeleton />
+        ) : leadDetailQuery.isError ? (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-4 text-sm text-red-800 shadow-sm">
+            {leadDetailQuery.error?.message || "Could not load this lead."}
+          </div>
+        ) : (
+          <>
+            {activeTab === "lead_details" ? (
+              <LeadsDetailsTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+                messageMeta={messageMeta}
+                getConversationMeta={getConversationMeta}
+                conversationMeta={conversationMeta}
+                formatMetaEntries={formatMetaEntries}
+                onOpenMeta={() => {}}
+              />
+            ) : null}
 
-        {activeTab === "conversation" ? (
-          <LeadsConversationTab
-            selectedConversation={selectedConversation}
-            messageMeta={messageMeta}
-            messagesQuery={messagesQuery}
-            messages={messages}
-            formatMetaEntries={formatMetaEntries}
-            onOpenMeta={() => {}}
-          />
-        ) : null}
+            {activeTab === "conversation" ? (
+              <LeadsConversationTab
+                selectedConversation={selectedConversation}
+                messageMeta={messageMeta}
+                messagesQuery={messagesQuery}
+                messages={messages}
+                formatMetaEntries={formatMetaEntries}
+                onOpenMeta={() => {}}
+              />
+            ) : null}
 
-        {activeTab === "actions" ? (
-          <LeadsAiActionsTab
-            selectedConversation={selectedConversation}
-            lead={leadDetailQuery.data?.lead || null}
-          />
-        ) : null}
+            {activeTab === "actions" ? (
+              <LeadsAiActionsTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+              />
+            ) : null}
 
-        {activeTab === "property_matches" ? (
-          <LeadsPropertyMatchesTab
-            selectedConversation={selectedConversation}
-            lead={leadDetailQuery.data?.lead || null}
-            propertyMatches={propertyMatches}
-            propertyMatchesQuery={propertyMatchesQuery}
-            propertyMatchesPayload={propertyMatchesQuery.data || null}
-          />
-        ) : null}
+            {activeTab === "property_matches" ? (
+              <LeadsPropertyMatchesTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+                propertyMatches={propertyMatches}
+                propertyMatchesQuery={propertyMatchesQuery}
+                propertyMatchesPayload={propertyMatchesQuery.data || null}
+              />
+            ) : null}
 
-        {activeTab === "lead_profile" ? (
-          <LeadsProfileTab
-            selectedConversation={selectedConversation}
-            lead={leadDetailQuery.data?.lead || null}
-          />
-        ) : null}
+            {activeTab === "lead_profile" ? (
+              <LeadsProfileTab
+                selectedConversation={selectedConversation}
+                lead={leadDetailQuery.data?.lead || null}
+              />
+            ) : null}
 
-        {activeTab === "others" ? (
-          <LeadsActionsTab
-            referralForm={referralForm}
-            setReferralForm={setReferralForm}
-            createReferralMutation={createReferralMutation}
-            selectedLeadId={leadId}
-            actionConversationId={actionConversationId}
-            conversationReferrals={conversationReferrals}
-            activeReferralId={activeReferralId}
-            setActiveReferralId={setActiveReferralId}
-            referralUpdate={referralUpdate}
-            setReferralUpdate={setReferralUpdate}
-            updateReferralMutation={updateReferralMutation}
-            mortgageForm={mortgageForm}
-            setMortgageForm={setMortgageForm}
-            mortgageMutation={mortgageMutation}
-            mortgageRuns={mortgageRuns}
-            closingForm={closingForm}
-            setClosingForm={setClosingForm}
-            closingMutation={closingMutation}
-            closingRuns={closingRuns}
-          />
-        ) : null}
+            {activeTab === "others" ? (
+              <LeadsActionsTab
+                referralForm={referralForm}
+                setReferralForm={setReferralForm}
+                createReferralMutation={createReferralMutation}
+                selectedLeadId={leadId}
+                actionConversationId={actionConversationId}
+                conversationReferrals={conversationReferrals}
+                activeReferralId={activeReferralId}
+                setActiveReferralId={setActiveReferralId}
+                referralUpdate={referralUpdate}
+                setReferralUpdate={setReferralUpdate}
+                updateReferralMutation={updateReferralMutation}
+                mortgageForm={mortgageForm}
+                setMortgageForm={setMortgageForm}
+                mortgageMutation={mortgageMutation}
+                mortgageRuns={mortgageRuns}
+                closingForm={closingForm}
+                setClosingForm={setClosingForm}
+                closingMutation={closingMutation}
+                closingRuns={closingRuns}
+              />
+            ) : null}
 
-        {activeTab === "nurture" ? (
-          <LeadsNurtureTab
-            nurtureForm={nurtureForm}
-            setNurtureForm={setNurtureForm}
-            nurtureMutation={nurtureMutation}
-            nurtureDraftMutation={nurtureDraftMutation}
-            nurtureRefineMutation={nurtureRefineMutation}
-            selectedLeadId={leadId}
-            actionConversationId={actionConversationId}
-            nurtureLogs={nurtureLogs}
-            nurtureLogsLoading={nurtureLogsQuery.isLoading}
-          />
-        ) : null}
+            {activeTab === "nurture" ? (
+              <LeadsNurtureTab
+                nurtureForm={nurtureForm}
+                setNurtureForm={setNurtureForm}
+                nurtureMutation={nurtureMutation}
+                nurtureDraftMutation={nurtureDraftMutation}
+                nurtureRefineMutation={nurtureRefineMutation}
+                selectedLeadId={leadId}
+                actionConversationId={actionConversationId}
+                nurtureLogs={nurtureLogs}
+                nurtureLogsLoading={nurtureLogsQuery.isLoading}
+              />
+            ) : null}
+          </>
+        )}
       </div>
 
       {showDeleteConfirm ? (
@@ -576,7 +590,11 @@ function LeadWorkspacePageContent() {
 export default function LeadWorkspacePage() {
   return (
     <Suspense
-      fallback={<div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />}
+      fallback={
+        <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10 px-5 md:px-6 py-6">
+          <LeadDetailPageSkeleton />
+        </div>
+      }
     >
       <LeadWorkspacePageContent />
     </Suspense>

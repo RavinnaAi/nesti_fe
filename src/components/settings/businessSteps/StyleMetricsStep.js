@@ -3,11 +3,32 @@
 import { Award, MapPin } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 
-const buttonClasses = (active) =>
-  `px-3 py-2 rounded-md border text-sm font-semibold transition-all ${active
-    ? "border-primary bg-primary/10 text-primary shadow-sm"
-    : "border-border bg-background-light/60 text-text-heading hover:border-primary"
+const chipCls = (active) =>
+  `px-2.5 py-1.5 rounded-md border text-xs font-semibold transition-all whitespace-nowrap ${
+    active
+      ? "border-primary bg-primary/10 text-primary shadow-sm"
+      : "border-border bg-background-light/60 text-text-heading hover:border-primary"
   }`;
+
+function OptionRow({ label, name, options, value, onChange }) {
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold text-text-heading">{label}</p>
+      <div className="flex flex-wrap gap-1.5">
+        {options.map((opt) => (
+          <button
+            type="button"
+            key={`${name}-${opt.value}`}
+            className={chipCls(value === opt.value)}
+            onClick={() => onChange(name, opt.value)}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function StyleMetricsStep({
   form,
@@ -16,69 +37,62 @@ export default function StyleMetricsStep({
   handleChange,
   handleSelectChange,
 }) {
-  const renderOptionButtons = (name, options) => (
-    <div className="flex flex-wrap gap-2">
-      {options.map((opt) => (
-        <button
-          type="button"
-          key={`${name}-${opt.value}`}
-          className={buttonClasses(form[name] === opt.value)}
-          onClick={() => handleSelectChange(name, opt.value)}
-        >
-          {opt.label}
-        </button>
-      ))}
-    </div>
-  );
-
   return (
     <div className="space-y-5">
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-text-heading">
-          What’s your negotiation style?
-        </p>
-        {renderOptionButtons("negotiationStyle", [
-          { value: "aggressive", label: "Aggressive advocate" },
-          { value: "collaborative", label: "Collaborative win-win" },
-          { value: "educator", label: "Educator / guide" },
-          { value: "analytical", label: "Analytical / data-driven" },
-        ])}
+      {/* Option groups in 2-col grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+        <OptionRow
+          label="Negotiation style"
+          name="negotiationStyle"
+          value={form.negotiationStyle}
+          onChange={handleSelectChange}
+          options={[
+            { value: "aggressive", label: "Aggressive" },
+            { value: "collaborative", label: "Collaborative" },
+            { value: "educator", label: "Educator" },
+            { value: "analytical", label: "Analytical" },
+          ]}
+        />
+        <OptionRow
+          label="Sales approach"
+          name="salesApproach"
+          value={form.salesApproach}
+          onChange={handleSelectChange}
+          options={[
+            { value: "relationship", label: "Relationship" },
+            { value: "results", label: "Results" },
+            { value: "coaching", label: "Coaching" },
+            { value: "consultative", label: "Consultative" },
+          ]}
+        />
+        <OptionRow
+          label="Energy style"
+          name="energyStyle"
+          value={form.energyStyle}
+          onChange={handleSelectChange}
+          options={[
+            { value: "high-energy", label: "High-energy" },
+            { value: "calm", label: "Calm" },
+            { value: "structured", label: "Structured" },
+            { value: "creative", label: "Creative" },
+          ]}
+        />
+        <OptionRow
+          label="Personality tag"
+          name="personalityTag"
+          value={form.personalityTag}
+          onChange={handleSelectChange}
+          options={[
+            { value: "educator", label: "Educator" },
+            { value: "negotiator", label: "Negotiator" },
+            { value: "low-pressure", label: "Low-pressure" },
+            { value: "relationship-builder", label: "Relationship Builder" },
+          ]}
+        />
       </div>
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-text-heading">
-          Sales approach
-        </p>
-        {renderOptionButtons("salesApproach", [
-          { value: "relationship", label: "Relationship-focused" },
-          { value: "results", label: "Results-focused" },
-          { value: "coaching", label: "Coaching / educational" },
-          { value: "consultative", label: "Consultative" },
-        ])}
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-text-heading">
-          Energy style
-        </p>
-        {renderOptionButtons("energyStyle", [
-          { value: "high-energy", label: "High-energy & enthusiastic" },
-          { value: "calm", label: "Calm & methodical" },
-          { value: "structured", label: "Structured & organized" },
-          { value: "creative", label: "Creative & flexible" },
-        ])}
-      </div>
-      <div className="space-y-2">
-        <p className="text-sm font-semibold text-text-heading">
-          Personality tag
-        </p>
-        {renderOptionButtons("personalityTag", [
-          { value: "educator", label: "Educator" },
-          { value: "negotiator", label: "Negotiator" },
-          { value: "low-pressure", label: "Low-pressure" },
-          { value: "relationship-builder", label: "Relationship Builder" },
-        ])}
-      </div>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Transactions + rating fields removed */}
+
+      {/* Text inputs */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
         <FormField
           label="Awards or Recognitions"
           name="awards"

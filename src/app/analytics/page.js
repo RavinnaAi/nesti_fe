@@ -10,8 +10,9 @@ import { fetchLeads } from "@/lib/leadsClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { buildGradeMix, buildMatchBreakdown, buildPropertyTypeMix } from "@/lib/leadConversationMeta";
 import AnalyticsCrmLeadInsights from "@/components/analytics/AnalyticsCrmLeadInsights";
+import { AnalyticsFunnelBlockSkeleton, AnalyticsSummaryCardsSkeleton } from "@/components/ui/ContentSkeletons";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { FEATURES } from "@/constants/features";
+
 
 const getDefaultRange = () => {
   const end = new Date();
@@ -25,8 +26,7 @@ const getDefaultRange = () => {
 
 export default function AnalyticsPage() {
   const { isAuthenticated } = useAuthGuard();
-  // Require advanced analytics feature (Pro)
-  useFeatureAccess(FEATURES.LEADS_INSIGHTS_ADVANCED);
+  useFeatureAccess();
   const { token } = useAppSelector((state) => state.auth);
   const defaults = useMemo(() => getDefaultRange(), []);
   const [startDate, setStartDate] = useState(defaults.start);
@@ -125,8 +125,9 @@ export default function AnalyticsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {summaryQuery.isLoading ? (
-            <div className="col-span-full rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-              Loading summary...
+            <div className="col-span-full">
+              <AnalyticsSummaryCardsSkeleton />
+              <p className="mt-3 text-center text-xs font-medium text-primary">Loading summary…</p>
             </div>
           ) : summaryQuery.isError ? (
             <div className="col-span-full rounded-md border border-border bg-white p-4 text-sm text-red-600">
@@ -154,7 +155,10 @@ export default function AnalyticsPage() {
         <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-6">
           <div className="text-sm font-semibold text-text-heading">Funnel breakdown</div>
           {funnelQuery.isLoading ? (
-            <div className="text-sm text-text-muted">Loading funnel...</div>
+            <div>
+              <AnalyticsFunnelBlockSkeleton />
+              <p className="mt-3 text-center text-xs font-medium text-primary">Loading funnel…</p>
+            </div>
           ) : funnelQuery.isError ? (
             <div className="text-sm text-red-600">Failed to load funnel.</div>
           ) : !funnelData ? (

@@ -234,6 +234,8 @@ export function useProfileQuery() {
   return useQuery({
     queryKey: ["profile"],
     enabled: Boolean(token),
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
     queryFn: () =>
       apiClient({
         url: API_ENDPOINTS.auth.profile,
@@ -243,14 +245,7 @@ export function useProfileQuery() {
     onError: (error) => {
       toastError(error);
       const status = error?.status;
-      const message = error?.message?.toLowerCase?.() || "";
-      if (
-        status === 401 ||
-        status === 403 ||
-        status === 404 ||
-        message.includes("unauthorized") ||
-        message.includes("not found")
-      ) {
+      if (status === 401 || status === 403) {
         dispatch(logoutAndClearAll());
       }
     },

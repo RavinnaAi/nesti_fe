@@ -169,27 +169,6 @@ export default function Footer() {
             <p className="text-text-body text-base mb-4 leading-relaxed">
               Get the latest updates and insights delivered to your inbox.
             </p>
-            {/* <form className="space-y-3" onSubmit={(e) => e.preventDefault()}>
-              <div className="flex gap-2">
-                <label htmlFor="footer-email" className="sr-only">
-                  Email address
-                </label>
-                <input
-                  id="footer-email"
-                  type="email"
-                  placeholder="Enter your email"
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-border text-sm text-text-body bg-background focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                  required
-                />
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 rounded-lg text-white text-sm font-semibold shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] bg-gradient-to-r from-primary to-primary-dark focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                  aria-label="Subscribe to newsletter"
-                >
-                  <ArrowRight size={18} />
-                </button>
-              </div>
-            </form> */}
           </section>
         </div>
 

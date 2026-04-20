@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, History, Loader2, Mail, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Mail, X } from "lucide-react";
+import { NurtureLogsListSkeleton } from "@/components/ui/ContentSkeletons";
 
 function statusChip(status) {
   const s = String(status || "").toLowerCase();
@@ -40,8 +41,15 @@ export default function LeadsNurtureLogsTab({
 
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 bg-slate-50/40">
         {loading ? (
-          <div className="flex justify-center py-10 text-text-muted">
-            <Loader2 size={22} className="animate-spin" />
+          <div className="py-2">
+            <NurtureLogsListSkeleton rows={6} />
+            <p className="mt-4 flex items-center justify-center gap-2 text-xs font-medium text-primary">
+              <span
+                className="inline-block size-4 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                aria-hidden
+              />
+              Loading nurture logs…
+            </p>
           </div>
         ) : !logs.length ? (
           <p className="text-sm text-text-muted text-center py-8">No nurture emails logged yet.</p>
@@ -98,11 +106,19 @@ export default function LeadsNurtureLogsTab({
       </div>
       {!loading ? (
         <div className="flex-shrink-0 border-t border-border/80 bg-background-light/40 px-4 py-3 flex items-center justify-between">
-          <p className="text-xs text-text-muted">
+          <p className="flex items-center gap-2 text-xs text-text-muted">
+            {isFetching && !loading ? (
+              <span
+                className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                aria-hidden
+              />
+            ) : null}
+            <span>
             Page <span className="font-semibold text-text-heading">{page}</span> of{" "}
             <span className="font-semibold text-text-heading">{totalPages}</span>
             {" · "}
             <span className="font-semibold text-text-heading">{total}</span> total
+            </span>
           </p>
           <div className="flex items-center gap-2">
             <button

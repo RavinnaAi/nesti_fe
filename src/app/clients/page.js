@@ -3,11 +3,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight, Loader2, User, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, User, Users } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
+import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
 const PAGE_SIZE = 20;
 
@@ -166,7 +167,16 @@ export default function ClientsPage() {
   const hasNext = Boolean(pagination.has_next_page || currentPage < totalPages);
 
   if (!hydrated) {
-    return <div className="min-h-[30vh] bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+    return (
+      <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2.5 pt-5 sm:px-4 sm:pt-6">
+        <div className="mx-auto w-full max-w-7xl">
+          <div className="overflow-hidden rounded-md border border-border/90 bg-white p-2 shadow-sm sm:p-3">
+            <ClientsTableSkeleton rows={6} />
+            <p className="mt-3 text-center text-[10px] font-medium text-primary sm:text-[11px]">Loading…</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) return null;
@@ -193,8 +203,15 @@ export default function ClientsPage() {
 
         <div className="overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">
           {clientsQuery.isLoading ? (
-            <div className="flex justify-center py-7 text-text-muted">
-              <Loader2 size={18} className="animate-spin" />
+            <div className="p-2 sm:p-3">
+              <ClientsTableSkeleton rows={8} />
+              <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
+                <span
+                  className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                  aria-hidden
+                />
+                Loading clients…
+              </p>
             </div>
           ) : profiles.length === 0 ? (
             <p className="px-2.5 py-6 text-center text-[11px] capitalize text-text-muted sm:text-xs">
@@ -317,11 +334,19 @@ export default function ClientsPage() {
 
           {!clientsQuery.isLoading ? (
             <div className="flex flex-wrap items-center justify-between gap-1.5 border-t border-border/80 bg-primary/[0.03] px-1.5 py-1">
-              <p className="text-[9px] text-text-muted sm:text-[10px]">
+              <p className="flex items-center gap-1.5 text-[9px] text-text-muted sm:text-[10px]">
+                {clientsQuery.isFetching && !clientsQuery.isLoading ? (
+                  <span
+                    className="inline-block size-3 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                    aria-hidden
+                  />
+                ) : null}
+                <span>
                 Page <span className="font-semibold text-text-heading">{currentPage}</span> of{" "}
                 <span className="font-semibold text-text-heading">{totalPages}</span>
                 {" · "}
                 <span className="font-semibold text-text-heading">{total}</span> total
+                </span>
               </p>
               <div className="flex items-center gap-1">
                 <button

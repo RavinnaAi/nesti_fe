@@ -1,34 +1,36 @@
 "use client";
 
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useProfileQuery } from "@/hooks/useAuthApi";
 import { updateProfile } from "@/store/authSlice";
 import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
 import { logoutAndClearAll } from "@/store/actions";
-import { ACCOUNT_STATUS } from "@/constants/features";
 
 export function useAuthGuard() {
   const router = useRouter();
-  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { token } = useAppSelector((state) => state.auth);
   const profileQuery = useProfileQuery();
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Only redirect after mount so client sessionStorage-backed Redux state is ready (avoids false redirects on reload).
+  useEffect(() => {
+    if (!mounted) return;
     if (!token) {
       router.replace("/log-in");
     }
-  }, [token, router]);
+  }, [mounted, token, router]);
 
   useEffect(() => {
     if (!token || !profileQuery.isError) return;
     const status = profileQuery.error?.status;
-    const message = profileQuery.error?.message?.toLowerCase?.() || "";
-    const shouldLogout =
-      status === 401 || status === 403 || status === 404 || message.includes("not found");
-    if (!shouldLogout) return;
+    if (status !== 401 && status !== 403) return;
     dispatch(logoutAndClearAll());
     router.replace("/log-in");
   }, [token, profileQuery.isError, profileQuery.error, dispatch, router]);
@@ -49,6 +51,8 @@ export function useAuthGuard() {
       country: profile?.country || "",
       role: profile?.role || professionalProfile?.professional_type || "",
       calendlyUrl: calendlyFromProfile,
+      profileImage:
+        professionalProfile?.img_url || profile?.img_url || profile?.profile_image || "",
     };
 
     const businessPayload = {
@@ -74,7 +78,7 @@ export function useAuthGuard() {
       careerTransactions: professionalProfile?.career_transactions || "",
       clientRating: professionalProfile?.client_rating || "",
       awards: professionalProfile?.awards || "",
-      testimonial: professionalProfile?.testimonial || "",
+      testimonial: professionalProfile?.bio || professionalProfile?.testimonial || "",
       targetNeighborhoods: professionalProfile?.target_neighborhoods || "",
       fullName:
         professionalProfile?.full_name ||
@@ -106,26 +110,6 @@ export function useAuthGuard() {
       dispatch(updateProfile(profile));
     }
   }, [profileQuery.data, dispatch]);
-
-  // Lightweight account_status-based redirect for expired accounts.
-  useEffect(() => {
-    const profile = profileQuery.data?.user || profileQuery.data?.data;
-    const accountStatus =
-      (profile?.accountStatus || profile?.account_status || ACCOUNT_STATUS.SUBSCRIBED)?.toLowerCase() ||
-      ACCOUNT_STATUS.SUBSCRIBED;
-
-    if (!token || !profile) return;
-
-    const isSettingsRoute = pathname?.startsWith("/settings");
-    const isCheckoutRoute = pathname?.startsWith("/checkout");
-
-    // TEMP: Subscription expired redirect is intentionally disabled on frontend.
-    // Re-enable by uncommenting below.
-    //
-    // if (accountStatus === ACCOUNT_STATUS.EXPIRED && !isSettingsRoute && !isCheckoutRoute) {
-    //   router.replace("/settings?tab=subscription&expired=1");
-    // }
-  }, [token, profileQuery.data, pathname, router]);
 
   return {
     isAuthenticated: Boolean(token),

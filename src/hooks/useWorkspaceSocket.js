@@ -49,6 +49,9 @@ export function useWorkspaceSocket(token, queryClient) {
         refetchType: "all",
       });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
+
+      if (payload?.notification_type === "lead_created") return;
+
       const title = payload?.title;
       if (title && typeof title === "string") {
         toast.info(title, { autoClose: 6000 });

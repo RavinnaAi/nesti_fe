@@ -12,6 +12,7 @@ import {
   markAllNotificationsReadRequest,
 } from "@/lib/notificationsClient";
 import { useNotificationsUi } from "@/contexts/NotificationsUiContext";
+import { NotificationsListSkeleton } from "@/components/ui/ContentSkeletons";
 
 const PAGE_SIZE = 20;
 
@@ -107,8 +108,12 @@ export default function NotificationsPage() {
 
         <div className="overflow-hidden rounded-xl border border-border bg-white shadow-sm">
           {listQuery.isLoading ? (
-            <div className="flex justify-center py-16 text-text-muted">
-              <Loader2 size={28} className="animate-spin" />
+            <div className="py-2">
+              <NotificationsListSkeleton rows={6} />
+              <p className="flex items-center justify-center gap-2 py-4 text-sm font-medium text-primary">
+                <Loader2 size={16} className="animate-spin shrink-0" />
+                Loading notifications…
+              </p>
             </div>
           ) : items.length === 0 ? (
             <div className="px-4 py-16 text-center text-text-muted">
@@ -152,7 +157,11 @@ export default function NotificationsPage() {
               </ul>
               {showPagination ? (
                 <div className="flex flex-col gap-3 border-t border-border/80 bg-background-light/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-xs text-text-muted sm:text-sm">
+                  <p className="flex items-center gap-2 text-xs text-text-muted sm:text-sm">
+                    {listQuery.isFetching && !listQuery.isLoading ? (
+                      <Loader2 size={14} className="animate-spin shrink-0 text-primary" aria-hidden />
+                    ) : null}
+                    <span>
                     Page <span className="font-semibold text-text-heading">{currentPage}</span> of{" "}
                     <span className="font-semibold text-text-heading">{totalPages}</span>
                     {total > 0 ? (
@@ -161,6 +170,7 @@ export default function NotificationsPage() {
                         · <span className="font-medium text-text-heading">{total}</span> total
                       </>
                     ) : null}
+                    </span>
                   </p>
                   <div className="flex items-center gap-2">
                     <button

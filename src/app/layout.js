@@ -36,7 +36,9 @@ export default function RootLayout({ children }) {
           */}
           <Suspense
             fallback={
-              <main className="relative z-10 flex min-h-0 flex-1 flex-col">{children}</main>
+              <div className="flex min-h-screen items-center justify-center bg-background">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
             }
           >
             <AppChrome>{children}</AppChrome>

@@ -2,22 +2,25 @@
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { User, CreditCard, Briefcase, BarChart3 } from "lucide-react";
+import { User, Briefcase } from "lucide-react";
 import { useAppSelector } from "@/store";
 import { motion } from "framer-motion";
 import PersonalCard from "@/components/profile/PersonalCard";
 import BusinessCard from "@/components/profile/BusinessCard";
-import SidebarTabs from "@/components/ui/SidebarTabs";
 import { usePublicProfile } from "@/hooks/useAuthApi";
-import StatusCard from "@/components/profile/StatusCard";
-import SubscriptionCard from "@/components/profile/SubscriptionCard";
+import { ProfilePageContentSkeleton } from "@/components/ui/ContentSkeletons";
 
-const tabs = [
-  { id: "personal", label: "Profile Overview", icon: User },
-  { id: "business", label: "Profile Details", icon: Briefcase },
-  { id: "status", label: "Profile Status", icon: BarChart3 },
-  { id: "subscription", label: "Subscription", icon: CreditCard },
-];
+function SectionHeader({ icon: Icon, title }) {
+  return (
+    <header className="mb-4 flex items-center gap-2.5">
+      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+        {Icon ? <Icon size={14} strokeWidth={2.5} /> : null}
+      </div>
+      <h2 className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{title}</h2>
+      <div className="flex-1 border-t border-slate-100" />
+    </header>
+  );
+}
 
 function ProfilePageContent() {
   const [isMounted, setIsMounted] = useState(false);
@@ -26,26 +29,10 @@ function ProfilePageContent() {
   const normalizedEmail = emailParam?.toLowerCase().trim() || "";
   const publicProfileQuery = usePublicProfile(normalizedEmail || undefined);
 
-  const { personalInfo, businessInfo } = useAppSelector(
-    (state) => state.profile
-  );
-  const selectedPlan = useAppSelector((state) => state.selectedPlan.plan);
-  const pricingPlans = useAppSelector((state) => state.pricing.plans);
-  const [activeTab, setActiveTab] = useState("personal");
-  const [stickyTop, setStickyTop] = useState("0");
+  const { personalInfo, businessInfo } = useAppSelector((state) => state.profile);
 
   useEffect(() => {
     setIsMounted(true);
-  }, []);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = typeof window !== "undefined" && window.scrollY > 0;
-      setStickyTop(isScrolled ? "15%" : "0");
-    };
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   const apiProfile = publicProfileQuery.data;
@@ -58,21 +45,21 @@ function ProfilePageContent() {
     null;
 
   const resolvedPersonal = useMemo(() => {
-    if (personalInfo && Object.keys(personalInfo).length > 0)
-      return personalInfo;
+    const calendlyFromApi = String(apiProfessional?.calendly_link || "").trim();
+    if (personalInfo && Object.keys(personalInfo).length > 0) {
+      return { ...personalInfo, calendlyUrl: personalInfo.calendlyUrl || calendlyFromApi };
+    }
     if (!apiUser && !apiProfessional) return null;
     return {
       fullName:
         apiUser?.name ||
         apiProfessional?.full_name ||
-        [apiUser?.firstName, apiUser?.lastName]
-          .filter(Boolean)
-          .join(" ")
-          .trim() ||
+        [apiUser?.firstName, apiUser?.lastName].filter(Boolean).join(" ").trim() ||
         "",
       email: apiUser?.email || apiProfessional?.email || "",
       phone: apiProfessional?.phone || apiUser?.phone || "",
       website: apiProfessional?.website || "",
+      calendlyUrl: calendlyFromApi,
       location: apiProfessional?.location || "",
       role: apiUser?.role || apiProfessional?.professional_type || "",
       profileImage: apiProfessional?.img_url || apiUser?.img_url || "",
@@ -81,15 +68,14 @@ function ProfilePageContent() {
   }, [personalInfo, apiUser, apiProfessional]);
 
   const resolvedBusiness = useMemo(() => {
-    if (businessInfo && Object.keys(businessInfo).length > 0)
-      return businessInfo;
+    const calendlyFromApi = String(apiProfessional?.calendly_link || "").trim();
+    if (businessInfo && Object.keys(businessInfo).length > 0) {
+      return { ...businessInfo, calendlyLink: businessInfo.calendlyLink || calendlyFromApi };
+    }
     if (!apiProfessional && !apiUser) return null;
     return {
       professionalType:
-        apiProfessional?.professional_type ||
-        apiUser?.role ||
-        apiUser?.title ||
-        "",
+        apiProfessional?.professional_type || apiUser?.role || apiUser?.title || "",
       companyName: apiProfessional?.company_name || "",
       website: apiProfessional?.website || "",
       phone: apiProfessional?.phone || apiUser?.phone || "",
@@ -110,218 +96,156 @@ function ProfilePageContent() {
       careerTransactions: apiProfessional?.career_transactions || "",
       clientRating: apiProfessional?.client_rating || "",
       awards: apiProfessional?.awards || "",
-      testimonial: apiProfessional?.testimonial || apiUser?.bio || "",
+      bio: apiProfessional?.bio || apiProfessional?.testimonial || apiUser?.bio || "",
       targetNeighborhoods: apiProfessional?.target_neighborhoods || "",
       fullName:
         apiProfessional?.full_name ||
         apiUser?.name ||
-        [apiUser?.firstName, apiUser?.lastName]
-          .filter(Boolean)
-          .join(" ")
-          .trim() ||
+        [apiUser?.firstName, apiUser?.lastName].filter(Boolean).join(" ").trim() ||
         "",
       location: apiProfessional?.location || "",
       specializations: apiProfessional?.specializations || [],
       communicationChannels: apiProfessional?.communication_channels || [],
       preferredClients: apiProfessional?.preferred_clients || [],
+      calendlyLink: calendlyFromApi,
     };
   }, [businessInfo, apiProfessional, apiUser]);
+
+  const bio = resolvedBusiness?.bio || resolvedBusiness?.testimonial || "";
 
   const displayFullName = useMemo(() => {
     const source = resolvedPersonal || {};
     const fromPersonal =
       source.fullName ||
       [source.firstName, source.lastName].filter(Boolean).join(" ").trim();
-    return (
-      fromPersonal ||
-      resolvedBusiness?.fullName ||
-      resolvedBusiness?.professionalType ||
-      ""
-    );
+    return fromPersonal || resolvedBusiness?.fullName || resolvedBusiness?.professionalType || "";
   }, [resolvedPersonal, resolvedBusiness]);
 
-  const activePlan = useMemo(() => {
-    if (selectedPlan) return selectedPlan;
-    if (pricingPlans?.length) {
-      return pricingPlans.find((p) => p.popular) || pricingPlans[0];
-    }
-    return null;
-  }, [selectedPlan, pricingPlans]);
-
-  const rating = Number(resolvedBusiness?.clientRating) || 0;
-  const listings = Number(resolvedBusiness?.careerTransactions) || 0;
-  const sold = Number(resolvedBusiness?.transactionsThisYear) || 0;
-  const ratingPercent = Math.min(100, (rating / 5) * 100 || 0);
-  const soldPercent = listings > 0 ? Math.min(100, (sold / listings) * 100) : 0;
-
-  const renderContent = () => {
-    if (normalizedEmail && publicProfileQuery.isLoading) {
-      return <div className="text-sm text-text-muted">Loading profile...</div>;
-    }
-    if (!resolvedPersonal && !resolvedBusiness) {
-      return (
-        <div className="text-sm text-text-muted">
-          Provide an email query parameter to view a public profile.
-        </div>
-      );
-    }
-
-    switch (activeTab) {
-      case "personal":
-        return (
-          <PersonalCard
-            displayFullName={displayFullName}
-            personalInfo={resolvedPersonal || {}}
-            businessInfo={resolvedBusiness || {}}
-          />
-        );
-      case "business":
-        return <BusinessCard businessInfo={resolvedBusiness || {}} />;
-      case "status":
-        return (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <StatusCard
-                title="Profile Rating"
-                value={`${rating.toFixed(1) || "0.0"}`}
-                percent={ratingPercent}
-                accent="#10b981"
-              />
-              <StatusCard
-                title="Properties Sold"
-                value={sold || 0}
-                percent={soldPercent}
-                accent="#3b82f6"
-                subtitle={
-                  listings
-                    ? `${sold} of ${listings} listings`
-                    : "No listings yet"
-                }
-              />
-            </div>
-          </div>
-        );
-      case "subscription":
-        return <SubscriptionCard activePlan={activePlan} />;
-      default:
-        return null;
-    }
-  };
-
-  const activeMeta = tabs.find((t) => t.id === activeTab);
-  const ActiveIcon = activeMeta?.icon;
-
   const heroStyle = resolvedPersonal?.coverImage
-    ? {
-      backgroundImage: `url(${resolvedPersonal.coverImage})`,
-      backgroundSize: "cover",
-      backgroundPosition: "center",
-    }
+    ? { backgroundImage: `url(${resolvedPersonal.coverImage})`, backgroundSize: "cover", backgroundPosition: "center" }
     : {};
 
-
   if (!isMounted) {
-    return <div className="p-6 text-sm text-text-muted">Loading profile...</div>;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 p-6">
+        <ProfilePageContentSkeleton />
+        <p className="mt-4 text-center text-xs font-medium text-primary">Loading…</p>
+      </div>
+    );
+  }
+
+  if (normalizedEmail && publicProfileQuery.isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 p-6">
+        <ProfilePageContentSkeleton />
+        <p className="mt-4 text-center text-xs font-medium text-primary">Loading profile…</p>
+      </div>
+    );
+  }
+
+  if (!resolvedPersonal && !resolvedBusiness) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 px-4 py-12">
+        <div className="mx-auto max-w-lg rounded-2xl border border-border bg-white p-8 text-center shadow-sm">
+          <p className="text-sm text-text-muted">
+            Provide an <span className="font-medium text-text-heading">email</span> query parameter to view a public
+            profile, or sign in to see your own profile.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
+      <div className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
+        {/* ── Hero ── */}
         <motion.div
-          initial={{ opacity: 0, y: 12 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className={`relative overflow-hidden rounded-md ${resolvedPersonal?.coverImage ? "text-white" : "bg-primary-dark/20 text-white"
-            } p-6 md:p-8 shadow-lg shadow-primary/10 `}
+          transition={{ duration: 0.4 }}
+          className={`relative overflow-hidden rounded-2xl border shadow-xl ${
+            resolvedPersonal?.coverImage
+              ? "border-white/10 text-white ring-1 ring-white/10 shadow-black/20"
+              : "border-primary/20 text-white ring-1 ring-white/15 shadow-primary/25"
+          }`}
           style={heroStyle}
         >
-          <div className="absolute inset-0 bg-black/60 pointer-events-none" />
-          <div className="relative z-10 flex flex-col md:flex-row md:items-center md:justify-between gap-6">
-            <div className="flex items-center gap-4">
+          {!resolvedPersonal?.coverImage ? (
+            <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark/95 to-emerald-700/90" aria-hidden />
+          ) : null}
+          {resolvedPersonal?.coverImage ? (
+            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/35" aria-hidden />
+          ) : null}
 
-              <div className="relative">
-                <div className="w-16 h-16 md:w-20 md:h-20 rounded-md bg-white shadow-md shadow-border/20 border border-border/20 overflow-hidden flex items-center justify-center text-xl font-bold text-primary-dark">
-                  {resolvedPersonal?.profileImage ||
-                    apiProfile?.professionalProfile?.profile_image ? (
+          <div className="relative z-10 p-5 sm:p-7">
+            <div className="flex items-start gap-4">
+              {/* Avatar */}
+              <div className="relative shrink-0">
+                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border-2 border-white/20 bg-white text-xl font-bold text-primary-dark shadow-lg sm:h-[4.5rem] sm:w-[4.5rem]">
+                  {resolvedPersonal?.profileImage || apiProfile?.professionalProfile?.profile_image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={
-                        resolvedPersonal?.profileImage ||
-                        apiProfile?.professionalProfile?.profile_image
-                      }
-                      alt="Profile avatar"
-                      className="w-full h-full object-cover"
+                      src={resolvedPersonal?.profileImage || apiProfile?.professionalProfile?.profile_image}
+                      alt={displayFullName || "Profile photo"}
+                      className="h-full w-full object-cover"
                     />
                   ) : (
                     (displayFullName || "N").slice(0, 1).toUpperCase()
                   )}
                 </div>
-                <span className="absolute -bottom-1 -right-1 px-2 py-1 rounded-md bg-white shadow-sm text-[11px] font-semibold text-primary border border-primary/10">
+                <span className="absolute -bottom-1 -right-1 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
                   Active
                 </span>
               </div>
 
-              <div className="space-y-1">
-                <h1 className="text-3xl text-white/80 font-bold">
-                  {displayFullName || "Your Profile"}
-                </h1>
-                <p className="text-white/80 text-sm">
-                  A quick view of your personal, business, and subscription
-                  details.
-                </p>
+              {/* Name + role + bio */}
+              <div className="min-w-0 flex-1 pt-0.5">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
+                    {displayFullName || "Your Profile"}
+                  </h1>
+                  {resolvedBusiness?.professionalType ? (
+                    <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
+                      {resolvedBusiness.professionalType}
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* Bio right under the name in hero */}
+                {bio ? (
+                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75">
+                    {bio}
+                  </p>
+                ) : (
+                  <p className="mt-1.5 text-sm text-white/50 italic">No bio added yet.</p>
+                )}
               </div>
-            </div>
-            <div className="flex flex-wrap gap-3">
-              {resolvedBusiness?.professionalType ? (
-                <span className="px-3 py-1 bg-primary text-white rounded-md text-primary text-xs font-semibold border border-primary/20">
-                  {resolvedBusiness?.professionalType?.toUpperCase()}
-                </span>
-              ) : null}
             </div>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-3 relative">
-            <SidebarTabs
-              tabs={tabs}
-              activeId={activeTab}
-              onChange={setActiveTab}
-              stickyTop={stickyTop}
-              activeClassName="bg-primary-dark text-white"
-              inactiveClassName="text-text-heading hover:bg-primary/5"
-              activeIconClassName="bg-white/20 text-white"
-              inactiveIconClassName="bg-background-light"
+        {/* ── Sections ── */}
+        <motion.div
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3, delay: 0.08 }}
+          className="flex flex-col gap-4"
+        >
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.05] sm:p-6">
+            <SectionHeader icon={User} title="Contact & role" />
+            <PersonalCard
+              displayFullName={displayFullName}
+              personalInfo={resolvedPersonal || {}}
+              businessInfo={resolvedBusiness || {}}
             />
-          </div>
+          </section>
 
-          <div className="lg:col-span-9">
-            <div className="rounded-md border border-border bg-white shadow-sm p-6 space-y-6">
-              <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                  {ActiveIcon ? <ActiveIcon size={18} /> : null}
-                </div>
-                <div>
-                  <div className="text-xl font-bold text-text-heading">
-                    {activeMeta?.label || "Profile"}
-                  </div>
-                  <div className="text-sm text-text-body">
-                    View and manage your profile information
-                  </div>
-                </div>
-              </div>
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18 }}
-              >
-                {renderContent()}
-              </motion.div>
-            </div>
-          </div>
-        </div>
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.05] sm:p-6">
+            <SectionHeader icon={Briefcase} title="Business & expertise" />
+            <BusinessCard businessInfo={resolvedBusiness || {}} />
+          </section>
+        </motion.div>
       </div>
     </div>
   );
@@ -329,7 +253,14 @@ function ProfilePageContent() {
 
 export default function ProfilePage() {
   return (
-    <Suspense fallback={<div className="p-6 text-sm text-text-muted">Loading...</div>}>
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 p-6">
+          <ProfilePageContentSkeleton />
+          <p className="mt-4 text-center text-xs font-medium text-primary">Loading…</p>
+        </div>
+      }
+    >
       <ProfilePageContent />
     </Suspense>
   );

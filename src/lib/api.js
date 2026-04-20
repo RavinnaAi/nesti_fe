@@ -80,6 +80,7 @@ export const API_ENDPOINTS = {
     remove: withBaseUrl((id) => `/api/leads/${id}`),
     conversation: withBaseUrl((id) => `/api/leads/${id}/conversation`),
     propertyMatches: withBaseUrl((id) => `/api/leads/${id}/property-matches`),
+    recordView: withBaseUrl((id) => `/api/leads/${id}/view`),
   },
   chat: {
     /** Public embed POST (no Bearer); body includes embedToken. */
@@ -102,6 +103,7 @@ export const API_ENDPOINTS = {
       summary: withBaseUrl("/api/chat/analytics/summary"),
       funnel: withBaseUrl("/api/chat/analytics/funnel"),
       timeseries: withBaseUrl("/api/chat/analytics/timeseries"),
+      leadTrends: withBaseUrl("/api/chat/analytics/lead-trends"),
     },
   },
   calendar: {

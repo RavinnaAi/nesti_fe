@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { User } from "lucide-react";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
+import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
 
 const th =
   "whitespace-nowrap px-2 py-2 text-left text-[10px] font-semibold uppercase tracking-wide text-text-muted sm:text-[11px]";
@@ -33,6 +34,70 @@ function contactPhone(profile) {
   return String(c.phone || "").trim() || null;
 }
 
+function TopLeadsTableSkeleton() {
+  const widths = ["w-4", "w-24", "w-28", "w-14", "w-10", "w-8", "w-20"];
+  return (
+    <div className="overflow-x-auto -mx-1" aria-hidden>
+      <table className="w-full min-w-[440px] border-collapse text-left">
+        <thead>
+          <tr className="border-b border-border bg-primary/[0.04]">
+            <th className={th}>#</th>
+            <th className={th}>Name</th>
+            <th className={th}>Email</th>
+            <th className={th}>Intent</th>
+            <th className={th}>Grade</th>
+            <th className={`${th} tabular-nums`}>Score</th>
+            <th className={th}>Location</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/60">
+          {Array.from({ length: 5 }).map((_, r) => (
+            <tr key={r}>
+              {widths.map((w, c) => (
+                <td key={c} className={tdMuted}>
+                  <SkeletonBlock className={`h-3.5 ${w}`} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function TopProfilesTableSkeleton() {
+  const widths = ["w-4", "w-32", "w-28", "w-16", "w-20", "w-14", "w-8"];
+  return (
+    <div className="overflow-x-auto -mx-1" aria-hidden>
+      <table className="w-full min-w-[560px] border-collapse text-left">
+        <thead>
+          <tr className="border-b border-border bg-primary/[0.04]">
+            <th className={th}>#</th>
+            <th className={th}>Client</th>
+            <th className={th}>Email</th>
+            <th className={th}>Phone</th>
+            <th className={th}>Location</th>
+            <th className={`${th} text-right`}>Budget</th>
+            <th className={`${th} text-center tabular-nums`}>Leads</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/60">
+          {Array.from({ length: 5 }).map((_, r) => (
+            <tr key={r}>
+              {widths.map((w, c) => (
+                <td key={c} className={tdMuted}>
+                  <SkeletonBlock className={`h-3.5 ${w}`} />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export default function DashboardTopTables({
   topLeads = [],
   topProfiles = [],
@@ -48,7 +113,7 @@ export default function DashboardTopTables({
         <h2 className="text-sm font-bold text-text-heading">Top 5 leads</h2>
         <p className="text-xs text-text-muted mt-0.5 mb-3">Highest lead score in your workspace (same list as charts).</p>
         {leadsLoading ? (
-          <p className="text-sm text-text-muted py-6">Loading leads…</p>
+          <TopLeadsTableSkeleton />
         ) : leadsError ? (
           <p className="text-sm text-red-600 py-4">Could not load leads.</p>
         ) : topLeads.length === 0 ? (
@@ -109,7 +174,7 @@ export default function DashboardTopTables({
         <h2 className="text-sm font-bold text-text-heading">Top 5 client profiles</h2>
         <p className="text-xs text-text-muted mt-0.5 mb-3">Profiles with the most linked leads (from your client list).</p>
         {profilesLoading ? (
-          <p className="text-sm text-text-muted py-6">Loading profiles…</p>
+          <TopProfilesTableSkeleton />
         ) : profilesError ? (
           <p className="text-sm text-red-600 py-4">Could not load profiles.</p>
         ) : topProfiles.length === 0 ? (

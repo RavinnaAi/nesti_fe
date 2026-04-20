@@ -23,18 +23,15 @@ import {
 } from "@/utils/validation";
 import { useSignupFlow } from "@/hooks/useSignupFlow";
 import { useSignup, useGoogleSignup } from "@/hooks/useAuthApi";
-import { useAppDispatch } from "@/store";
-import { logoutAndClearAll } from "@/store/actions";
+import { useAppSelector } from "@/store";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
+  const token = useAppSelector((state) => state.auth.token);
 
-  // Clear any stale session so the Header doesn't show authenticated state
-  // while the user is on the public sign-up page
   useEffect(() => {
-    dispatch(logoutAndClearAll());
-  }, [dispatch]);
+    if (token) router.replace("/dashboard");
+  }, [token, router]);
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(null);

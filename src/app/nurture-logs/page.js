@@ -6,6 +6,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchNurtureLogs } from "@/lib/chatClient";
 import LeadsNurtureLogsTab from "@/components/leads/LeadsNurtureLogsTab";
+import { NurtureLogsListSkeleton } from "@/components/ui/ContentSkeletons";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -43,7 +44,16 @@ export default function NurtureLogsPage() {
   const hasNext = Boolean(pagination.has_next_page || currentPage < totalPages);
 
   if (!hydrated) {
-    return <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
+        <div className="mx-auto max-w-7xl px-6 py-10">
+          <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
+            <NurtureLogsListSkeleton rows={4} />
+            <p className="mt-4 text-center text-xs font-medium text-primary">Loading…</p>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) return null;

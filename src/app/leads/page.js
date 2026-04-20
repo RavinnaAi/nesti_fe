@@ -6,6 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useRecordLeadView } from "@/hooks/useRecordLeadView";
 import { useAppSelector } from "@/store";
 import {
   fetchReferrals,
@@ -35,6 +36,7 @@ import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
 import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
+import { LeadsPageTableSkeleton } from "@/components/ui/ContentSkeletons";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -338,6 +340,8 @@ function LeadsPageContent() {
     enabled: Boolean(token && selectedLeadId),
     queryFn: () => fetchLeadById({ token, id: selectedLeadId }),
   });
+
+  useRecordLeadView(selectedLeadId, { token, enabled: Boolean(selectedLeadId) });
 
   const selectedConversation = useMemo(() => {
     const base = conversations.find((c) => String(getLeadMatchId(c)) === String(selectedLeadId));
@@ -664,7 +668,13 @@ function LeadsPageContent() {
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
             {leadsQuery.isLoading ? (
-              <div className="p-4 text-sm text-text-muted">Loading leads...</div>
+              <div className="p-3 sm:p-4">
+                <LeadsPageTableSkeleton rows={8} />
+                <p className="mt-3 flex items-center gap-2 text-xs font-medium text-primary">
+                  <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+                  Loading leads…
+                </p>
+              </div>
             ) : leadsQuery.isError ? (
               <div className="p-4 text-sm text-red-600">Failed to load leads.</div>
             ) : filteredConversations.length === 0 ? (
@@ -762,11 +772,19 @@ function LeadsPageContent() {
           </div>
 
           <div className="rounded-md border border-border bg-white p-3 shadow-sm flex items-center justify-between gap-3">
-            <div className="text-xs text-text-muted">
-              Page {leadsPagination.current} of {leadsPagination.totalPages}
-              {Number.isFinite(leadsPagination.total) && leadsPagination.total > 0
-                ? ` · ${leadsPagination.total} total leads`
-                : ""}
+            <div className="flex items-center gap-2 text-xs text-text-muted">
+              {leadsQuery.isFetching && !leadsQuery.isLoading ? (
+                <span
+                  className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                  aria-hidden
+                />
+              ) : null}
+              <span>
+                Page {leadsPagination.current} of {leadsPagination.totalPages}
+                {Number.isFinite(leadsPagination.total) && leadsPagination.total > 0
+                  ? ` · ${leadsPagination.total} total leads`
+                  : ""}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <button

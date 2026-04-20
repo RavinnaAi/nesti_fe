@@ -41,10 +41,19 @@ export default function AnalyticsCrmLeadInsights({ gradeMix = [], propertyTypeMi
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
-        <div className="xl:col-span-3 h-[240px] rounded-xl border border-border bg-white animate-pulse" />
-        <div className="xl:col-span-2 h-[240px] rounded-xl border border-border bg-white animate-pulse" />
-        <div className="xl:col-span-full h-[250px] max-w-3xl mx-auto w-full rounded-xl border border-border bg-white animate-pulse" />
+      <div className="space-y-3" aria-busy="true" aria-label="Loading CRM insights">
+        <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
+          <div className="xl:col-span-3 h-[240px] rounded-xl border border-border bg-white">
+            <div className="h-full w-full rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
+          </div>
+          <div className="xl:col-span-2 h-[240px] rounded-xl border border-border bg-white">
+            <div className="h-full w-full rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
+          </div>
+          <div className="xl:col-span-full mx-auto h-[250px] w-full max-w-3xl rounded-xl border border-border bg-white">
+            <div className="h-full w-full rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
+          </div>
+        </div>
+        <p className="text-center text-xs font-medium text-primary">Loading CRM charts…</p>
       </div>
     );
   }

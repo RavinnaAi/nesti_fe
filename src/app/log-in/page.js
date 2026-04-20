@@ -13,17 +13,16 @@ import SubmitButton from "@/components/auth/SubmitButton";
 import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
 import { useLogin } from "@/hooks/useAuthApi";
-import { useAppDispatch } from "@/store";
-import { logoutAndClearAll } from "@/store/actions";
+import { useAppSelector } from "@/store";
 
 export default function LoginPage() {
   const router = useRouter();
-  const dispatch = useAppDispatch();
+  const token = useAppSelector((state) => state.auth.token);
 
-  // Clear any stale session when landing on the login page
+  // Logged-in users belong in the app — do not wipe session on mount (that broke reload flows).
   useEffect(() => {
-    dispatch(logoutAndClearAll());
-  }, [dispatch]);
+    if (token) router.replace("/dashboard");
+  }, [token, router]);
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
     email: "",

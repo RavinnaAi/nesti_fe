@@ -4,37 +4,32 @@ export const dynamic = "force-dynamic";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  User,
-  Lock,
-  CreditCard,
-  Code2,
-  Building,
-  Copy,
-  Share2,
-} from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import PersonalInfo from "@/components/settings/PersonalInfo";
 import ChangePassword from "@/components/settings/ChangePassword";
 import SubscriptionInfo from "@/components/settings/SubscriptionInfo";
 import ChatbotEmbed from "@/components/settings/ChatbotEmbed";
 import BusinessInformation from "@/components/settings/BusinessInformation";
+import IcpIntegrationCard from "@/components/settings/IcpIntegrationCard";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { toast } from "react-toastify";
-import { useAppSelector } from "@/store";
+import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
 
-const tabs = [
-  { id: "personal", label: "Personal Information", icon: User },
-  { id: "business", label: "Business Information", icon: Building },
-  { id: "password", label: "Change Password", icon: Lock },
-  { id: "subscription", label: "Subscription", icon: CreditCard },
-  { id: "chatbot", label: "Embed Chatbot", icon: Code2 },
-];
+const VALID_TABS = ["personal", "business", "icp", "password", "subscription", "chatbot"];
 
 function SettingsPageFallback() {
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="rounded-md border border-border bg-white shadow-sm p-6 min-h-[240px] animate-pulse bg-background-light/40" />
+    <div className="max-w-5xl mx-auto px-4 py-8 space-y-4" aria-busy="true" aria-label="Loading settings">
+      <div className="rounded-xl border border-border bg-white p-6 shadow-sm space-y-4">
+        <SkeletonBlock className="h-6 w-48 max-w-full" />
+        <SkeletonBlock className="h-4 w-full max-w-xl" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+        <SkeletonBlock className="h-32 w-full rounded-lg" />
+      </div>
     </div>
   );
 }
@@ -54,7 +49,7 @@ function SettingsPageContent() {
     const upgrade = searchParams.get("upgrade");
     const expired = searchParams.get("expired");
 
-    if (tab && tabs.some((t) => t.id === tab)) {
+    if (tab && VALID_TABS.includes(tab)) {
       setActiveTab(tab);
     } else if (!tab) {
       setActiveTab("personal");
@@ -66,6 +61,7 @@ function SettingsPageContent() {
       toast.warning("Your trial has expired. Please subscribe to continue.");
     }
   }, [searchParams]);
+
   const ActiveComponent = useMemo(() => {
     switch (activeTab) {
       case "personal":
@@ -78,6 +74,8 @@ function SettingsPageContent() {
         return ChatbotEmbed;
       case "business":
         return BusinessInformation;
+      case "icp":
+        return IcpIntegrationCard;
       default:
         return PersonalInfo;
     }
@@ -85,83 +83,20 @@ function SettingsPageContent() {
 
   const Content = ActiveComponent;
 
-  const activeMeta = tabs.find((t) => t.id === activeTab);
-  const { user } = useAppSelector((state) => state.auth);
-  const ActiveIcon = activeMeta?.icon;
-
-  // Prevent hydration mismatch: auth state is client-derived.
-  if (!isMounted) {
-    return null;
-  }
-
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isMounted) return null;
+  if (!isAuthenticated) return null;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="rounded-md border border-border bg-white shadow-sm p-6">
-        <div className="flex items-center gap-3 mb-6">
-          <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-            {ActiveIcon ? <ActiveIcon size={18} /> : null}
-          </div>
-          <div className="flex-1">
-            <div className="text-xl font-bold text-text-heading">
-              {activeMeta?.label || "Profile Information"}
-            </div>
-            <div className="text-sm text-text-body">
-              Manage your account preferences
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={async () => {
-                const link =
-                  (typeof window !== "undefined"
-                    ? window.location.origin
-                    : "") + `/profile?email=${user?.email}`;
-                try {
-                  await navigator.clipboard.writeText(link);
-                  toast.success("Link copied to clipboard");
-                } catch (err) {
-                  toast.error("Failed to copy link");
-                }
-              }}
-              className="h-10 w-10 rounded-md bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
-              aria-label="Copy public link"
-            >
-              <Copy size={16} className="text-text-heading" />
-            </button>
-            <button
-              type="button"
-              onClick={async () => {
-                const link =
-                  (typeof window !== "undefined"
-                    ? window.location.origin
-                    : "") + `/profile?email=${user?.email}`;
-                try {
-                  await navigator.clipboard.writeText(link);
-                  toast.success("Share link copied to clipboard");
-                } catch (err) {
-                  toast.error("Failed to copy link");
-                }
-              }}
-              className="h-10 w-10 rounded-md bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
-              aria-label="Share"
-            >
-              <Share2 size={16} className="text-text-heading" />
-            </button>
-          </div>
-        </div>
-
+    <div className="max-w-5xl mx-auto px-4 py-6">
+      <div className="rounded-xl border border-border bg-white shadow-sm">
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
-            initial={{ opacity: 0, y: 8 }}
+            initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
+            exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
+            className="p-6"
           >
             <Content />
           </motion.div>
