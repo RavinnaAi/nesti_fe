@@ -1,55 +1,64 @@
-"use client";
-
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 
-const AUTH_STORAGE_KEY = "nesti_auth_state";
-
-const getStoredAuthToken = () => {
-    if (typeof window === "undefined") return "";
-    try {
-        const stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
-        // Alternatively check localStorage if sessionStorage is empty, or use the one from redux persistence if available
-        // But adhering to chatClient pattern:
-        if (!stored) return "";
-        const parsed = JSON.parse(stored);
-        return parsed?.token || "";
-    } catch (_err) {
-        return "";
-    }
-};
-
-export async function connectCalendar(provider, token) {
-    const authToken = token || getStoredAuthToken();
-    return apiClient({
-        url: API_ENDPOINTS.calendar.connect(provider),
-        method: "GET",
-        token: authToken,
-    });
+/**
+ * GET /api/calendar/connect/calendly — returns { success, authUrl } (Bearer).
+ */
+export async function fetchCalendlyConnectUrl({ token }) {
+  return apiClient({
+    url: API_ENDPOINTS.calendar.connect("calendly"),
+    method: "GET",
+    token,
+  });
 }
 
-export async function fetchCalendarStatus(token) {
-    const authToken = token || getStoredAuthToken();
-    return apiClient({
-        url: API_ENDPOINTS.calendar.status,
-        method: "GET",
-        token: authToken,
-    });
+/**
+ * GET /api/calendar/status — { success, status: [{ provider, account_email, expires_at, ... }] }.
+ */
+export async function fetchCalendarStatus({ token }) {
+  return apiClient({
+    url: API_ENDPOINTS.calendar.status,
+    method: "GET",
+    token,
+  });
 }
 
-export async function disconnectCalendar(provider, token) {
-    const authToken = token || getStoredAuthToken();
-    return apiClient({
-        url: API_ENDPOINTS.calendar.disconnect(provider),
-        method: "DELETE",
-        token: authToken,
-    });
+/**
+ * DELETE /api/calendar/disconnect/calendly
+ */
+export async function disconnectCalendly({ token }) {
+  return apiClient({
+    url: API_ENDPOINTS.calendar.disconnect("calendly"),
+    method: "DELETE",
+    token,
+  });
 }
 
-export async function fetchBookings(token) {
-    const authToken = token || getStoredAuthToken();
-    return apiClient({
-        url: API_ENDPOINTS.calendar.bookings,
-        method: "GET",
-        token: authToken,
-    });
+/**
+ * POST /api/calendar/calendly/webhook-subscription — { webhookUrl? } body optional if server has env.
+ */
+export async function registerCalendlyWebhook({ token, webhookUrl }) {
+  const trimmed = webhookUrl != null ? String(webhookUrl).trim() : "";
+  return apiClient({
+    url: API_ENDPOINTS.calendar.webhookSubscription,
+    method: "POST",
+    data: trimmed ? { webhookUrl: trimmed } : {},
+    token,
+  });
+}
+
+/**
+ * POST /api/calendar/calendly/cancel-booking — cancel the Calendly event for a booked lead.
+ */
+export async function cancelCalendlyAppointment({ token, leadMatchId, reason }) {
+  const id = String(leadMatchId || "").trim();
+  if (!id) throw new Error("lead_match_id is required");
+  const payload = { lead_match_id: id };
+  const r = reason != null ? String(reason).trim().slice(0, 500) : "";
+  if (r) payload.reason = r;
+  return apiClient({
+    url: API_ENDPOINTS.calendar.cancelCalendlyBooking,
+    method: "POST",
+    data: payload,
+    token,
+  });
 }

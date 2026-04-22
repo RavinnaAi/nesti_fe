@@ -283,7 +283,7 @@ export default function PersonalInfo() {
           onChange={handleChange}
           onFocus={() => setFocusedField("calendlyUrl")}
           onBlur={() => setFocusedField("")}
-          placeholder="Enter Calendly URL"
+          placeholder="https://calendly.com/your-handle/..."
           icon={Calendar}
           focusedField={focusedField}
         />

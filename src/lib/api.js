@@ -77,6 +77,7 @@ export const API_ENDPOINTS = {
     profileDetail: withBaseUrl((id) => `/api/leads/profiles/${id}`),
     profileLeads: withBaseUrl((id) => `/api/leads/profiles/${id}/leads`),
     detail: withBaseUrl((id) => `/api/leads/${id}`),
+    patch: withBaseUrl((id) => `/api/leads/${id}`),
     remove: withBaseUrl((id) => `/api/leads/${id}`),
     conversation: withBaseUrl((id) => `/api/leads/${id}/conversation`),
     propertyMatches: withBaseUrl((id) => `/api/leads/${id}/property-matches`),
@@ -108,6 +109,8 @@ export const API_ENDPOINTS = {
   },
   calendar: {
     connect: (provider) => withBaseUrl(`/api/calendar/connect/${provider}`),
+    webhookSubscription: withBaseUrl("/api/calendar/calendly/webhook-subscription"),
+    cancelCalendlyBooking: withBaseUrl("/api/calendar/calendly/cancel-booking"),
     bookings: withBaseUrl("/api/calendar/bookings"),
     status: withBaseUrl("/api/calendar/status"),
     disconnect: (provider) => withBaseUrl(`/api/calendar/disconnect/${provider}`),

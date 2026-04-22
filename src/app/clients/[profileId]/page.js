@@ -11,7 +11,7 @@ import { fetchLeadProfileById, fetchLeadsByProfileId } from "@/lib/leadsClient";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
 import { ClientProfileCardSkeleton, ProfileLeadsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
-const PAGE_SIZE = 15;
+const PAGE_SIZE = 10;
 
 function humanize(value) {
   if (value == null || value === "") return "—";
@@ -242,7 +242,7 @@ export default function ClientProfileLeadsPage() {
 
               {leadsQuery.isLoading && !leadsQuery.data ? (
                 <div className="px-2 py-4 sm:px-3">
-                  <ProfileLeadsTableSkeleton rows={6} />
+                  <ProfileLeadsTableSkeleton rows={PAGE_SIZE} />
                   <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
                     <span
                       className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"

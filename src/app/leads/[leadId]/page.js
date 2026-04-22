@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useState } from "react";
-import { useParams, useRouter, useSearchParams } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { toast } from "react-toastify";
@@ -25,9 +25,13 @@ import {
   fetchLeadConversation,
   fetchLeadPropertyMatches,
   deleteLeadById,
+  patchLead,
 } from "@/lib/leadsClient";
+import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
+import { LEAD_WORKSPACE_TAB_IDS } from "@/lib/leadWorkspaceTabsMeta";
+import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
 import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
 import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
 import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
@@ -138,6 +142,7 @@ function LeadWorkspacePageContent() {
   const { isAuthenticated } = useAuthGuard();
   const { token } = useAppSelector((state) => state.auth);
   const params = useParams();
+  const pathname = usePathname() || "";
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryClient = useQueryClient();
@@ -148,9 +153,24 @@ function LeadWorkspacePageContent() {
   const leadId = normalizeLeadId(rawLeadIdParam);
   const backPage = Number(searchParams.get("page") || "1");
   const backParamRaw = searchParams.get("back");
-  const leadsListHref = `/leads?page=${Number.isFinite(backPage) && backPage > 0 ? backPage : 1}`;
+  const listStatusQ = String(searchParams.get("status") || "").trim();
+  const listPipelineQ = String(searchParams.get("pipeline") || "").trim();
+  const tabFromUrl = String(searchParams.get("tab") || "").trim();
+  const leadsListHref = useMemo(() => {
+    const p = new URLSearchParams();
+    const pageNum = Number.isFinite(backPage) && backPage > 0 ? backPage : 1;
+    p.set("page", String(pageNum));
+    if (listStatusQ) p.set("status", listStatusQ);
+    if (listPipelineQ) p.set("pipeline", listPipelineQ);
+    return `/leads?${p.toString()}`;
+  }, [backPage, listStatusQ, listPipelineQ]);
   const returnHref = sanitizeInternalReturnPath(backParamRaw) || leadsListHref;
-  const backButtonLabel = returnHref.startsWith("/clients/") ? "Back to clients" : "Back to leads";
+  const openedFromPipelineFilter = Boolean(listStatusQ || listPipelineQ);
+  const backButtonLabel = returnHref.startsWith("/clients/")
+    ? "Back to clients"
+    : openedFromPipelineFilter
+      ? "Back to pipeline list"
+      : "Back to leads";
 
   const [referralForm, setReferralForm] = useState({
     target_vertical: "realtor",
@@ -182,6 +202,14 @@ function LeadWorkspacePageContent() {
   }, []);
 
   useEffect(() => {
+    if (tabFromUrl && LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl)) {
+      setActiveTab(tabFromUrl);
+    } else {
+      setActiveTab("lead_profile");
+    }
+  }, [tabFromUrl, leadId]);
+
+  useEffect(() => {
     if (!rawLeadIdParam || !leadId) return;
     if (rawLeadIdParam === leadId) return;
     const page = Number.isFinite(backPage) && backPage > 0 ? backPage : 1;
@@ -189,8 +217,11 @@ function LeadWorkspacePageContent() {
     qs.set("page", String(page));
     const safeBack = sanitizeInternalReturnPath(backParamRaw);
     if (safeBack) qs.set("back", safeBack);
+    if (listStatusQ) qs.set("status", listStatusQ);
+    if (listPipelineQ) qs.set("pipeline", listPipelineQ);
+    if (tabFromUrl && LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl)) qs.set("tab", tabFromUrl);
     router.replace(`/leads/${encodeURIComponent(leadId)}?${qs.toString()}`);
-  }, [rawLeadIdParam, leadId, backPage, backParamRaw, router]);
+  }, [rawLeadIdParam, leadId, backPage, backParamRaw, listStatusQ, listPipelineQ, tabFromUrl, router]);
 
   const leadDetailQuery = useQuery({
     queryKey: ["lead-detail", token, leadId],
@@ -414,10 +445,43 @@ function LeadWorkspacePageContent() {
     },
   });
 
+  const cancelCalendlyMutation = useMutation({
+    mutationFn: () => cancelCalendlyAppointment({ token, leadMatchId: leadId }),
+    onSuccess: () => {
+      toast.success("Appointment canceled in Calendly.");
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail", token, leadId] });
+    },
+    onError: (err) => toast.error(err?.message || "Could not cancel appointment"),
+  });
+
+  const patchLeadMutation = useMutation({
+    mutationFn: (payload) => patchLead({ token, id: leadId, ...payload }),
+    onSuccess: (data) => {
+      toast.success("Lead updated");
+      if (data?.lead) {
+        queryClient.setQueryData(["lead-detail", token, leadId], (prev) => ({
+          ...(prev && typeof prev === "object" ? prev : {}),
+          success: true,
+          lead: data.lead,
+          conversation_id:
+            data.conversation_id != null ? data.conversation_id : prev?.conversation_id ?? null,
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+    },
+    onError: (err) => toast.error(err?.message || "Could not update lead"),
+  });
+
   const deleteLeadMutation = useMutation({
     mutationFn: () => deleteLeadById({ token, id: leadId }),
     onSuccess: () => {
       toast.success("Lead deleted successfully");
+      setShowDeleteConfirm(false);
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+      queryClient.removeQueries({ queryKey: ["lead-detail", token, leadId] });
+      queryClient.removeQueries({ queryKey: ["lead-conversation", token, leadId] });
+      queryClient.removeQueries({ queryKey: ["lead-property-matches", token, leadId] });
       router.push(returnHref);
     },
     onError: (err) => toast.error(err?.message || "Failed to delete lead"),
@@ -429,34 +493,14 @@ function LeadWorkspacePageContent() {
   return (
     <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10">
       <div className="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <button
-            type="button"
-            onClick={() => router.push(returnHref)}
-            className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline sm:text-xs"
-          >
-            <ArrowLeft size={14} />
-            {backButtonLabel}
-          </button>
-        </div>
-
-        <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-          <LeadsWorkspaceTabs
-            activeTab={activeTab}
-            onChange={setActiveTab}
-            endSlot={
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(true)}
-                disabled={deleteLeadMutation.isPending}
-                className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 border border-red-200 rounded-md px-2.5 py-1.5 bg-white hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                <Trash2 size={14} aria-hidden />
-                {deleteLeadMutation.isPending ? "Deleting…" : "Delete"}
-              </button>
-            }
-          />
-        </div>
+        <button
+          type="button"
+          onClick={() => router.push(returnHref)}
+          className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline sm:text-xs"
+        >
+          <ArrowLeft size={14} />
+          {backButtonLabel}
+        </button>
 
         {leadDetailQuery.isLoading ? (
           <LeadDetailPageSkeleton />
@@ -466,6 +510,29 @@ function LeadWorkspacePageContent() {
           </div>
         ) : (
           <>
+            <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+              <LeadsWorkspaceTabs
+                activeTab={activeTab}
+                onChange={(tabId) => {
+                  setActiveTab(tabId);
+                  const p = new URLSearchParams(searchParams.toString());
+                  p.set("tab", tabId);
+                  router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+                }}
+                endSlot={
+                  <button
+                    type="button"
+                    onClick={() => setShowDeleteConfirm(true)}
+                    disabled={deleteLeadMutation.isPending}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 border border-red-200 rounded-md px-2.5 py-1.5 bg-white hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
+                  >
+                    <Trash2 size={14} aria-hidden />
+                    {deleteLeadMutation.isPending ? "Deleting…" : "Delete"}
+                  </button>
+                }
+              />
+            </div>
+
             {activeTab === "lead_details" ? (
               <LeadsDetailsTab
                 selectedConversation={selectedConversation}
@@ -475,6 +542,8 @@ function LeadWorkspacePageContent() {
                 conversationMeta={conversationMeta}
                 formatMetaEntries={formatMetaEntries}
                 onOpenMeta={() => {}}
+                onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutate()}
+                cancelCalendlyPending={cancelCalendlyMutation.isPending}
               />
             ) : null}
 
@@ -510,6 +579,21 @@ function LeadWorkspacePageContent() {
               <LeadsProfileTab
                 selectedConversation={selectedConversation}
                 lead={leadDetailQuery.data?.lead || null}
+              />
+            ) : null}
+
+            {activeTab === "pipeline" ? (
+              <LeadPipelineNotesPanel
+                lead={leadDetailQuery.data?.lead || null}
+                onPatchLead={(body) => patchLeadMutation.mutateAsync(body)}
+                patchLeadPending={patchLeadMutation.isPending}
+                pipelineListFilterHint={
+                  openedFromPipelineFilter ? (
+                    <p className="text-xs text-text-muted leading-relaxed">
+                      You opened this lead from a filtered pipeline view. Change the stage below.
+                    </p>
+                  ) : null
+                }
               />
             ) : null}
 

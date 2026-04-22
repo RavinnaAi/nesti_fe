@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Trash2 } from "lucide-react";
@@ -26,9 +26,12 @@ import {
   fetchLeadConversation,
   fetchLeadPropertyMatches,
   deleteLeadById,
+  patchLead,
 } from "@/lib/leadsClient";
+import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
+import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
 import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
 import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
 import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
@@ -37,6 +40,10 @@ import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
 import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
 import { LeadsPageTableSkeleton } from "@/components/ui/ContentSkeletons";
+import LeadsListHeader from "@/components/leads/LeadsListHeader";
+import { getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
+import { useLeadsListFilters } from "@/hooks/useLeadsListFilters";
+import { getStatusDisplay } from "@/lib/leadPipelineConfig";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -45,6 +52,9 @@ const normalizeList = (data) => {
   if (Array.isArray(data?.items)) return data.items;
   return [];
 };
+
+/** Must match backend `fetchLeads` `limit` so pagination totals stay correct. */
+const LEADS_PAGE_SIZE = 10;
 
 /** Active chat thread id for referrals, nurture, calculators. */
 const getActionConversationId = (lead) =>
@@ -91,18 +101,26 @@ const getConversationMeta = (conversation) => {
 const matchesSearch = (conversation, term) => {
   if (!term) return true;
   const needle = term.toLowerCase();
+  const contact = conversation?.contact || {};
   const haystack = [
     conversation?.name,
     conversation?.visitor_name,
     conversation?.visitorName,
+    contact?.full_name,
+    contact?.name,
     conversation?.email,
     conversation?.visitor_email,
     conversation?.visitorEmail,
+    contact?.email,
     conversation?.phone,
     conversation?.visitor_phone,
     conversation?.visitorPhone,
     conversation?.city,
     conversation?.location,
+    conversation?.conversion?.property?.property_type,
+    conversation?.conversion?.property?.type,
+    conversation?.property?.property_type,
+    conversation?.property?.type,
     conversation?.visitor_id,
     conversation?.visitorId,
   ]
@@ -149,75 +167,6 @@ const toFiniteNumber = (value) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const extractRangeNumbers = (value) => {
-  if (value === null || value === undefined) return null;
-  const matches = String(value).match(/-?\d+(?:\.\d+)?/g);
-  if (!matches || matches.length < 2) return null;
-  const low = Number(matches[0]);
-  const high = Number(matches[1]);
-  if (!Number.isFinite(low) || !Number.isFinite(high)) return null;
-  return low <= high ? [low, high] : [high, low];
-};
-
-const formatMoney = (value) =>
-  new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
-
-const formatBudgetValue = (conversation) => {
-  const conversionProperty = conversation?.conversion?.property || {};
-  const minCandidate =
-    conversionProperty?.min_budget ??
-    conversation?.budget_profile?.min_budget ??
-    conversation?.property?.min_budget ??
-    conversation?.property?.budget_min;
-  const maxCandidate =
-    conversionProperty?.max_budget ??
-    conversation?.budget_profile?.max_budget ??
-    conversation?.property?.max_budget ??
-    conversation?.property?.budget_max;
-  const singleCandidate =
-    conversionProperty?.budget ??
-    conversionProperty?.price ??
-    conversation?.budget ??
-    conversation?.property?.budget ??
-    conversation?.property?.price ??
-    conversation?.price;
-
-  const min = toFiniteNumber(minCandidate);
-  const max = toFiniteNumber(maxCandidate);
-  if (min !== null && max !== null) return `${formatMoney(min)} - ${formatMoney(max)}`;
-  if (min !== null) return formatMoney(min);
-  if (max !== null) return formatMoney(max);
-
-  const single = toFiniteNumber(singleCandidate);
-  if (single !== null) return formatMoney(single);
-
-  const ranged = extractRangeNumbers(singleCandidate);
-  if (ranged) return `${formatMoney(ranged[0])} - ${formatMoney(ranged[1])}`;
-
-  return "N/A";
-};
-
-const getStatusLabel = (conversation, meta) => {
-  const rawStatus = String(
-    conversation?.status ||
-      conversation?.lead_status ||
-      conversation?.conversion_funnel?.stage ||
-      ""
-  )
-    .trim()
-    .toLowerCase();
-
-  if (rawStatus) return rawStatus.replace(/_/g, " ");
-  if (meta?.isMatched === true) return "matched";
-  if (meta?.isMatched === false) return "mismatched";
-  if (meta?.qualified) return "qualified";
-  return "new";
-};
-
 const getMatchesCount = (conversation) => {
   const candidates = [
     conversation?.stats?.total_matches,
@@ -246,6 +195,10 @@ function LeadsPageContent() {
   const [currentPage, setCurrentPage] = useState(Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1);
   const [searchTerm, setSearchTerm] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
+  const [appointmentFilter, setAppointmentFilter] = useState("all");
+  const appointmentFilterBoot = useRef(true);
+  const { status: statusFromUrl, pipeline: pipelineFromUrl, filterLabel, toLeadWorkspace, toListPage } =
+    useLeadsListFilters();
   const [activeTab, setActiveTab] = useState("lead_profile");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -289,17 +242,39 @@ function LeadsPageContent() {
     }
   }, [searchParams, currentPage]);
 
-  // Compatibility redirect: old deep links `/leads?lead=<id>` -> `/leads/<id>`.
+  // Compatibility redirect: old deep links `/leads?lead=<id>` -> `/leads/<id>` (keep list filters).
   useEffect(() => {
     if (!leadFromUrl) return;
     const pageNum = Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1;
-    router.replace(`/leads/${encodeURIComponent(leadFromUrl)}?page=${encodeURIComponent(String(pageNum))}`);
-  }, [leadFromUrl, pageFromUrl, router]);
+    const qs = new URLSearchParams();
+    qs.set("page", String(pageNum));
+    const st = String(searchParams.get("status") || "").trim();
+    const pl = String(searchParams.get("pipeline") || "").trim();
+    if (st) qs.set("status", st);
+    if (pl) qs.set("pipeline", pl);
+    router.replace(`/leads/${encodeURIComponent(leadFromUrl)}?${qs.toString()}`);
+  }, [leadFromUrl, pageFromUrl, router, searchParams]);
+
+  useEffect(() => {
+    if (appointmentFilterBoot.current) {
+      appointmentFilterBoot.current = false;
+      return;
+    }
+    setCurrentPage(1);
+  }, [appointmentFilter]);
 
   const leadsQuery = useQuery({
-    queryKey: ["leads", token, currentPage],
+    queryKey: ["leads", token, currentPage, appointmentFilter, statusFromUrl, pipelineFromUrl],
     enabled: Boolean(token),
-    queryFn: () => fetchLeads({ token, page: currentPage, limit: 8 }),
+    queryFn: () =>
+      fetchLeads({
+        token,
+        page: currentPage,
+        limit: LEADS_PAGE_SIZE,
+        ...(appointmentFilter && appointmentFilter !== "all" ? { appointment: appointmentFilter } : {}),
+        ...(statusFromUrl ? { status: statusFromUrl } : {}),
+        ...(!statusFromUrl && pipelineFromUrl ? { pipeline: pipelineFromUrl } : {}),
+      }),
   });
 
   const leadsPagination = useMemo(() => {
@@ -598,6 +573,35 @@ function LeadsPageContent() {
     onError: (err) => toast.error(err?.message || "Failed to run closing cost calculator"),
   });
 
+  const cancelCalendlyMutation = useMutation({
+    mutationFn: () => cancelCalendlyAppointment({ token, leadMatchId: selectedLeadId }),
+    onSuccess: () => {
+      toast.success("Appointment canceled in Calendly.");
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail", token, selectedLeadId] });
+    },
+    onError: (err) => toast.error(err?.message || "Could not cancel appointment"),
+  });
+
+  const patchLeadMutation = useMutation({
+    mutationFn: (payload) => patchLead({ token, id: selectedLeadId, ...payload }),
+    onSuccess: (data) => {
+      toast.success("Lead updated");
+      const id = selectedLeadId;
+      if (id && data?.lead) {
+        queryClient.setQueryData(["lead-detail", token, id], (prev) => ({
+          ...(prev && typeof prev === "object" ? prev : {}),
+          success: true,
+          lead: data.lead,
+          conversation_id:
+            data.conversation_id != null ? data.conversation_id : prev?.conversation_id ?? null,
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+    },
+    onError: (err) => toast.error(err?.message || "Could not update lead"),
+  });
+
   const deleteLeadMutation = useMutation({
     mutationFn: () => deleteLeadById({ token, id: selectedLeadId }),
     onSuccess: () => {
@@ -605,7 +609,7 @@ function LeadsPageContent() {
       toast.success("Lead deleted successfully");
       setShowDeleteConfirm(false);
       setSelectedLeadId("");
-      queryClient.invalidateQueries({ queryKey: ["leads", token] });
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
       queryClient.removeQueries({ queryKey: ["lead-detail", token, deletedLeadId] });
       queryClient.removeQueries({ queryKey: ["lead-conversation", token, deletedLeadId] });
       queryClient.removeQueries({ queryKey: ["lead-property-matches", token, deletedLeadId] });
@@ -633,47 +637,47 @@ function LeadsPageContent() {
   return (
     <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10">
       <div className="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 space-y-5">
-        <div className="space-y-1">
-          <div className="flex flex-wrap items-start justify-between gap-2">
-            <div>
-              <h1 className="text-[26px] leading-tight font-bold text-text-heading">Leads</h1>
-              <p className="text-sm text-text-muted">
-                Manage conversations, referrals, nurtures, and calculators.
-              </p>
-            </div>
-            <div className="w-full max-w-[540px] sm:pt-1">
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(event) => setSearchTerm(event.target.value)}
-                  placeholder="Search by name, email, phone, city..."
-                  className="h-9 min-w-0 flex-1 rounded-md border border-border/60 bg-white px-2.5 text-[13px] leading-none placeholder:text-[12px] placeholder:text-text-muted/80 focus:outline-none"
-                />
-                <select
-                  value={intentFilter}
-                  onChange={(event) => setIntentFilter(event.target.value)}
-                  className="h-9 w-[96px] rounded-md border border-primary/30 bg-primary/5 px-2 text-[12px] font-medium text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-                  aria-label="Filter by intent"
-                >
-                  <option value="">All</option>
-                  <option value="buy">Buyer</option>
-                  <option value="sell">Seller</option>
-                </select>
-              </div>
+        <LeadsListHeader filterLabel={filterLabel}>
+          <div className="w-full max-w-[720px] sm:pt-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search by property type, name, phone, city..."
+                className="h-9 min-w-0 flex-1 rounded-md border border-border/60 bg-white px-2.5 text-[13px] leading-none placeholder:text-[12px] placeholder:text-text-muted/80 focus:outline-none basis-[200px]"
+              />
+              <select
+                value={intentFilter}
+                onChange={(event) => setIntentFilter(event.target.value)}
+                className="h-9 w-[96px] shrink-0 rounded-md border border-primary/30 bg-primary/5 px-2 text-[12px] font-medium text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                aria-label="Filter by intent"
+              >
+                <option value="">All</option>
+                <option value="buy">Buyer</option>
+                <option value="sell">Seller</option>
+              </select>
+              <select
+                value={appointmentFilter}
+                onChange={(event) => setAppointmentFilter(event.target.value)}
+                className="h-9 min-w-[132px] shrink-0 rounded-md border border-primary/30 bg-primary/5 px-2 text-[12px] font-medium text-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
+                aria-label="Filter by appointment status"
+              >
+                <option value="all">All appointments</option>
+                <option value="booked">Booked</option>
+                <option value="canceled">Canceled</option>
+                <option value="not_booked">Not booked</option>
+              </select>
             </div>
           </div>
-        </div>
+        </LeadsListHeader>
 
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
             {leadsQuery.isLoading ? (
               <div className="p-3 sm:p-4">
-                <LeadsPageTableSkeleton rows={8} />
-                <p className="mt-3 flex items-center gap-2 text-xs font-medium text-primary">
-                  <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
-                  Loading leads…
-                </p>
+                <LeadsPageTableSkeleton rows={LEADS_PAGE_SIZE} />
+                <p className="mt-3 text-xs font-medium text-text-muted">Loading leads…</p>
               </div>
             ) : leadsQuery.isError ? (
               <div className="p-4 text-sm text-red-600">Failed to load leads.</div>
@@ -681,18 +685,18 @@ function LeadsPageContent() {
               <div className="p-4 text-sm text-text-muted">No leads found.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1040px] table-auto">
+                <table className="w-full min-w-[960px] table-auto">
                   <thead className="bg-primary/[0.04] border-b border-border">
                     <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
-                      <th className="px-3 py-2">Lead</th>
-                      <th className="px-3 py-2">Phone</th>
+                      <th className="px-3 py-2">Type</th>
+                      <th className="px-3 py-2">Name</th>
+                      <th className="px-3 py-2">Email</th>
+                      <th className="px-3 py-2">Status</th>
                       <th className="px-3 py-2">Intent</th>
                       <th className="px-3 py-2">Location</th>
-                      <th className="px-3 py-2">Budget</th>
                       <th className="px-3 py-2">Matches</th>
                       <th className="px-3 py-2">Score</th>
                       <th className="px-3 py-2">Grade</th>
-                      <th className="px-3 py-2">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -700,68 +704,66 @@ function LeadsPageContent() {
                       const id = String(getLeadMatchId(conversation));
                       const meta = getConversationMeta(conversation);
                       const contact = conversation?.contact || {};
-                      const name =
-                        contact?.full_name ||
-                        conversation?.name ||
-                        conversation?.visitor_name ||
-                        conversation?.visitorName ||
-                        "Unknown";
-                      const email =
-                        contact?.email ||
-                        conversation?.email ||
-                        conversation?.visitor_email ||
-                        conversation?.visitorEmail ||
-                        "No email";
+                      const leadMeta = getLeadMeta(conversation);
+                      const displayName =
+                        contact?.full_name || contact?.name || leadMeta.name || "—";
+                      const displayEmail =
+                        contact?.email || leadMeta.email || "";
+                      const propertyTypeLabel = getLeadPropertyTypeDisplay(conversation);
                       const location =
                         conversation?.location ||
                         conversation?.city ||
                         conversation?.property?.location ||
                         "—";
-                      const phone =
-                        contact?.phone ||
-                        conversation?.phone ||
-                        conversation?.visitor_phone ||
-                        conversation?.visitorPhone ||
-                        "—";
-                      const budget = formatBudgetValue(conversation);
-                      const statusLabel = getStatusLabel(conversation, meta);
                       const matchesCount = getMatchesCount(conversation);
                       const isActive = selectedLeadId && String(selectedLeadId) === id;
+                      const pipeStatus = conversation?.status;
+                      const statusInfo = getStatusDisplay(pipeStatus);
 
+                      const workspaceHref = toLeadWorkspace(id);
                       return (
                         <tr
                           key={id}
                           role="button"
                           tabIndex={0}
-                          onClick={() =>
-                            router.push(
-                              `/leads/${encodeURIComponent(id)}?page=${encodeURIComponent(String(currentPage))}`
-                            )
-                          }
+                          onClick={() => router.push(workspaceHref)}
                           onKeyDown={(event) => {
                             if (event.key === "Enter" || event.key === " ") {
                               event.preventDefault();
-                              router.push(
-                                `/leads/${encodeURIComponent(id)}?page=${encodeURIComponent(String(currentPage))}`
-                              );
+                              router.push(workspaceHref);
                             }
                           }}
                           className={`border-b border-border/70 text-[13px] text-text-body transition cursor-pointer ${
                             isActive ? "bg-primary/[0.08]" : "hover:bg-primary/[0.05]"
                           }`}
                         >
-                          <td className="px-3 py-2.5">
-                            <div className="font-medium text-text-heading truncate">{name}</div>
-                            <div className="text-[11px] text-primary-dark truncate">{email}</div>
+                          <td className="px-3 py-2.5 capitalize">
+                            <span className="font-medium text-text-heading line-clamp-2">
+                              {propertyTypeLabel}
+                            </span>
                           </td>
-                          <td className="px-3 py-2.5">{phone}</td>
+                          <td className="px-3 py-2.5 min-w-[120px]">
+                            <span className="line-clamp-2 font-medium text-text-heading">{displayName}</span>
+                          </td>
+                          <td className="px-3 py-2.5 min-w-[140px]">
+                            {displayEmail ? (
+                              <span className="block max-w-[200px] truncate" title={displayEmail}>
+                                {displayEmail}
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-snug whitespace-nowrap ${statusInfo.color}`}>
+                              {statusInfo.label}
+                            </span>
+                          </td>
                           <td className="px-3 py-2.5 capitalize">{String(meta.intent || "—")}</td>
                           <td className="px-3 py-2.5">{location}</td>
-                          <td className="px-3 py-2.5">{budget === "N/A" ? <span className="inline-flex rounded-md border border-primary/30 bg-primary/10 px-1.5 py-0.5 text-[11px] text-primary-dark">N/A</span> : budget}</td>
                           <td className="px-3 py-2.5">{matchesCount}</td>
                           <td className="px-3 py-2.5">{meta.leadScore ?? "—"}</td>
                           <td className="px-3 py-2.5 capitalize">{String(meta.leadGrade || "—").replace(/_/g, " ")}</td>
-                          <td className="px-3 py-2.5 capitalize">{statusLabel}</td>
                         </tr>
                       );
                     })}
@@ -793,7 +795,7 @@ function LeadsPageContent() {
                 onClick={() => {
                   const nextPage = Math.max(1, leadsPagination.current - 1);
                   setCurrentPage(nextPage);
-                  router.push(`/leads?page=${encodeURIComponent(String(nextPage))}`);
+                  router.push(toListPage({ page: nextPage }));
                 }}
                 className="h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -805,7 +807,7 @@ function LeadsPageContent() {
                 onClick={() => {
                   const nextPage = leadsPagination.current + 1;
                   setCurrentPage(nextPage);
-                  router.push(`/leads?page=${encodeURIComponent(String(nextPage))}`);
+                  router.push(toListPage({ page: nextPage }));
                 }}
                 className="h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-60 disabled:cursor-not-allowed"
               >
@@ -844,6 +846,8 @@ function LeadsPageContent() {
                   conversationMeta={conversationMeta}
                   formatMetaEntries={formatMetaEntries}
                   onOpenMeta={() => {}}
+                  onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutate()}
+                  cancelCalendlyPending={cancelCalendlyMutation.isPending}
                 />
               ) : null}
 
@@ -879,6 +883,28 @@ function LeadsPageContent() {
                 <LeadsProfileTab
                   selectedConversation={selectedConversation}
                   lead={leadDetailQuery.data?.lead || null}
+                  onPatchLead={
+                    selectedLeadId
+                      ? (body) => patchLeadMutation.mutateAsync(body)
+                      : undefined
+                  }
+                  patchLeadPending={patchLeadMutation.isPending}
+                />
+              ) : null}
+
+              {activeTab === "pipeline" ? (
+                <LeadPipelineNotesPanel
+                  lead={leadDetailQuery.data?.lead || null}
+                  onPatchLead={(body) => patchLeadMutation.mutateAsync(body)}
+                  patchLeadPending={patchLeadMutation.isPending}
+                  pipelineListFilterHint={
+                    statusFromUrl || pipelineFromUrl ? (
+                      <p className="text-xs text-text-muted leading-relaxed">
+                        You opened this lead from a pipeline list filter; adjust stage here or in Lead
+                        Profile.
+                      </p>
+                    ) : null
+                  }
                 />
               ) : null}
 

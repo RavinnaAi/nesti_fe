@@ -10,6 +10,8 @@ export default function LeadsDetailsTab({
   conversationMeta,
   formatMetaEntries,
   onOpenMeta,
+  onCancelCalendlyAppointment,
+  cancelCalendlyPending = false,
 }) {
   const leadData = lead && typeof lead === "object" ? lead : {};
   const property = leadData.property || {};
@@ -179,6 +181,31 @@ export default function LeadsDetailsTab({
               <KeyValue label="Primary outcome" value={conversion?.outcome?.primary_outcome} />
               <KeyValue label="Alert" value={conversion?.alert?.title} />
             </div>
+            {String(appointmentStatus).toLowerCase() === "booked" &&
+            typeof onCancelCalendlyAppointment === "function" ? (
+              <div className="space-y-1.5 pt-1 border-t border-border/60">
+                <button
+                  type="button"
+                  disabled={cancelCalendlyPending}
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Cancel this Calendly appointment? Invitees are notified according to your Calendly settings."
+                      )
+                    ) {
+                      onCancelCalendlyAppointment();
+                    }
+                  }}
+                  className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  {cancelCalendlyPending ? "Canceling…" : "Cancel Calendly appointment"}
+                </button>
+                <p className="text-[11px] text-text-muted leading-snug">
+                  Cancels the scheduled event via Calendly (1:1 events). Some group-style events may
+                  need to be managed in Calendly.
+                </p>
+              </div>
+            ) : null}
           </div>
 
         </>

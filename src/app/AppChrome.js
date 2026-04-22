@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import BackgroundElements from "@/components/layout/BackgroundElements";
@@ -12,6 +14,12 @@ import NotificationsBell from "@/components/notifications/NotificationsBell";
 import { ChevronDown, LogOut, Menu, Settings, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
+import {
+  CALENDLY_INTEGRATION_TOAST_ID,
+  CALENDLY_OAUTH_BROADCAST_CHANNEL,
+  CALENDLY_OAUTH_MESSAGE_SOURCE,
+  CALENDLY_OAUTH_WINDOW_NAME,
+} from "@/lib/calendlyOAuthPopup";
 
 function LoadingShell() {
   return (
@@ -24,6 +32,7 @@ function LoadingShell() {
 export default function AppChrome({ children }) {
   const pathname = usePathname() || "";
   const router = useRouter();
+  const queryClient = useQueryClient();
   const dispatch = useAppDispatch();
   const { token, user } = useAppSelector((state) => state.auth);
   const personalInfo = useAppSelector((state) => state.profile.personalInfo);
@@ -33,12 +42,43 @@ export default function AppChrome({ children }) {
   const [isSidebarMobileOpen, setIsSidebarMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
+  const calendlyOAuthBroadcastAt = useRef(0);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (!token || typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+      return;
+    }
+    const ch = new BroadcastChannel(CALENDLY_OAUTH_BROADCAST_CHANNEL);
+    const onMessage = (ev) => {
+      if (window.name === CALENDLY_OAUTH_WINDOW_NAME) return;
+      const data = ev.data;
+      if (!data || data.source !== CALENDLY_OAUTH_MESSAGE_SOURCE) return;
+      const now = Date.now();
+      if (now - calendlyOAuthBroadcastAt.current < 800) return;
+      calendlyOAuthBroadcastAt.current = now;
+      if (data.result === "connected") {
+        toast.success("Calendly connected.", { toastId: CALENDLY_INTEGRATION_TOAST_ID });
+        queryClient.invalidateQueries({ queryKey: ["calendar-status"] });
+      } else if (data.result === "error") {
+        toast.error(data.message || "Calendly connection did not complete.", {
+          toastId: CALENDLY_INTEGRATION_TOAST_ID,
+        });
+        queryClient.invalidateQueries({ queryKey: ["calendar-status"] });
+      }
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [token, queryClient]);
+
   const isChatbotEmbed = pathname.startsWith("/chatbot");
+  const isCalendlyCallback = pathname.startsWith("/calendly-callback");
   const isPublicAuthPage = useMemo(
     () =>
       pathname === "/" ||
@@ -108,6 +148,11 @@ export default function AppChrome({ children }) {
 
   // ── Chatbot embed: no chrome at all ──
   if (isChatbotEmbed) {
+    return <>{children}</>;
+  }
+
+  // ── Calendly OAuth return popup: minimal render, no sidebar/header ──
+  if (isCalendlyCallback) {
     return <>{children}</>;
   }
 

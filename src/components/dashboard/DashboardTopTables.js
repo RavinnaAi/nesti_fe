@@ -35,13 +35,13 @@ function contactPhone(profile) {
 }
 
 function TopLeadsTableSkeleton() {
-  const widths = ["w-4", "w-24", "w-28", "w-14", "w-10", "w-8", "w-20"];
+  const widths = ["w-24", "w-28", "w-24", "w-28", "w-14", "w-10", "w-20"];
   return (
     <div className="overflow-x-auto -mx-1" aria-hidden>
-      <table className="w-full min-w-[440px] border-collapse text-left">
+      <table className="w-full min-w-[640px] border-collapse text-left">
         <thead>
           <tr className="border-b border-border bg-primary/[0.04]">
-            <th className={th}>#</th>
+            <th className={th}>Type</th>
             <th className={th}>Name</th>
             <th className={th}>Email</th>
             <th className={th}>Intent</th>
@@ -67,13 +67,12 @@ function TopLeadsTableSkeleton() {
 }
 
 function TopProfilesTableSkeleton() {
-  const widths = ["w-4", "w-32", "w-28", "w-16", "w-20", "w-14", "w-8"];
+  const widths = ["w-32", "w-28", "w-16", "w-20", "w-14", "w-8"];
   return (
     <div className="overflow-x-auto -mx-1" aria-hidden>
-      <table className="w-full min-w-[560px] border-collapse text-left">
+      <table className="w-full min-w-[520px] border-collapse text-left">
         <thead>
           <tr className="border-b border-border bg-primary/[0.04]">
-            <th className={th}>#</th>
             <th className={th}>Client</th>
             <th className={th}>Email</th>
             <th className={th}>Phone</th>
@@ -120,10 +119,10 @@ export default function DashboardTopTables({
           <p className="text-sm text-text-muted py-4">No leads to show yet.</p>
         ) : (
           <div className="overflow-x-auto -mx-1">
-            <table className="w-full min-w-[440px] border-collapse text-left">
+            <table className="w-full min-w-[640px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-border bg-primary/[0.04]">
-                  <th className={th}>#</th>
+                  <th className={th}>Type</th>
                   <th className={th}>Name</th>
                   <th className={th}>Email</th>
                   <th className={th}>Intent</th>
@@ -133,21 +132,24 @@ export default function DashboardTopTables({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {topLeads.map((row, idx) => (
+                {topLeads.map((row) => (
                   <tr key={row.id}>
-                    <td className={`${td} tabular-nums text-text-muted`}>{idx + 1}</td>
                     <td className={td}>
                       <button
                         type="button"
                         onClick={() => onSelectLead?.(row.id)}
-                        className="font-semibold text-primary hover:underline text-left"
+                        className="font-semibold text-left text-primary hover:underline capitalize"
+                        title={String(row.propertyType || "")}
                       >
-                        {row.name}
+                        {row.propertyType || "—"}
                       </button>
                     </td>
                     <td className={tdMuted}>
+                      <span className="line-clamp-2 font-medium text-text-heading">{row.name || "—"}</span>
+                    </td>
+                    <td className={tdMuted}>
                       {row.email ? (
-                        <span className="block max-w-[140px] truncate" title={row.email}>
+                        <span className="block max-w-[160px] truncate" title={row.email}>
                           {row.email}
                         </span>
                       ) : (
@@ -184,7 +186,6 @@ export default function DashboardTopTables({
             <table className="w-full min-w-[560px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-border bg-primary/[0.04]">
-                  <th className={th}>#</th>
                   <th className={th}>Client</th>
                   <th className={th}>Email</th>
                   <th className={th}>Phone</th>
@@ -194,7 +195,7 @@ export default function DashboardTopTables({
                 </tr>
               </thead>
               <tbody className="divide-y divide-border/60">
-                {topProfiles.map((profile, idx) => {
+                {topProfiles.map((profile) => {
                   const pid = profile?.id || profile?._id;
                   const displayName = profileDisplayName(profile);
                   const email = contactEmail(profile);
@@ -204,7 +205,6 @@ export default function DashboardTopTables({
                   const leadRefs = Array.isArray(profile?.lead_refs) ? profile.lead_refs : [];
                   return (
                     <tr key={String(pid)} className="transition-colors hover:bg-primary/[0.06]">
-                      <td className={`${td} tabular-nums text-text-muted`}>{idx + 1}</td>
                       <td className={td}>
                         {pid ? (
                           <Link

@@ -16,12 +16,13 @@ import {
 } from "@/lib/chatClient";
 import { fetchLeads, fetchLeadProfiles } from "@/lib/leadsClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
-import { formatLeadLocationLine, getLeadMeta } from "@/lib/leadConversationMeta";
+import { formatLeadLocationLine, getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
 import NewLeadPopup from "@/components/leads/NewLeadPopup";
 import LeadDetailsModal from "@/components/dashboard/LeadDetailsModal";
 import DashboardAnalyticsPanels from "@/components/dashboard/DashboardAnalyticsPanels";
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
 import DashboardTopTables from "@/components/dashboard/DashboardTopTables";
+import DashboardCalendlyButton from "@/components/dashboard/DashboardCalendlyButton";
 
 const WINDOW_OPTIONS = [
   { value: 7, label: "7d" },
@@ -207,6 +208,7 @@ export default function DashboardPage() {
         const score = Number(meta.leadScore);
         const id = String(c?.id || c?.conversation_id || c?.conversationId || "").trim();
         const location = formatLeadLocationLine(c);
+        const propertyType = getLeadPropertyTypeDisplay(c);
         const intent = String(meta.intent || "").trim() || "—";
         const grade = meta.leadGrade || "";
         const sortScore = Number.isFinite(score) && !Number.isNaN(score) ? score : -1;
@@ -214,6 +216,7 @@ export default function DashboardPage() {
           id,
           name: meta.name || "Unknown",
           email: meta.email || "",
+          propertyType,
           intent,
           grade,
           scoreLabel: sortScore >= 0 ? String(score) : "—",
@@ -378,6 +381,15 @@ export default function DashboardPage() {
               <p className="max-w-xl text-sm leading-relaxed text-white/90 md:text-base">
                 Track your pipeline, nurture hot leads, and close faster.
               </p>
+            </motion.div>
+
+            <motion.div
+              className="flex shrink-0 sm:ml-auto"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.28, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+            >
+              <DashboardCalendlyButton className="w-full sm:w-auto" />
             </motion.div>
           </div>
         </motion.section>

@@ -51,6 +51,23 @@ export async function fetchLeadById({ token, id }) {
   });
 }
 
+/** PATCH lead: `match_status` and/or `note` (append-only agent note). */
+export async function patchLead({ token, id, match_status, note }) {
+  const data = {};
+  if (match_status != null && String(match_status).trim() !== "") {
+    data.match_status = String(match_status).trim();
+  }
+  if (note != null && String(note).trim() !== "") {
+    data.note = String(note).trim();
+  }
+  return apiClient({
+    url: API_ENDPOINTS.leads.patch(id),
+    method: "PATCH",
+    token,
+    data,
+  });
+}
+
 export async function fetchLeadConversation({ token, leadId, ...query }) {
   return apiClient({
     url: withQuery(API_ENDPOINTS.leads.conversation(leadId), query),

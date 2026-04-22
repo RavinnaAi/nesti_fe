@@ -44,6 +44,11 @@ export default function SelectDropdown({
   }, []);
 
   const selectedOption = options.find((opt) => opt.value === value);
+  const isSmall = size === "small";
+  const itemPad = isSmall ? "px-3 py-1.5 gap-2" : "px-3 py-2 gap-2.5";
+  const itemText = isSmall ? "text-xs" : "text-sm";
+  const iconWrap = isSmall ? "w-6 h-6" : "w-8 h-8";
+  const iconPx = isSmall ? 14 : 18;
 
   return (
     <div>
@@ -63,25 +68,36 @@ export default function SelectDropdown({
           onFocus={onFocus}
           onBlur={onBlur}
           className={`w-full ${disabled ? "!cursor-not-allowed !bg-gray-100" : ""
-            } ${size === "small" ? "h-10 text-xs px-3 pr-10" : "h-14 px-4 pr-12"} border-2 rounded-md transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-start pt-4 ${error
+            } ${size === "small"
+              ? "h-10 text-xs px-3 pr-10 items-center py-0 min-h-0"
+              : "h-14 px-4 pr-12 items-start pt-4"
+            } border-2 rounded-md transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex ${error
               ? "border-red-400 focus:border-red-500 focus:ring-red-300"
               : "border-border hover:border-primary focus:border-primary focus:ring-primary/20"
             } ${value ? "text-text-heading" : "text-text-muted"}`}
         >
           {selectedOption ? (
-            <span className="font-medium flex items-start gap-2">
+            <span
+              className={`font-medium flex gap-2 ${isSmall ? "items-center text-xs" : "items-start text-sm"}`}
+            >
               {selectedOption.icon ? (
-                <selectedOption.icon size={18} className="text-primary mt-0.5" />
+                <selectedOption.icon
+                  size={iconPx}
+                  className={`text-primary flex-shrink-0 ${isSmall ? "" : "mt-0.5"}`}
+                />
               ) : null}
               {selectedOption.label}
             </span>
           ) : (
-            <span>{placeholder}</span>
+            <span className={isSmall ? "text-xs" : "text-sm"}>{placeholder}</span>
           )}
         </button>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+        <div
+          className={`absolute pointer-events-none top-1/2 -translate-y-1/2 ${size === "small" ? "right-3" : "right-4"
+            }`}
+        >
           <svg
-            className={`w-5 h-5 text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            className={`${size === "small" ? "w-4 h-4" : "w-5 h-5"} text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""
               }`}
             fill="none"
             stroke="currentColor"
@@ -97,7 +113,10 @@ export default function SelectDropdown({
         </div>
 
         {isOpen && (
-          <div className={`absolute z-50 max-h-[250px] min-w-[250px] overflow-y-auto w-full mt-2 bg-white border-2 border-border rounded-md shadow-xl overflow-hidden ${className}`}>
+          <div
+            className={`absolute z-50 w-full overflow-x-hidden overflow-y-auto bg-white border-2 border-border rounded-md shadow-xl mt-1 ${isSmall ? "max-h-52 text-xs" : "max-h-60 text-sm"
+              } ${className}`}
+          >
             {options.map((opt, index) => {
               const IconComponent = opt.icon;
               const isSelected = value === opt.value;
@@ -109,24 +128,20 @@ export default function SelectDropdown({
                     onChange(opt.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full px-4 py-3 flex items-start gap-3 transition-colors group duration-150 hover:!text-primary-dark  ${isSelected
+                  className={`w-full flex items-center transition-colors group duration-150 hover:!text-primary-dark ${itemPad} ${isSelected
                     ? "bg-primary/20 text-primary-dark"
                     : "hover:bg-primary/20 hover:text-primary-dark"
-                    } ${index !== options.length - 1
-                      ? "border-b border-border/50"
-                      : ""
-                    }`}
+                    } ${index !== options.length - 1 ? "border-b border-border/50" : ""}`}
                 >
                   {IconComponent ? (
-                    <div className="w-8 h-8 rounded-md bg-green-100 flex items-center justify-center flex-shrink-0">
-                      <IconComponent size={18} className="text-primary" />
+                    <div
+                      className={`${iconWrap} rounded-md bg-green-100 flex items-center justify-center flex-shrink-0`}
+                    >
+                      <IconComponent size={iconPx} className="text-primary" />
                     </div>
                   ) : null}
                   <span
-                    className={`font-medium transition-colors text-sm duration-150 pt-0.5
-                       ${isSelected
-                        ? "text-primary-dark"
-                        : "group-hover:text-primary-dark"
+                    className={`font-medium transition-colors duration-150 leading-snug ${itemText} ${isSelected ? "text-primary-dark" : "group-hover:text-primary-dark"
                       }`}
                   >
                     {opt.label}

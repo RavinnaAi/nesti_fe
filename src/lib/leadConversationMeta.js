@@ -95,6 +95,19 @@ export function buildPropertyTypeMix(conversations) {
     .slice(0, 8);
 }
 
+/** Property type label for tables (conversation shaped by leadApiRowToConversationShape). */
+export function getLeadPropertyTypeDisplay(conversation) {
+  const raw =
+    conversation?.conversion?.property?.property_type ||
+    conversation?.conversion?.property?.type ||
+    conversation?.property?.property_type ||
+    conversation?.property?.type ||
+    "";
+  const s = String(raw ?? "").trim();
+  if (!s) return "—";
+  return s.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
+
 /** Single display line for location; de-duplicates city vs location when API repeats the same place. */
 export function formatLeadLocationLine(conversation) {
   const seen = new Set();

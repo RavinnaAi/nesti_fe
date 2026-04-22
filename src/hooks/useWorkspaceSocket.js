@@ -48,6 +48,10 @@ export function useWorkspaceSocket(token, queryClient) {
         queryKey: ["leads"],
         refetchType: "all",
       });
+      queryClient.invalidateQueries({
+        queryKey: ["lead-detail"],
+        refetchType: "all",
+      });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
 
       if (payload?.notification_type === "lead_created") return;
@@ -61,6 +65,10 @@ export function useWorkspaceSocket(token, queryClient) {
     const onLead = () => {
       queryClient.invalidateQueries({
         queryKey: ["leads"],
+        refetchType: "all",
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["lead-detail"],
         refetchType: "all",
       });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });

@@ -8,38 +8,42 @@ export function SkeletonBlock({ className = "" }) {
 export function LeadsPageTableSkeleton({ rows = 8 }) {
   return (
     <div className="overflow-x-auto" aria-hidden>
-      <table className="w-full min-w-[1040px] table-auto">
+      <table className="w-full min-w-[960px] table-auto">
         <thead className="bg-primary/[0.04] border-b border-border">
           <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
-            {["Lead", "Phone", "Intent", "Location", "Budget", "Matches", "Score", "Grade", "Status"].map(
-              (h) => (
-                <th key={h} className="px-3 py-2">
-                  {h}
-                </th>
-              )
-            )}
+            {[
+              "Type",
+              "Name",
+              "Email",
+              "Intent",
+              "Location",
+              "Matches",
+              "Score",
+              "Grade",
+            ].map((h) => (
+              <th key={h} className="px-3 py-2">
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: rows }).map((_, i) => (
             <tr key={i} className="border-b border-border/70">
               <td className="px-3 py-2.5">
-                <div className="space-y-2">
-                  <SkeletonBlock className="h-3.5 w-36 max-w-full" />
-                  <SkeletonBlock className="h-3 w-28 max-w-full" />
-                </div>
+                <SkeletonBlock className="h-3.5 w-32 max-w-full" />
               </td>
               <td className="px-3 py-2.5">
-                <SkeletonBlock className="h-3.5 w-24" />
+                <SkeletonBlock className="h-3.5 w-28 max-w-full" />
+              </td>
+              <td className="px-3 py-2.5">
+                <SkeletonBlock className="h-3.5 w-40 max-w-full" />
               </td>
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-14" />
               </td>
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-28" />
-              </td>
-              <td className="px-3 py-2.5">
-                <SkeletonBlock className="h-3.5 w-20" />
               </td>
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-8" />
@@ -49,9 +53,6 @@ export function LeadsPageTableSkeleton({ rows = 8 }) {
               </td>
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-12" />
-              </td>
-              <td className="px-3 py-2.5">
-                <SkeletonBlock className="h-3.5 w-16" />
               </td>
             </tr>
           ))}

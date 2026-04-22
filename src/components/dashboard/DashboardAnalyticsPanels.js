@@ -18,11 +18,16 @@ import {
 } from "recharts";
 import { BarChart3, Mail, CalendarCheck } from "lucide-react";
 
+void LineChart;
+void Line;
+
 const PRIMARY = "#34C759";
 const PRIMARY_DARK = "#2AA84A";
 const ACCENT = "#4DD469";
-const PRIMARY_SOFT = "#86EFAC";
 const MUTED = "#94a3b8";
+
+/** Solid grid lines (avoid dashed “dotted” look from strokeDasharray). */
+const gridStroke = "#e2e8f0";
 
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
@@ -166,12 +171,12 @@ export default function DashboardAnalyticsPanels({
                     <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+                <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 10, fill: MUTED }}
                   tickLine={false}
-                  axisLine={{ stroke: "#e2e8f0" }}
+                  axisLine={{ stroke: gridStroke }}
                   interval="preserveStartEnd"
                 />
                 <YAxis tick={{ fontSize: 10, fill: MUTED }} tickLine={false} axisLine={false} allowDecimals={false} width={32} />
@@ -193,7 +198,7 @@ export default function DashboardAnalyticsPanels({
           <div className="h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={funnelBars} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" horizontal={false} />
+                <CartesianGrid stroke={gridStroke} horizontal={false} />
                 <XAxis type="number" tick={{ fontSize: 10, fill: MUTED }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
@@ -210,32 +215,39 @@ export default function DashboardAnalyticsPanels({
           <p className="text-xs text-text-muted mb-3">Daily buyers vs sellers (from your CRM list)</p>
           <div className="h-[240px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={intentTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <AreaChart data={intentTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="intentFillBuyers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="intentFillSellers" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={ACCENT} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Line
-                type="monotone"
-                dataKey="buyers"
-                name="Buyers"
-                stroke={PRIMARY_DARK}
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: PRIMARY_DARK, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
-              />
-              <Line
-                type="monotone"
-                dataKey="sellers"
-                name="Sellers"
-                stroke={PRIMARY_SOFT}
-                strokeWidth={2.5}
-                strokeDasharray="4 4"
-                dot={{ r: 3, fill: PRIMARY_SOFT, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
-              />
-            </LineChart>
+                <Area
+                  type="monotone"
+                  dataKey="buyers"
+                  name="Buyers"
+                  stroke={PRIMARY_DARK}
+                  strokeWidth={2}
+                  fill="url(#intentFillBuyers)"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="sellers"
+                  name="Sellers"
+                  stroke={ACCENT}
+                  strokeWidth={2}
+                  fill="url(#intentFillSellers)"
+                />
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -245,8 +257,14 @@ export default function DashboardAnalyticsPanels({
           <p className="text-xs text-text-muted mb-3">Average budget signal per day (parsed from lead fields)</p>
           <div className="h-[240px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={budgetTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <AreaChart data={budgetTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="budgetFillAvg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
                 <YAxis
                   tick={{ fontSize: 10, fill: MUTED }}
@@ -269,16 +287,15 @@ export default function DashboardAnalyticsPanels({
                     );
                   }}
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="budget_avg"
                   name="Avg budget"
                   stroke={PRIMARY_DARK}
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: PRIMARY_DARK, strokeWidth: 0 }}
-                  activeDot={{ r: 5 }}
+                  strokeWidth={2}
+                  fill="url(#budgetFillAvg)"
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -300,8 +317,18 @@ export default function DashboardAnalyticsPanels({
           </p>
           <div className="h-[220px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="apptFillBooked" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="apptFillCanceled" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={ACCENT} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 10, fill: MUTED }}
@@ -318,25 +345,23 @@ export default function DashboardAnalyticsPanels({
                 />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="appointment_booked"
                   name="Booked"
                   stroke={PRIMARY_DARK}
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: PRIMARY_DARK, strokeWidth: 0 }}
-                  activeDot={{ r: 5 }}
+                  strokeWidth={2}
+                  fill="url(#apptFillBooked)"
                 />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="appointment_canceled"
                   name="Canceled"
-                  stroke={PRIMARY_SOFT}
+                  stroke={ACCENT}
                   strokeWidth={2}
-                  strokeDasharray="4 4"
-                  dot={false}
+                  fill="url(#apptFillCanceled)"
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>
@@ -357,8 +382,14 @@ export default function DashboardAnalyticsPanels({
           </p>
           <div className="h-[220px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" vertical={false} />
+              <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="nurtureFillEmails" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis
                   dataKey="label"
                   tick={{ fontSize: 10, fill: MUTED }}
@@ -369,16 +400,15 @@ export default function DashboardAnalyticsPanels({
                 <YAxis tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} allowDecimals={false} width={32} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Line
+                <Area
                   type="monotone"
                   dataKey="nurture_email_sent"
                   name="Emails sent"
-                  stroke={PRIMARY}
-                  strokeWidth={2.5}
-                  dot={{ r: 3, fill: PRIMARY, strokeWidth: 0 }}
-                  activeDot={{ r: 5 }}
+                  stroke={PRIMARY_DARK}
+                  strokeWidth={2}
+                  fill="url(#nurtureFillEmails)"
                 />
-              </LineChart>
+              </AreaChart>
             </ResponsiveContainer>
           </div>
         </div>

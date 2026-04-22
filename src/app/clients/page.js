@@ -10,7 +10,8 @@ import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfile
 import { fetchLeadProfiles } from "@/lib/leadsClient";
 import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
-const PAGE_SIZE = 20;
+/** Matches leads list page size — API `limit` for `/api/leads/profiles`. */
+const PAGE_SIZE = 10;
 
 const th =
   "whitespace-nowrap px-1.5 py-1.5 text-left text-[10px] font-semibold capitalize tracking-wide text-text-muted sm:text-[11px]";
@@ -171,7 +172,7 @@ export default function ClientsPage() {
       <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2.5 pt-5 sm:px-4 sm:pt-6">
         <div className="mx-auto w-full max-w-7xl">
           <div className="overflow-hidden rounded-md border border-border/90 bg-white p-2 shadow-sm sm:p-3">
-            <ClientsTableSkeleton rows={6} />
+            <ClientsTableSkeleton rows={PAGE_SIZE} />
             <p className="mt-3 text-center text-[10px] font-medium text-primary sm:text-[11px]">Loading…</p>
           </div>
         </div>
@@ -204,7 +205,7 @@ export default function ClientsPage() {
         <div className="overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">
           {clientsQuery.isLoading ? (
             <div className="p-2 sm:p-3">
-              <ClientsTableSkeleton rows={8} />
+              <ClientsTableSkeleton rows={PAGE_SIZE} />
               <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
                 <span
                   className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"

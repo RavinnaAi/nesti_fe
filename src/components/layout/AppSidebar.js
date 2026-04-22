@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
   Bot,
@@ -20,10 +20,13 @@ import {
   LogOut,
   ChevronDown,
   X,
+  ListFilter,
+  GitBranch,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
+import LeadsPipelineSidebarNav from "@/components/leads/LeadsPipelineSidebarNav";
 
 const PRIMARY_ITEMS = [
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -41,12 +44,21 @@ const SETTINGS_ITEMS = [
   { id: "icp", label: "Ideal Client Profile", tab: "icp", icon: Target },
   { id: "password", label: "Change Password", tab: "password", icon: Lock },
   { id: "subscription", label: "Subscription", tab: "subscription", icon: CreditCard },
+  { id: "leads_pipeline", label: "Leads pipeline", tab: "leads", icon: ListFilter },
 ];
 
-function isHrefActive(pathname, href) {
-  const cleanHref = href.split("?")[0];
+function isPrimaryNavActive(pathname, href, searchParams) {
+  const q = href.indexOf("?");
+  const cleanHref = q === -1 ? href : href.slice(0, q);
   if (cleanHref === "/") return pathname === "/";
-  return pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
+  const pathMatches = pathname === cleanHref || pathname.startsWith(`${cleanHref}/`);
+  if (!pathMatches) return false;
+  if (q === -1) return true;
+  const wanted = new URLSearchParams(href.slice(q + 1));
+  for (const [key, val] of wanted.entries()) {
+    if ((searchParams?.get(key) ?? "") !== val) return false;
+  }
+  return true;
 }
 
 export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
@@ -72,10 +84,18 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     isSettingsRoute && (!settingsTab || settingsTabSet.has(settingsTab));
 
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pipelineNavOpen, setPipelineNavOpen] = useState(false);
+
+  const isLeadsArea = pathname === "/leads" || pathname.startsWith("/leads/");
 
   useEffect(() => {
     if (isSettingsActive) setSettingsOpen(true);
+    else setSettingsOpen(false);
   }, [isSettingsActive]);
+
+  useEffect(() => {
+    if (!isLeadsArea) setPipelineNavOpen(false);
+  }, [isLeadsArea]);
 
   useEffect(() => {
     if (!isMobileOpen) return;
@@ -116,6 +136,26 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     router.push("/log-in");
   };
 
+  /**
+   * Settings expanded → no primary “selected” (sub-links carry state).
+   * On /leads/* the Leads link never uses the same strong pill as other nav items (Pipeline carries expanded focus),
+   * but it always gets a lighter “you are here” style + aria-current so it doesn’t look broken.
+   * Pipeline expanded while on another top-level route → suppress primary until Pipeline is collapsed.
+   */
+  const primaryItemActive = (item) => {
+    const routeActive = isPrimaryNavActive(pathname, item.href, searchParams);
+    if (settingsOpen) return false;
+    if (item.id === "leads" && isLeadsArea) return false;
+    if (pipelineNavOpen && !isLeadsArea) return false;
+    if (pipelineNavOpen && isLeadsArea) return routeActive && item.id !== "leads";
+    return routeActive;
+  };
+
+  const pipelineRowExpanded = pipelineNavOpen;
+  const pipelineRowInLeadsWorkspace = isLeadsArea && !pipelineNavOpen;
+
+  const leadsNavInWorkspace = (item) => item.id === "leads" && isLeadsArea && !pipelineNavOpen;
+
   const sidebarInner = (
     <aside
       ref={menuRef}
@@ -151,28 +191,100 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
         <div className="space-y-1">
           {PRIMARY_ITEMS.map((item) => {
             const Icon = item.icon;
-            const active = isHrefActive(pathname, item.href);
+            const active = primaryItemActive(item);
+            const leadsHere = leadsNavInWorkspace(item);
             return (
-              <Link
-                key={item.id}
-                href={item.href}
-                onClick={() => onCloseMobile?.()}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition ${
-                  active
-                    ? "bg-primary/10 text-primary-dark"
-                    : "text-text-body hover:bg-primary/5 hover:text-text-heading"
-                }`}
-                aria-current={active ? "page" : undefined}
-              >
-                <span
-                  className={`h-8 w-8 rounded-md grid place-items-center ${
-                    active ? "bg-primary/20 text-primary-dark" : "bg-background-light text-text-muted"
+              <Fragment key={item.id}>
+                <Link
+                  href={item.href}
+                  onClick={() => {
+                    setSettingsOpen(false);
+                    setPipelineNavOpen(false);
+                    onCloseMobile?.();
+                  }}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition ${
+                    active
+                      ? "bg-primary/10 text-primary-dark"
+                      : leadsHere
+                        ? "bg-primary/[0.08] text-primary-dark border border-primary/15"
+                        : "text-text-body hover:bg-primary/5 hover:text-text-heading"
                   }`}
+                  aria-current={active || leadsHere ? "page" : undefined}
                 >
-                  <Icon size={16} />
-                </span>
-                <span>{item.label}</span>
-              </Link>
+                  <span
+                    className={`h-8 w-8 rounded-md grid place-items-center ${
+                      active
+                        ? "bg-primary/20 text-primary-dark"
+                        : leadsHere
+                          ? "bg-primary/15 text-primary-dark"
+                          : "bg-background-light text-text-muted"
+                    }`}
+                  >
+                    <Icon size={16} />
+                  </span>
+                  <span>{item.label}</span>
+                </Link>
+
+                {item.id === "leads" ? (
+                  <div className="space-y-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPipelineNavOpen((prev) => !prev);
+                        setSettingsOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold transition ${
+                        pipelineRowExpanded
+                          ? "bg-primary/10 text-primary-dark"
+                          : pipelineRowInLeadsWorkspace
+                            ? "bg-primary/[0.07] text-text-heading"
+                            : "text-text-body hover:bg-primary/5 hover:text-text-heading"
+                      }`}
+                      aria-expanded={pipelineNavOpen}
+                    >
+                      <span className="flex items-center gap-2.5">
+                        <span
+                          className={`h-8 w-8 rounded-md grid place-items-center ${
+                            pipelineRowExpanded
+                              ? "bg-primary/20 text-primary-dark"
+                              : pipelineRowInLeadsWorkspace
+                                ? "bg-primary/12 text-primary-dark/90"
+                                : "bg-background-light text-text-muted"
+                          }`}
+                        >
+                          <GitBranch size={16} />
+                        </span>
+                        Pipeline
+                      </span>
+                      <ChevronDown
+                        size={16}
+                        className={`transition-transform ${pipelineNavOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    <AnimatePresence initial={false}>
+                      {pipelineNavOpen ? (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: "auto", opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.16 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pl-4 pr-1 py-1 space-y-1 border-l border-border/80 ml-4">
+                            <LeadsPipelineSidebarNav
+                              embedded
+                              variant="settings"
+                              skipRouteCheck
+                              onNavigate={() => onCloseMobile?.()}
+                            />
+                          </div>
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+                  </div>
+                ) : null}
+              </Fragment>
             );
           })}
         </div>
@@ -180,18 +292,21 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
         <div className="space-y-1">
           <button
             type="button"
-            onClick={() => setSettingsOpen((prev) => !prev)}
+            onClick={() => {
+              setSettingsOpen((prev) => !prev);
+              setPipelineNavOpen(false);
+            }}
             className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold transition ${
-              isSettingsActive
+              settingsOpen
                 ? "bg-primary/10 text-primary-dark"
-                : "text-text-body hover:bg-primary/5"
+                : "text-text-body hover:bg-primary/5 hover:text-text-heading"
             }`}
             aria-expanded={settingsOpen}
           >
             <span className="flex items-center gap-2.5">
               <span
                 className={`h-8 w-8 rounded-md grid place-items-center ${
-                  isSettingsActive
+                  settingsOpen
                     ? "bg-primary/20 text-primary-dark"
                     : "bg-background-light text-text-muted"
                 }`}

@@ -1,14 +1,10 @@
 "use client";
 
-const TABS = [
-  { id: "lead_profile", label: "Lead Profile" },
-  { id: "lead_details", label: "Lead Details" },
-  { id: "conversation", label: "Conversation" },
-  { id: "actions", label: "Actions" },
-  { id: "property_matches", label: "Property Matches" },
-  { id: "nurture", label: "Nurture Email" },
-  { id: "others", label: "Others" },
-];
+import { LEAD_WORKSPACE_TABS } from "@/lib/leadWorkspaceTabsMeta";
+
+export { LEAD_WORKSPACE_TABS, LEAD_WORKSPACE_TAB_IDS } from "@/lib/leadWorkspaceTabsMeta";
+
+const TABS = LEAD_WORKSPACE_TABS;
 
 /** Optional actions (e.g. delete) aligned opposite the tab list on one toolbar row. */
 export default function LeadsWorkspaceTabs({ activeTab, onChange, endSlot = null }) {
