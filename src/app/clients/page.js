@@ -7,6 +7,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, User, Users } from "lucide-reac
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
+import { AppointmentStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
 import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
@@ -50,13 +51,6 @@ function humanize(value) {
   if (value == null || value === "") return "—";
   return String(value).replace(/_/g, " ");
 }
-
-function appointmentLabel(status) {
-  const s = String(status || "").trim().toLowerCase();
-  if (!s) return "—";
-  return s.replace(/_/g, " ");
-}
-
 
 const ICP_TIER_OPTIONS = [
   { value: "", label: "All ICP tiers" },
@@ -315,15 +309,13 @@ export default function ClientsPage() {
                             </span>
                           )}
                         </td>
-                        <td className={tdMuted}>
-                          <span className="line-clamp-2 max-w-[100px]" title={appointmentLabel(profile.appointment_status)}>
-                            {appointmentLabel(profile.appointment_status)}
-                          </span>
+                        <td className={`${tdMuted} align-middle`}>
+                          <AppointmentStatusChip status={profile.appointment_status} />
                         </td>
-                        <td className={`${td} text-center font-medium tabular-nums text-text-heading`}>
-                          <span className="text-primary" title="Leads linked to this profile">
-                            {leadCount}
-                          </span>
+                        <td className={`${td} text-center align-middle tabular-nums`}>
+                          <div className="flex justify-center">
+                            <LeadsCountChip count={leadCount} />
+                          </div>
                         </td>
                       </tr>
                     );

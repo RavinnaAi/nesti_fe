@@ -281,11 +281,14 @@ export async function sendNurtureEmail({ token, payload }) {
   });
 }
 
-export async function fetchNurtureLogs({ token, leadMatchId, page, limit }) {
+export async function fetchNurtureLogs({ token, leadMatchId, leadProfileId, page, limit }) {
   const authToken = token || getStoredAuthToken();
   const params = new URLSearchParams();
   if (leadMatchId && String(leadMatchId).trim()) {
     params.set("lead_match_id", String(leadMatchId).trim());
+  }
+  if (leadProfileId && String(leadProfileId).trim()) {
+    params.set("lead_profile_id", String(leadProfileId).trim());
   }
   if (page != null && String(page).trim() !== "") params.set("page", String(page));
   if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));

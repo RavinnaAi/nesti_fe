@@ -3,15 +3,32 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ExternalLink, User } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
+import { ArrowLeft, ExternalLink, Mail, User } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchLeadProfileById, fetchLeadsByProfileId } from "@/lib/leadsClient";
+import {
+  fetchNurtureLogs,
+  postNurtureDraft,
+  postNurtureRefine,
+  sendNurtureEmail,
+} from "@/lib/chatClient";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
+import { AppointmentStatusChip } from "@/components/clients/AppointmentStatusChip";
 import { ClientProfileCardSkeleton, ProfileLeadsTableSkeleton } from "@/components/ui/ContentSkeletons";
+import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 
 const PAGE_SIZE = 10;
+
+const normalizeList = (data) => {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data?.data)) return data.data;
+  if (Array.isArray(data?.items)) return data.items;
+  return [];
+};
 
 function humanize(value) {
   if (value == null || value === "") return "—";
@@ -38,11 +55,25 @@ export default function ClientProfileLeadsPage() {
     `/leads/${encodeURIComponent(leadId)}?back=${encodeURIComponent(clientProfilePath)}`;
   const { isAuthenticated } = useAuthGuard();
   const token = useAppSelector((s) => s.auth.token);
+  const queryClient = useQueryClient();
   const [hydrated, setHydrated] = useState(false);
   const [page, setPage] = useState(1);
+  const [nurtureForm, setNurtureForm] = useState({
+    to_email: "",
+    subject: "",
+    body: "",
+    refine_instruction: "",
+    goal: "",
+    tone: "",
+    include_property_cards: true,
+  });
+  const [resolvedLeadMatchId, setResolvedLeadMatchId] = useState(null);
+  /** 'leads' | 'nurture' — nurture opens the email composer in its own tab. */
+  const [clientWorkspaceTab, setClientWorkspaceTab] = useState("leads");
 
   useEffect(() => setHydrated(true), []);
   useEffect(() => setPage(1), [profileId]);
+  useEffect(() => setClientWorkspaceTab("leads"), [profileId]);
 
   const profileQuery = useQuery({
     queryKey: ["lead-profile", profileId, token],
@@ -88,6 +119,133 @@ export default function ClientProfileLeadsPage() {
   }, [profile]);
 
   const budgetDisplay = profile ? getBudgetDisplay(profile) : null;
+
+  const hasLinkedLeads = useMemo(() => {
+    if (!profile) return false;
+    const t = Number(pagination.total || 0);
+    if (Number.isFinite(t) && t > 0) return true;
+    if (leads.length > 0) return true;
+    const refs = Array.isArray(profile.lead_refs) ? profile.lead_refs.length : 0;
+    return refs > 0;
+  }, [profile, pagination.total, leads.length]);
+
+  useEffect(() => {
+    setNurtureForm({
+      to_email: "",
+      subject: "",
+      body: "",
+      refine_instruction: "",
+      goal: "",
+      tone: "",
+      include_property_cards: true,
+    });
+    setResolvedLeadMatchId(null);
+  }, [profileId]);
+
+  const nurtureSuggestedEmail = useMemo(() => {
+    const c = profile?.contact || {};
+    const raw = c?.email || c?.canonical_email || "";
+    return String(raw || "").trim();
+  }, [profile]);
+
+  useEffect(() => {
+    if (!profileId || !nurtureSuggestedEmail) return;
+    setNurtureForm((prev) => {
+      if (prev.to_email.trim()) return prev;
+      return { ...prev, to_email: nurtureSuggestedEmail };
+    });
+  }, [profileId, nurtureSuggestedEmail]);
+
+  const nurtureLogsQuery = useQuery({
+    queryKey: ["chat-nurture-logs", token, "profile", profileId],
+    enabled: Boolean(token && profileId && profileQuery.isSuccess),
+    queryFn: () => fetchNurtureLogs({ token, leadProfileId: profileId }),
+  });
+
+  const nurtureLogs = useMemo(() => normalizeList(nurtureLogsQuery.data), [nurtureLogsQuery.data]);
+
+  const nurtureLogsInvalidateKey = useMemo(
+    () => ["chat-nurture-logs", token, "profile", profileId],
+    [token, profileId],
+  );
+
+  const nurtureDraftMutation = useMutation({
+    mutationFn: () =>
+      postNurtureDraft({
+        token,
+        payload: {
+          lead_profile_id: profileId,
+          goal: nurtureForm.goal?.trim() || undefined,
+          tone: nurtureForm.tone?.trim() || undefined,
+        },
+      }),
+    onSuccess: (data) => {
+      const mid = data?.lead_match_id;
+      if (mid) setResolvedLeadMatchId(String(mid));
+      const d = data?.draft;
+      if (d) {
+        setNurtureForm((prev) => ({
+          ...prev,
+          subject: d.subject ?? prev.subject,
+          body: d.body_text ?? prev.body,
+        }));
+      }
+      toast.success("Draft ready. Review and send.");
+    },
+    onError: (err) => toast.error(err?.message || "Could not generate draft"),
+  });
+
+  const nurtureRefineMutation = useMutation({
+    mutationFn: () =>
+      postNurtureRefine({
+        token,
+        payload: {
+          lead_profile_id: profileId,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          instruction: nurtureForm.refine_instruction.trim(),
+        },
+      }),
+    onSuccess: (data) => {
+      const mid = data?.lead_match_id;
+      if (mid) setResolvedLeadMatchId(String(mid));
+      const d = data?.draft;
+      if (d) {
+        setNurtureForm((prev) => ({
+          ...prev,
+          subject: d.subject ?? prev.subject,
+          body: d.body_text ?? prev.body,
+          refine_instruction: "",
+        }));
+      }
+      toast.success("Refined.");
+    },
+    onError: (err) => toast.error(err?.message || "Could not refine email"),
+  });
+
+  const nurtureMutation = useMutation({
+    mutationFn: () =>
+      sendNurtureEmail({
+        token,
+        payload: {
+          lead_profile_id: profileId,
+          to_email: nurtureForm.to_email?.trim() || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
+        },
+      }),
+    onSuccess: (data) => {
+      const mid = data?.lead_match_id;
+      if (mid) setResolvedLeadMatchId(String(mid));
+      toast.success("Nurture email sent");
+      queryClient.invalidateQueries({ queryKey: nurtureLogsInvalidateKey });
+    },
+    onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
+  });
+
+  const resolvedWorkspaceLeadHref =
+    resolvedLeadMatchId && profileId ? leadWorkspaceHref(resolvedLeadMatchId) : null;
 
   if (!hydrated) {
     return (
@@ -176,8 +334,8 @@ export default function ClientProfileLeadsPage() {
                         {humanize(profile?.property?.timeline)}
                       </td>
                       <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Appointment</th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.appointment_status)}
+                      <td className="px-2 py-1 align-middle sm:text-[11px]">
+                        <AppointmentStatusChip status={profile?.appointment_status} />
                       </td>
                     </tr>
                     <tr className="border-b border-border/50">
@@ -232,11 +390,62 @@ export default function ClientProfileLeadsPage() {
               </div>
             </div>
 
+            <div className="flex flex-wrap gap-1 rounded-lg border border-border/90 bg-white p-1 shadow-sm">
+              <button
+                type="button"
+                onClick={() => setClientWorkspaceTab("leads")}
+                className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-colors sm:flex-none sm:justify-start sm:px-4 ${
+                  clientWorkspaceTab === "leads"
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-text-muted hover:bg-slate-100"
+                }`}
+              >
+                Leads
+              </button>
+              <button
+                type="button"
+                onClick={() => setClientWorkspaceTab("nurture")}
+                className={`inline-flex flex-1 items-center justify-center gap-1.5 rounded-md px-3 py-2 text-xs font-semibold transition-colors sm:flex-none sm:justify-start sm:px-4 ${
+                  clientWorkspaceTab === "nurture"
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-text-muted hover:bg-slate-100"
+                }`}
+              >
+                <Mail size={14} className="shrink-0 opacity-90" aria-hidden />
+                Nurture email
+              </button>
+            </div>
+
+            {clientWorkspaceTab === "nurture" ? (
+              <div className="overflow-hidden rounded-lg border border-border/90 bg-white shadow-sm p-2 sm:p-3">
+                <LeadsNurtureTab
+                  nurtureForm={nurtureForm}
+                  setNurtureForm={setNurtureForm}
+                  nurtureMutation={nurtureMutation}
+                  nurtureDraftMutation={nurtureDraftMutation}
+                  nurtureRefineMutation={nurtureRefineMutation}
+                  selectedLeadId={null}
+                  leadProfileId={profileId}
+                  nurtureEnabled={hasLinkedLeads}
+                  logsEnabled
+                  actionConversationId=""
+                  nurtureLogs={nurtureLogs}
+                  nurtureLogsLoading={nurtureLogsQuery.isLoading}
+                  composeEmptyMessage="No lead workspace linked to this client yet. Add or open a lead from the Leads tab before composing a nurture email."
+                  logsEmptyListMessage="No nurture emails logged for this client yet."
+                  headerDescription="Send from this client profile: draft uses your most recently active lead workspace for context and listing cards, then refine and send with your workspace email configuration."
+                  resolvedWorkspaceLeadHref={resolvedWorkspaceLeadHref || undefined}
+                />
+              </div>
+            ) : null}
+
+            {clientWorkspaceTab === "leads" ? (
             <div className="overflow-hidden rounded-lg border border-border/90 bg-white shadow-sm">
               <div className="border-b border-border bg-primary/[0.04] px-2.5 py-1.5">
                 <h2 className="font-heading text-sm font-semibold text-text-heading">Leads for this profile</h2>
                 <p className="text-[10px] text-text-muted sm:text-[11px]">
-                  Open a lead in the workspace to view conversation, nurture, and matches.
+                  Open a lead in the workspace for conversation and property matches, or switch to the Nurture
+                  email tab to compose from this client.
                 </p>
               </div>
 
@@ -327,8 +536,8 @@ export default function ClientProfileLeadsPage() {
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
                               {humanize(lead?.contact?.best_time_to_contact)}
                             </td>
-                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
-                              {humanize(lead?.appointment_status)}
+                            <td className="px-2 py-1.5 align-middle sm:text-[11px]">
+                              <AppointmentStatusChip status={lead?.appointment_status} />
                             </td>
                             <td className="px-2 py-1.5 text-right">
                               <Link
@@ -377,6 +586,7 @@ export default function ClientProfileLeadsPage() {
                 </div>
               ) : null}
             </div>
+            ) : null}
           </>
         )}
       </div>

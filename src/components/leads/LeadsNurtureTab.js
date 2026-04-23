@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2, X } from "lucide-react";
 
 function statusChip(status) {
@@ -28,13 +29,28 @@ export default function LeadsNurtureTab({
   nurtureDraftMutation,
   nurtureRefineMutation,
   selectedLeadId,
+  leadProfileId,
+  nurtureEnabled: nurtureEnabledProp,
+  /** When set, logs tab can load even if compose is disabled (e.g. client profile with no leads). */
+  logsEnabled: logsEnabledProp,
   actionConversationId,
   nurtureLogs,
   nurtureLogsLoading,
+  composeEmptyMessage,
+  logsEmptySelectionMessage,
+  logsEmptyListMessage,
+  headerDescription,
+  resolvedWorkspaceLeadHref,
 }) {
   const [panelTab, setPanelTab] = useState("compose");
   const [selectedLog, setSelectedLog] = useState(null);
-  const canAi = Boolean(selectedLeadId);
+  const nurtureEnabled =
+    typeof nurtureEnabledProp === "boolean"
+      ? nurtureEnabledProp
+      : Boolean(selectedLeadId || leadProfileId);
+  const canAi = nurtureEnabled;
+  const canViewLogs =
+    typeof logsEnabledProp === "boolean" ? logsEnabledProp : nurtureEnabled;
   const canRefine =
     canAi &&
     nurtureForm.subject?.trim() &&
@@ -56,8 +72,8 @@ export default function LeadsNurtureTab({
               Nurture email
             </h2>
             <p className="text-xs text-text-muted mt-0.5 max-w-xl leading-relaxed">
-              Draft from lead context, refine, then send. Uses your workspace email
-              configuration.
+              {headerDescription ||
+                "Draft from lead context, refine, then send. Uses your workspace email configuration."}
             </p>
           </div>
           <div className="grid grid-cols-2 rounded-lg border border-border bg-white p-1 w-full sm:w-[220px]">
@@ -91,9 +107,22 @@ export default function LeadsNurtureTab({
         <div className="grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
         {/* Left: nurture draft inputs */}
         <div className="lg:col-span-8 lg:border-r border-border/70 flex flex-col min-h-0 min-w-0">
-          {!selectedLeadId ? (
+          {!canAi ? (
             <div className="flex-shrink-0 m-3 rounded-lg border border-amber-200 bg-amber-50/90 px-3 py-2 text-xs text-amber-900">
-              Select a lead in the list to compose a nurture email.
+              {composeEmptyMessage ||
+                "Select a lead in the list to compose a nurture email."}
+            </div>
+          ) : null}
+
+          {canAi && resolvedWorkspaceLeadHref ? (
+            <div className="flex-shrink-0 m-3 rounded-lg border border-primary/15 bg-primary/[0.04] px-3 py-2 text-[11px] text-text-heading">
+              Draft and matches use your most recently active lead workspace for this client.{" "}
+              <Link
+                href={resolvedWorkspaceLeadHref}
+                className="font-semibold text-primary hover:underline"
+              >
+                Open that lead
+              </Link>
             </div>
           ) : null}
 
@@ -289,7 +318,7 @@ export default function LeadsNurtureTab({
               </span>
             </label>
 
-            {!actionConversationId && selectedLeadId ? (
+            {!actionConversationId && selectedLeadId && !leadProfileId ? (
               <p className="text-[11px] text-text-muted leading-snug">
                 No conversation id on this lead — email still sends; logging may
                 omit thread linkage.
@@ -300,9 +329,10 @@ export default function LeadsNurtureTab({
       </div>
       ) : (
         <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 bg-slate-50/40">
-          {!selectedLeadId ? (
+          {!canViewLogs ? (
             <p className="text-sm text-text-muted text-center py-8">
-              Select a lead to view nurture logs.
+              {logsEmptySelectionMessage ||
+                "Select a lead to view nurture logs."}
             </p>
           ) : nurtureLogsLoading ? (
             <div className="flex justify-center py-10 text-text-muted">
@@ -310,7 +340,8 @@ export default function LeadsNurtureTab({
             </div>
           ) : !nurtureLogs.length ? (
             <p className="text-sm text-text-muted text-center py-8">
-              No nurture emails logged for this lead yet.
+              {logsEmptyListMessage ||
+                "No nurture emails logged for this lead yet."}
             </p>
           ) : (
             <div className="space-y-2">
