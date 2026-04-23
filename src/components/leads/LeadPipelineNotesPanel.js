@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { MessageSquareText } from "lucide-react";
 import LeadPipelineStageControl from "@/components/leads/LeadPipelineStageControl";
 
+/** Max rows in "Previous comments" (newest first). */
+const PREVIOUS_NOTES_SHOWN = 2;
+
 /**
  * Agent notes with pipeline stage. Optional `pipelineListFilterHint` when the lead was opened
  * from a filtered list (`status` / `pipeline` in the URL).
@@ -43,7 +46,14 @@ export default function LeadPipelineNotesPanel({
     }
   };
 
-  const agentNotes = Array.isArray(leadData.agent_notes) ? leadData.agent_notes : [];
+  const agentNotesAll = Array.isArray(leadData.agent_notes) ? leadData.agent_notes : [];
+  const agentNotes = [...agentNotesAll]
+    .sort((a, b) => {
+      const ta = new Date(a?.created_at || 0).getTime();
+      const tb = new Date(b?.created_at || 0).getTime();
+      return tb - ta;
+    })
+    .slice(0, PREVIOUS_NOTES_SHOWN);
 
   if (typeof onPatchLead !== "function") return null;
 
@@ -87,15 +97,17 @@ export default function LeadPipelineNotesPanel({
         <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-text-muted">
           Previous comments
         </h3>
-        {agentNotes.length > 0 ? (
+        {agentNotesAll.length > 0 ? (
           <span className="text-[11px] font-medium tabular-nums text-text-muted/80">
-            ({agentNotes.length})
+            {agentNotesAll.length > PREVIOUS_NOTES_SHOWN
+              ? `(${PREVIOUS_NOTES_SHOWN} of ${agentNotesAll.length})`
+              : `(${agentNotesAll.length})`}
           </span>
         ) : null}
       </div>
 
       <div className="flex min-h-[200px] flex-1 flex-col overflow-hidden rounded-lg border border-border/60 bg-background-light/25 lg:min-h-0">
-        {agentNotes.length > 0 ? (
+        {agentNotesAll.length > 0 ? (
           <ul className="space-y-2.5 overflow-y-auto overscroll-contain p-3 sm:p-4">
             {agentNotes.map((n) => {
               const when = n.created_at ? new Date(n.created_at) : null;

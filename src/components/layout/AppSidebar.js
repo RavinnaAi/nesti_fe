@@ -20,8 +20,8 @@ import {
   LogOut,
   ChevronDown,
   X,
-  ListFilter,
   GitBranch,
+  CalendarDays,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -34,7 +34,6 @@ const PRIMARY_ITEMS = [
   { id: "clients", label: "Clients", href: "/clients", icon: UserRound },
   { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
   { id: "logs", label: "Logs", href: "/nurture-logs", icon: ClipboardList },
-  { id: "chatbot", label: "Chatbot", href: "/settings?tab=chatbot", icon: Code2 },
   { id: "checkout", label: "Checkout", href: "/checkout", icon: CreditCard },
 ];
 
@@ -44,7 +43,7 @@ const SETTINGS_ITEMS = [
   { id: "icp", label: "Ideal Client Profile", tab: "icp", icon: Target },
   { id: "password", label: "Change Password", tab: "password", icon: Lock },
   { id: "subscription", label: "Subscription", tab: "subscription", icon: CreditCard },
-  { id: "leads_pipeline", label: "Leads pipeline", tab: "leads", icon: ListFilter },
+  { id: "chatbot", label: "Chatbot", tab: "chatbot", icon: Code2 },
 ];
 
 function isPrimaryNavActive(pathname, href, searchParams) {
@@ -87,6 +86,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const [pipelineNavOpen, setPipelineNavOpen] = useState(false);
 
   const isLeadsArea = pathname === "/leads" || pathname.startsWith("/leads/");
+  const isCalendarRoute = pathname === "/calendar" || pathname.startsWith("/calendar/");
 
   useEffect(() => {
     if (isSettingsActive) setSettingsOpen(true);
@@ -226,63 +226,90 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                 </Link>
 
                 {item.id === "leads" ? (
-                  <div className="space-y-1">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setPipelineNavOpen((prev) => !prev);
-                        setSettingsOpen(false);
-                      }}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold transition ${
-                        pipelineRowExpanded
-                          ? "bg-primary/10 text-primary-dark"
-                          : pipelineRowInLeadsWorkspace
-                            ? "bg-primary/[0.07] text-text-heading"
-                            : "text-text-body hover:bg-primary/5 hover:text-text-heading"
-                      }`}
-                      aria-expanded={pipelineNavOpen}
-                    >
-                      <span className="flex items-center gap-2.5">
-                        <span
-                          className={`h-8 w-8 rounded-md grid place-items-center ${
-                            pipelineRowExpanded
-                              ? "bg-primary/20 text-primary-dark"
-                              : pipelineRowInLeadsWorkspace
-                                ? "bg-primary/12 text-primary-dark/90"
-                                : "bg-background-light text-text-muted"
-                          }`}
-                        >
-                          <GitBranch size={16} />
+                  <>
+                    <div className="space-y-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPipelineNavOpen((prev) => !prev);
+                          setSettingsOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold transition ${
+                          pipelineRowExpanded
+                            ? "bg-primary/10 text-primary-dark"
+                            : pipelineRowInLeadsWorkspace
+                              ? "bg-primary/[0.07] text-text-heading"
+                              : "text-text-body hover:bg-primary/5 hover:text-text-heading"
+                        }`}
+                        aria-expanded={pipelineNavOpen}
+                      >
+                        <span className="flex items-center gap-2.5">
+                          <span
+                            className={`h-8 w-8 rounded-md grid place-items-center ${
+                              pipelineRowExpanded
+                                ? "bg-primary/20 text-primary-dark"
+                                : pipelineRowInLeadsWorkspace
+                                  ? "bg-primary/12 text-primary-dark/90"
+                                  : "bg-background-light text-text-muted"
+                            }`}
+                          >
+                            <GitBranch size={16} />
+                          </span>
+                          Pipeline
                         </span>
-                        Pipeline
-                      </span>
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform ${pipelineNavOpen ? "rotate-180" : ""}`}
-                      />
-                    </button>
+                        <ChevronDown
+                          size={16}
+                          className={`transition-transform ${pipelineNavOpen ? "rotate-180" : ""}`}
+                        />
+                      </button>
 
-                    <AnimatePresence initial={false}>
-                      {pipelineNavOpen ? (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          transition={{ duration: 0.16 }}
-                          className="overflow-hidden"
-                        >
-                          <div className="pl-4 pr-1 py-1 space-y-1 border-l border-border/80 ml-4">
-                            <LeadsPipelineSidebarNav
-                              embedded
-                              variant="settings"
-                              skipRouteCheck
-                              onNavigate={() => onCloseMobile?.()}
-                            />
-                          </div>
-                        </motion.div>
-                      ) : null}
-                    </AnimatePresence>
-                  </div>
+                      <AnimatePresence initial={false}>
+                        {pipelineNavOpen ? (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.16 }}
+                            className="overflow-hidden"
+                          >
+                            <div className="pl-4 pr-1 py-1 space-y-1 border-l border-border/80 ml-4">
+                              <LeadsPipelineSidebarNav
+                                embedded
+                                variant="settings"
+                                skipRouteCheck
+                                onNavigate={() => onCloseMobile?.()}
+                              />
+                            </div>
+                          </motion.div>
+                        ) : null}
+                      </AnimatePresence>
+                    </div>
+                    <Link
+                      href="/calendar"
+                      onClick={() => {
+                        setSettingsOpen(false);
+                        setPipelineNavOpen(false);
+                        onCloseMobile?.();
+                      }}
+                      className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition ${
+                        isCalendarRoute
+                          ? "bg-primary/10 text-primary-dark"
+                          : "text-text-body hover:bg-primary/5 hover:text-text-heading"
+                      }`}
+                      aria-current={isCalendarRoute ? "page" : undefined}
+                    >
+                      <span
+                        className={`h-8 w-8 rounded-md grid place-items-center ${
+                          isCalendarRoute
+                            ? "bg-primary/20 text-primary-dark"
+                            : "bg-background-light text-text-muted"
+                        }`}
+                      >
+                        <CalendarDays size={16} />
+                      </span>
+                      <span>Calendar</span>
+                    </Link>
+                  </>
                 ) : null}
               </Fragment>
             );

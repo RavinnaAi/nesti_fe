@@ -12,7 +12,6 @@ import SubscriptionInfo from "@/components/settings/SubscriptionInfo";
 import ChatbotEmbed from "@/components/settings/ChatbotEmbed";
 import BusinessInformation from "@/components/settings/BusinessInformation";
 import IcpIntegrationCard from "@/components/settings/IcpIntegrationCard";
-import LeadsPipelineSettings from "@/components/settings/LeadsPipelineSettings";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { toast } from "react-toastify";
 import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
@@ -23,7 +22,15 @@ import {
   CALENDLY_OAUTH_WINDOW_NAME,
 } from "@/lib/calendlyOAuthPopup";
 
-const VALID_TABS = ["personal", "business", "icp", "password", "subscription", "chatbot", "leads"];
+const VALID_TABS = [
+  "personal",
+  "business",
+  "icp",
+  "password",
+  "subscription",
+  "chatbot",
+  "leads",
+];
 
 function SettingsPageFallback() {
   return (
@@ -148,6 +155,16 @@ function SettingsPageContent() {
     const upgrade = searchParams.get("upgrade");
     const expired = searchParams.get("expired");
 
+    if (tab === "appointments") {
+      router.replace("/calendar");
+      return;
+    }
+
+    if (tab === "leads") {
+      router.replace("/leads");
+      return;
+    }
+
     if (tab && VALID_TABS.includes(tab)) {
       setActiveTab(tab);
     } else if (!tab) {
@@ -159,7 +176,7 @@ function SettingsPageContent() {
     } else if (expired === "1") {
       toast.warning("Your trial has expired. Please subscribe to continue.");
     }
-  }, [searchParams]);
+  }, [searchParams, router]);
 
   const ActiveComponent = useMemo(() => {
     switch (activeTab) {
@@ -175,8 +192,6 @@ function SettingsPageContent() {
         return BusinessInformation;
       case "icp":
         return IcpIntegrationCard;
-      case "leads":
-        return LeadsPipelineSettings;
       default:
         return PersonalInfo;
     }

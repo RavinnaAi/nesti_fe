@@ -2,7 +2,11 @@
 
 import { LEAD_WORKSPACE_TABS } from "@/lib/leadWorkspaceTabsMeta";
 
-export { LEAD_WORKSPACE_TABS, LEAD_WORKSPACE_TAB_IDS } from "@/lib/leadWorkspaceTabsMeta";
+export {
+  LEAD_WORKSPACE_TABS,
+  LEAD_WORKSPACE_TAB_IDS,
+  normalizeLeadWorkspaceTabId,
+} from "@/lib/leadWorkspaceTabsMeta";
 
 const TABS = LEAD_WORKSPACE_TABS;
 

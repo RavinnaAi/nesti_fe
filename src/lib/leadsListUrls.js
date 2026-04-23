@@ -1,4 +1,4 @@
-import { LEAD_WORKSPACE_TAB_IDS } from "@/lib/leadWorkspaceTabsMeta";
+import { LEAD_WORKSPACE_TAB_IDS, normalizeLeadWorkspaceTabId } from "@/lib/leadWorkspaceTabsMeta";
 
 /** Build `/leads?page=&status=&pipeline=` for list + pagination. */
 export function buildLeadsListHref({ page = 1, status = "", pipeline = "" } = {}) {
@@ -29,7 +29,7 @@ export function buildLeadWorkspaceHref(
   const pl = String(pipeline || "").trim();
   if (st) p.set("status", st);
   if (pl) p.set("pipeline", pl);
-  const t = String(tab || "").trim();
+  const t = normalizeLeadWorkspaceTabId(String(tab || "").trim());
   if (t && LEAD_WORKSPACE_TAB_IDS.has(t)) p.set("tab", t);
   return `/leads/${id}?${p.toString()}`;
 }

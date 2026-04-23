@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ShieldCheck, RefreshCw } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRecordLeadView } from "@/hooks/useRecordLeadView";
@@ -23,7 +23,6 @@ import DashboardAnalyticsPanels from "@/components/dashboard/DashboardAnalyticsP
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
 import DashboardTopTables from "@/components/dashboard/DashboardTopTables";
 import DashboardCalendlyButton from "@/components/dashboard/DashboardCalendlyButton";
-
 const WINDOW_OPTIONS = [
   { value: 7, label: "7d" },
   { value: 30, label: "30d" },
@@ -39,6 +38,7 @@ function normalizeProfilesPayload(data) {
 }
 
 export default function DashboardPage() {
+  const queryClient = useQueryClient();
   const { user, token } = useAppSelector((state) => state.auth);
   const personalInfo = useAppSelector((state) => state.profile.personalInfo);
   const coverImage = personalInfo?.coverImage;
@@ -135,6 +135,7 @@ export default function DashboardPage() {
     nurtureLogsChartQuery.refetch();
     profilesTopQuery.refetch();
     leadTrendsQuery.refetch();
+    queryClient.invalidateQueries({ queryKey: ["calendar-bookings", token] });
   };
 
   const isRefreshing =

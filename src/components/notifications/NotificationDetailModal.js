@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -59,18 +59,37 @@ export default function NotificationDetailModal({ notification, onClose }) {
   const isLoading = Boolean(id && detailQuery.isLoading && !detail);
   const isError = detailQuery.isError;
 
+  /** Avoid duplicate PATCH /read when mutation state + broad invalidation re-ran the effect. */
+  const markReadAttemptedRef = useRef(false);
+  useEffect(() => {
+    markReadAttemptedRef.current = false;
+  }, [id]);
+
   const markReadMutation = useMutation({
     mutationFn: ({ nid }) => markNotificationReadRequest({ token, id: nid }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["notifications", "detail", token, id] });
+    onSuccess: (data) => {
+      const updated = data?.notification;
+      if (updated && id) {
+        queryClient.setQueryData(["notifications", "detail", token, id], updated);
+      }
+      queryClient.invalidateQueries({ queryKey: ["notifications", "unread-count"] });
+      queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
     },
   });
 
   useEffect(() => {
-    if (!detail?.id || detail.read_at) return;
-    markReadMutation.mutate({ nid: detail.id });
-  }, [detail?.id, detail?.read_at, markReadMutation]);
+    if (!detail?.id || detail.read_at || markReadAttemptedRef.current) return;
+    markReadAttemptedRef.current = true;
+    const nid = String(detail.id);
+    markReadMutation.mutate(
+      { nid },
+      {
+        onError: () => {
+          markReadAttemptedRef.current = false;
+        },
+      }
+    );
+  }, [detail?.id, detail?.read_at]);
 
   useEffect(() => {
     if (!notification) return;

@@ -30,7 +30,7 @@ import {
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
-import { LEAD_WORKSPACE_TAB_IDS } from "@/lib/leadWorkspaceTabsMeta";
+import { LEAD_WORKSPACE_TAB_IDS, normalizeLeadWorkspaceTabId } from "@/lib/leadWorkspaceTabsMeta";
 import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
 import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
 import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
@@ -155,7 +155,8 @@ function LeadWorkspacePageContent() {
   const backParamRaw = searchParams.get("back");
   const listStatusQ = String(searchParams.get("status") || "").trim();
   const listPipelineQ = String(searchParams.get("pipeline") || "").trim();
-  const tabFromUrl = String(searchParams.get("tab") || "").trim();
+  const rawTabParam = String(searchParams.get("tab") || "").trim();
+  const tabFromUrl = normalizeLeadWorkspaceTabId(rawTabParam);
   const leadsListHref = useMemo(() => {
     const p = new URLSearchParams();
     const pageNum = Number.isFinite(backPage) && backPage > 0 ? backPage : 1;
@@ -208,6 +209,16 @@ function LeadWorkspacePageContent() {
       setActiveTab("lead_profile");
     }
   }, [tabFromUrl, leadId]);
+
+  /** Canonicalize e.g. `tab=notes` → `tab=pipeline` without breaking bookmarks. */
+  useEffect(() => {
+    if (!rawTabParam) return;
+    if (!tabFromUrl || !LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl)) return;
+    if (rawTabParam === tabFromUrl) return;
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("tab", tabFromUrl);
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+  }, [rawTabParam, tabFromUrl, pathname, router, searchParams]);
 
   useEffect(() => {
     if (!rawLeadIdParam || !leadId) return;

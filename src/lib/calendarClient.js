@@ -12,6 +12,18 @@ export async function fetchCalendlyConnectUrl({ token }) {
 }
 
 /**
+ * GET /api/calendar/bookings — { success, bookings: [{ lead_match_id, starts_at, title, contact, ... }] }.
+ * `starts_at` is when the booking was recorded (conversation.calendly_booking_at), newest first.
+ */
+export async function fetchCalendarBookings({ token }) {
+  return apiClient({
+    url: API_ENDPOINTS.calendar.bookings,
+    method: "GET",
+    token,
+  });
+}
+
+/**
  * GET /api/calendar/status — { success, status: [{ provider, account_email, expires_at, ... }] }.
  */
 export async function fetchCalendarStatus({ token }) {

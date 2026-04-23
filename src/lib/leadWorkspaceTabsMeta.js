@@ -1,5 +1,8 @@
 /** Single source for workspace tab ids + labels (lead detail /leads/[id]). */
 
+/** URL/query aliases → canonical tab id (keeps old `tab=pipeline` links working). */
+const LEAD_WORKSPACE_TAB_ALIASES = { notes: "pipeline" };
+
 export const LEAD_WORKSPACE_TABS = [
   { id: "lead_profile", label: "Lead Profile" },
   { id: "lead_details", label: "Lead Details" },
@@ -12,3 +15,10 @@ export const LEAD_WORKSPACE_TABS = [
 ];
 
 export const LEAD_WORKSPACE_TAB_IDS = new Set(LEAD_WORKSPACE_TABS.map((t) => t.id));
+
+/** Resolve `tab=notes` (or other aliases) to the canonical id used in state and UI. */
+export function normalizeLeadWorkspaceTabId(tab) {
+  if (tab == null || tab === "") return "";
+  const s = String(tab).trim();
+  return LEAD_WORKSPACE_TAB_ALIASES[s] || s;
+}

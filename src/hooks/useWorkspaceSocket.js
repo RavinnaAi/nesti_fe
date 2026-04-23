@@ -53,6 +53,7 @@ export function useWorkspaceSocket(token, queryClient) {
         refetchType: "all",
       });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
 
       if (payload?.notification_type === "lead_created") return;
 
@@ -72,6 +73,7 @@ export function useWorkspaceSocket(token, queryClient) {
         refetchType: "all",
       });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
     };
 
     socket.on("connect", () => {

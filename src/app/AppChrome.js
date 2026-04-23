@@ -11,7 +11,7 @@ import BackgroundElements from "@/components/layout/BackgroundElements";
 import CustomToastContainer from "@/components/ui/ToastContainer";
 import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
-import { ChevronDown, LogOut, Menu, Settings, User } from "lucide-react";
+import { CalendarDays, ChevronDown, LogOut, Menu, Settings, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import {
@@ -253,6 +253,15 @@ export default function AppChrome({ children }) {
                       >
                         <Settings size={16} className="text-text-muted" />
                         Settings
+                      </Link>
+                      <Link
+                        href="/calendar"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <CalendarDays size={16} className="text-text-muted" />
+                        Calendar
                       </Link>
                       <div className="my-1 h-px bg-border" role="separator" />
                       <button
