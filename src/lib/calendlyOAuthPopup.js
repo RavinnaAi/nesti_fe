@@ -1,4 +1,4 @@
-/** Second argument to `window.open` — legacy popup flow only; main app uses same-tab OAuth. */
+/** Second argument to `window.open` — OAuth runs here so the opener tab stays on the SPA. */
 export const CALENDLY_OAUTH_WINDOW_NAME = "calendly-oauth";
 
 /** Where to send the user after OAuth completes (same-tab return). */

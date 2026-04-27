@@ -16,7 +16,7 @@ import {
   sendNurtureEmail,
 } from "@/lib/chatClient";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
-import { AppointmentStatusChip } from "@/components/clients/AppointmentStatusChip";
+import { NurtureConsultationStatusChip } from "@/components/clients/AppointmentStatusChip";
 import { ClientProfileCardSkeleton, ProfileLeadsTableSkeleton } from "@/components/ui/ContentSkeletons";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 
@@ -333,9 +333,9 @@ export default function ClientProfileLeadsPage() {
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
                         {humanize(profile?.property?.timeline)}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Appointment</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Nurture consult</th>
                       <td className="px-2 py-1 align-middle sm:text-[11px]">
-                        <AppointmentStatusChip status={profile?.appointment_status} />
+                        <NurtureConsultationStatusChip booked={profile?.nurture_consultation_booked} />
                       </td>
                     </tr>
                     <tr className="border-b border-border/50">
@@ -478,7 +478,7 @@ export default function ClientProfileLeadsPage() {
                         <th className="px-2 py-1.5 text-center">Score</th>
                         <th className="px-2 py-1.5">Preferred</th>
                         <th className="px-2 py-1.5">Best time</th>
-                        <th className="px-2 py-1.5">Appt</th>
+                        <th className="px-2 py-1.5">Nurture</th>
                         <th className="px-2 py-1.5 text-right">Open</th>
                       </tr>
                     </thead>
@@ -537,7 +537,7 @@ export default function ClientProfileLeadsPage() {
                               {humanize(lead?.contact?.best_time_to_contact)}
                             </td>
                             <td className="px-2 py-1.5 align-middle sm:text-[11px]">
-                              <AppointmentStatusChip status={lead?.appointment_status} />
+                              <NurtureConsultationStatusChip booked={profile?.nurture_consultation_booked} />
                             </td>
                             <td className="px-2 py-1.5 text-right">
                               <Link

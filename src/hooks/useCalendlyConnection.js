@@ -13,7 +13,11 @@ import { isCalendlyPlanWebhookBlock } from "@/lib/calendlyErrors";
 import {
   CALENDLY_INTEGRATION_TOAST_ID,
   CALENDLY_OAUTH_RETURN_KEY,
+  CALENDLY_OAUTH_WINDOW_NAME,
 } from "@/lib/calendlyOAuthPopup";
+
+const CALENDLY_POPUP_FEATURES =
+  "popup=yes,width=560,height=720,scrollbars=yes,resizable=yes";
 
 export function useCalendlyConnection() {
   const { token } = useAppSelector((s) => s.auth);
@@ -52,7 +56,20 @@ export function useCalendlyConnection() {
         });
         return;
       }
-      window.location.assign(url);
+      // Popup keeps the main SPA mounted; same-tab assign would tear down the whole app on return.
+      const popup = window.open(url, CALENDLY_OAUTH_WINDOW_NAME, CALENDLY_POPUP_FEATURES);
+      if (!popup) {
+        toast.info("Popup blocked — continuing Calendly sign-in in this tab.", {
+          toastId: CALENDLY_INTEGRATION_TOAST_ID,
+        });
+        window.location.assign(url);
+      } else {
+        try {
+          popup.focus();
+        } catch {
+          /* ignore */
+        }
+      }
     } catch (e) {
       toast.error(e?.message || "Failed to start Calendly connection", {
         toastId: CALENDLY_INTEGRATION_TOAST_ID,

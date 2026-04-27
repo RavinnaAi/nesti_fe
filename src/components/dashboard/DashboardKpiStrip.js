@@ -1,6 +1,6 @@
 "use client";
 
-import { Users, Eye, CalendarCheck, Mail, TrendingUp } from "lucide-react";
+import { Users, Eye, CalendarCheck, Mail, Trophy } from "lucide-react";
 
 const TILES = [
   {
@@ -32,12 +32,12 @@ const TILES = [
     accent: "text-amber-600 bg-amber-50",
   },
   {
-    key: "conversion_rate",
-    label: "Conversion",
-    helper: "Booked / created",
-    Icon: TrendingUp,
+    key: "leads_closed_won",
+    label: "Deals",
+    helper: "",
+    Icon: Trophy,
     accent: "text-rose-600 bg-rose-50",
-    isPercent: true,
+    dealsMeta: true,
   },
 ];
 
@@ -62,14 +62,19 @@ export default function DashboardKpiStrip({ summary, isLoading }) {
     lead_views: totals.lead_views ?? 0,
     appointments_booked: totals.appointments_booked ?? 0,
     nurture_emails_sent: totals.nurture_emails_sent ?? 0,
-    conversion_rate: rates.booked_from_created ?? 0,
+    leads_closed_won: totals.leads_closed_won ?? 0,
   };
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4">
-      {TILES.map(({ key, label, helper, Icon, accent, isPercent }) => {
+      {TILES.map(({ key, label, helper, Icon, accent, isPercent, dealsMeta }) => {
         const raw = values[key];
         const display = isLoading ? null : isPercent ? formatPercent(raw) : formatInt(raw);
+        const cohort = totals.leads_in_window_for_conversion ?? 0;
+        const helperText =
+          dealsMeta && !isLoading
+            ? `Closed won · ${formatPercent(rates.closed_won_from_created ?? 0)} win rate · ${formatInt(cohort)} leads in cohort`
+            : helper;
         return (
           <div
             key={key}
@@ -102,7 +107,7 @@ export default function DashboardKpiStrip({ summary, isLoading }) {
             {isLoading ? (
               <div className="mt-2 h-3 w-28 rounded-md bg-primary/10 animate-pulse" />
             ) : (
-              <p className="mt-2 text-[11px] text-text-muted">{helper}</p>
+              <p className="mt-2 text-[11px] text-text-muted leading-snug">{helperText}</p>
             )}
           </div>
         );

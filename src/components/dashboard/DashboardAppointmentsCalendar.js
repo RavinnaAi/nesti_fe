@@ -35,6 +35,18 @@ function formatIntentLabel(intent) {
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
+/** Stable key when the same lead has multiple calendar rows (nurture logs / workspace docs). */
+function bookingRowKey(b, idx) {
+  const id =
+    b?.nurture_log_id ||
+    b?.workspace_appointment_id ||
+    `${b?.lead_match_id || "lead"}-${b?.starts_at || ""}`;
+  return `${id}-${idx}`;
+}
+
+/** Max bookings listed in a day cell (fits without in-cell scroll); rest open the day modal. */
+const MAX_VISIBLE_DAY_BOOKINGS = 3;
+
 /** @param {{ booking: object | null; onClose: () => void; token?: string | null; onCanceled?: () => void }} props */
 function BookingDetailModal({ booking, onClose, token, onCanceled }) {
   const [canceling, setCanceling] = useState(false);
@@ -100,7 +112,7 @@ function BookingDetailModal({ booking, onClose, token, onCanceled }) {
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] lg:inset-y-0 lg:left-[272px] lg:right-0"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] lg:inset-y-0 lg:left-60 lg:right-0"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -260,7 +272,7 @@ function DayOverflowModal({ day, cursor, items, onClose, onSelectBooking }) {
 
   return (
     <div
-      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] lg:inset-y-0 lg:left-[272px] lg:right-0"
+      className="fixed inset-0 z-[110] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px] lg:inset-y-0 lg:left-60 lg:right-0"
       role="presentation"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
@@ -287,7 +299,7 @@ function DayOverflowModal({ day, cursor, items, onClose, onSelectBooking }) {
           </button>
         </div>
         <ul className="max-h-[min(70vh,22rem)] overflow-y-auto p-2">
-          {sorted.map((b) => {
+          {sorted.map((b, bi) => {
             const t = parseStart(b.starts_at);
             const time = formatTimeShort(t) || "—";
             const pt =
@@ -295,7 +307,7 @@ function DayOverflowModal({ day, cursor, items, onClose, onSelectBooking }) {
                 ? String(b.property_type).trim()
                 : null;
             return (
-              <li key={b.lead_match_id} className="border-b border-border/60 last:border-0">
+              <li key={bookingRowKey(b, bi)} className="border-b border-border/60 last:border-0">
                 <button
                   type="button"
                   className="flex w-full flex-col gap-0.5 rounded-lg px-2 py-2.5 text-left transition hover:bg-primary/[0.06]"
@@ -381,10 +393,9 @@ export default function DashboardAppointmentsCalendar({
     : compact
       ? "p-2 sm:p-3"
       : "p-4 shadow-sm sm:p-5";
-  const maxChips = compact || embeddedInSettings ? 2 : 3;
   const cellMinH = compact
-    ? "min-h-[4.25rem] sm:min-h-[4.75rem]"
-    : "min-h-[5.25rem] sm:min-h-[6.5rem]";
+    ? "min-h-[7rem] sm:min-h-[7.75rem]"
+    : "min-h-[8rem] sm:min-h-[9rem]";
 
   const sectionClass = embeddedInSettings
     ? `flex min-h-0 flex-1 flex-col gap-2 ${className}`.trim()
@@ -477,27 +488,27 @@ export default function DashboardAppointmentsCalendar({
                   </div>
                 ))}
               </div>
-              <div className="min-h-0 flex-1">
-                {/* White grid background — gap-px + bg-border was making empty cells look grey */}
-                <div className="grid h-full min-h-[12rem] w-full grid-cols-7 overflow-hidden rounded-b-lg border border-t-0 border-border/80 bg-white [grid-auto-rows:minmax(3.25rem,1fr)]">
+              <div className="min-h-0 flex-1 overflow-y-auto rounded-b-lg border border-t-0 border-border/80 bg-white">
+                {/* Scroll the full month: h-full + overflow-hidden was clipping rows and collapsing booking chips. */}
+                <div className="grid w-full grid-cols-7 bg-white [grid-auto-rows:minmax(5.5rem,auto)]">
                   {cells.map((cell) => {
                     if (cell.type === "pad") {
                       return (
                         <div
                           key={cell.key}
-                          className="min-h-0 border-r border-t border-border/40 bg-background-lighter [&:nth-child(7n)]:border-r-0"
+                          className="min-h-[5.5rem] border-r border-t border-border/40 bg-background-lighter [&:nth-child(7n)]:border-r-0"
                           aria-hidden
                         />
                       );
                     }
                     const items = cell.items;
                     const has = items.length > 0;
-                    const visible = items.slice(0, maxChips);
+                    const visible = items.slice(0, MAX_VISIBLE_DAY_BOOKINGS);
                     const overflow = items.length - visible.length;
                     return (
                       <div
                         key={cell.key}
-                        className={`flex min-h-0 flex-col overflow-hidden border-r border-t border-border/40 bg-white pl-2 pr-1 pt-1.5 pb-1 [&:nth-child(7n)]:border-r-0 ${
+                        className={`flex min-h-[5.5rem] flex-col border-r border-t border-border/40 bg-white pl-2 pr-1 pt-1.5 pb-1 [&:nth-child(7n)]:border-r-0 ${
                           has ? "ring-1 ring-inset ring-primary/18" : ""
                         }`}
                       >
@@ -508,17 +519,17 @@ export default function DashboardAppointmentsCalendar({
                         >
                           {cell.day}
                         </span>
-                        <div className="mt-0.5 flex min-h-0 flex-1 flex-col gap-px overflow-hidden">
-                          {visible.map((b) => {
+                        <div className="mt-0.5 flex flex-col gap-px">
+                          {visible.map((b, idx) => {
                             const t = parseStart(b.starts_at);
                             const time = formatTimeShort(t);
                             const name = b.contact?.full_name || b.contact?.email || "Lead";
                             return (
                               <button
-                                key={b.lead_match_id}
+                                key={bookingRowKey(b, idx)}
                                 type="button"
                                 onClick={() => setSelectedBooking(b)}
-                                className="w-full min-w-0 rounded-sm border-l-[3px] border-primary bg-primary/[0.1] px-1 py-px text-left transition hover:bg-primary/[0.16] focus:outline-none focus:ring-2 focus:ring-primary/25"
+                                className="w-full min-w-0 shrink-0 rounded-sm border-l-[3px] border-primary bg-primary/[0.1] px-1 py-px text-left transition hover:bg-primary/[0.16] focus:outline-none focus:ring-2 focus:ring-primary/25"
                                 title={`${name}${time ? ` · ${time}` : ""}`}
                               >
                                 <div className="truncate text-[8px] font-semibold leading-tight sm:text-[9px]">
@@ -532,9 +543,16 @@ export default function DashboardAppointmentsCalendar({
                             <button
                               type="button"
                               onClick={() => setDayOverflow({ day: cell.day, items })}
-                              className="mt-px w-full rounded-sm px-1 text-left text-[8px] font-semibold text-primary underline-offset-2 hover:underline sm:text-[9px]"
+                              title={`${items.length} bookings this day — open full list`}
+                              aria-label={`${overflow} more bookings, ${items.length} total this day`}
+                              className="mt-px flex w-full shrink-0 flex-col gap-0 rounded-sm px-1 py-px text-left leading-tight"
                             >
-                              +{overflow} more
+                              <span className="text-[8px] font-semibold text-primary underline-offset-2 hover:underline sm:text-[9px]">
+                                +{overflow} more
+                              </span>
+                              <span className="text-[7px] font-medium tabular-nums text-text-muted sm:text-[8px]">
+                                {items.length} total
+                              </span>
                             </button>
                           ) : null}
                         </div>
@@ -570,7 +588,7 @@ export default function DashboardAppointmentsCalendar({
                   }
                   const items = cell.items;
                   const has = items.length > 0;
-                  const visible = items.slice(0, maxChips);
+                  const visible = items.slice(0, MAX_VISIBLE_DAY_BOOKINGS);
                   const overflow = items.length - visible.length;
                   const cellPad = compact ? "p-0.5" : "p-1";
 
@@ -590,17 +608,17 @@ export default function DashboardAppointmentsCalendar({
                       >
                         {cell.day}
                       </span>
-                      <div className="mt-0.5 flex min-h-0 flex-1 flex-col gap-px overflow-hidden">
-                        {visible.map((b) => {
+                      <div className="mt-0.5 flex flex-col gap-px">
+                        {visible.map((b, idx) => {
                           const t = parseStart(b.starts_at);
                           const time = formatTimeShort(t);
                           const name = b.contact?.full_name || b.contact?.email || "Lead";
                           return (
                             <button
-                              key={b.lead_match_id}
+                              key={bookingRowKey(b, idx)}
                               type="button"
                               onClick={() => setSelectedBooking(b)}
-                              className={`w-full min-w-0 rounded-sm border-l-[3px] border-primary bg-primary/[0.12] text-left transition hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/30 ${compact ? "px-1 py-px" : "px-1 py-0.5"}`}
+                              className={`w-full min-w-0 shrink-0 rounded-sm border-l-[3px] border-primary bg-primary/[0.12] text-left transition hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/30 ${compact ? "px-1 py-px" : "px-1 py-0.5"}`}
                               title={`${name}${time ? ` · ${time}` : ""}`}
                             >
                               <div
@@ -616,9 +634,16 @@ export default function DashboardAppointmentsCalendar({
                           <button
                             type="button"
                             onClick={() => setDayOverflow({ day: cell.day, items })}
-                            className={`mt-px w-full rounded-sm px-1 text-left font-semibold text-primary-dark underline-offset-2 hover:underline ${compact ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]"}`}
+                            title={`${items.length} bookings this day — open full list`}
+                            aria-label={`${overflow} more bookings, ${items.length} total this day`}
+                            className={`mt-px flex w-full shrink-0 flex-col gap-0 rounded-sm px-1 py-px text-left leading-tight ${compact ? "text-[8px] sm:text-[9px]" : "text-[9px] sm:text-[10px]"}`}
                           >
-                            +{overflow} more
+                            <span className="font-semibold text-primary-dark underline-offset-2 hover:underline">
+                              +{overflow} more
+                            </span>
+                            <span className="text-[7px] font-medium tabular-nums text-text-muted sm:text-[8px]">
+                              {items.length} total
+                            </span>
                           </button>
                         ) : null}
                       </div>

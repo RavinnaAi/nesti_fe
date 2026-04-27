@@ -8,13 +8,15 @@ export function SkeletonBlock({ className = "" }) {
 export function LeadsPageTableSkeleton({ rows = 8 }) {
   return (
     <div className="overflow-x-auto" aria-hidden>
-      <table className="w-full min-w-[960px] table-auto">
+      <table className="w-full min-w-[1060px] table-auto">
         <thead className="bg-primary/[0.04] border-b border-border">
           <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
             {[
               "Type",
               "Name",
               "Email",
+              "Status",
+              "Consult",
               "Intent",
               "Location",
               "Matches",
@@ -38,6 +40,12 @@ export function LeadsPageTableSkeleton({ rows = 8 }) {
               </td>
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-40 max-w-full" />
+              </td>
+              <td className="px-3 py-2.5">
+                <SkeletonBlock className="h-3.5 w-20" />
+              </td>
+              <td className="px-3 py-2.5">
+                <SkeletonBlock className="h-3.5 w-16" />
               </td>
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-14" />
@@ -97,7 +105,7 @@ export function ClientsTableSkeleton({ rows = 8 }) {
       <table className="w-full min-w-[680px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border bg-primary/[0.04]">
-            {["Client", "Email", "Phone", "Location", "Timeline", "Mortgage", "Budget", "Appt", "Leads"].map(
+            {["Client", "Email", "Phone", "Location", "Timeline", "Mortgage", "Budget", "Nurture", "Leads"].map(
               (h) => (
                 <th key={h} className={thClients}>
                   {h}
@@ -166,7 +174,7 @@ export function ProfileLeadsTableSkeleton({ rows = 6 }) {
       <table className="w-full min-w-[720px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border text-[10px] font-semibold capitalize tracking-wide text-text-muted">
-            {["Intent", "Type", "Location", "Timeline", "Budget", "Grade", "Score", "Preferred", "Best time", "Appt", "Open"].map(
+            {["Intent", "Type", "Location", "Timeline", "Budget", "Grade", "Score", "Preferred", "Best time", "Nurture", "Open"].map(
               (h) => (
                 <th key={h} className="px-2 py-1.5">
                   {h}

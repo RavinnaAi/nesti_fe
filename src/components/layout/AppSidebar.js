@@ -46,6 +46,48 @@ const SETTINGS_ITEMS = [
   { id: "chatbot", label: "Chatbot", tab: "chatbot", icon: Code2 },
 ];
 
+/** Sidebar nav icon: gradient tile, depth, hover lift on idle state */
+function NavIconTile({ Icon, variant = "idle" }) {
+  const wrap =
+    variant === "active"
+      ? "bg-gradient-to-br from-primary via-primary to-primary-dark text-white shadow-[0_4px_14px_rgba(52,199,89,0.38)] ring-1 ring-white/35"
+      : variant === "soft"
+        ? "bg-gradient-to-br from-primary/35 to-primary/12 text-primary-dark shadow-[inset_0_-1px_0_rgba(42,168,74,0.14)] ring-1 ring-primary/28"
+        : "bg-gradient-to-br from-background-lighter to-white text-text-muted shadow-[inset_0_1px_0_rgba(255,255,255,0.95)] ring-1 ring-border/55 group-hover:from-primary/[0.16] group-hover:to-white group-hover:text-primary-dark group-hover:ring-primary/28 group-hover:shadow-[0_2px_8px_rgba(52,199,89,0.12)]";
+
+  return (
+    <span
+      className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all duration-200 ease-out ${wrap}`}
+      aria-hidden
+    >
+      <Icon
+        size={variant === "active" ? 16 : 15}
+        strokeWidth={2}
+        className={
+          variant === "idle"
+            ? "transition-transform duration-200 ease-out group-hover:scale-110 group-hover:-translate-y-px"
+            : "drop-shadow-[0_1px_1px_rgba(0,0,0,0.06)]"
+        }
+      />
+    </span>
+  );
+}
+
+function SettingsSubIcon({ Icon, active }) {
+  return (
+    <span
+      className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all duration-200 ${
+        active
+          ? "bg-gradient-to-br from-primary to-primary-dark text-white shadow-[0_2px_8px_rgba(52,199,89,0.3)] ring-1 ring-white/30"
+          : "bg-gradient-to-br from-background-lighter to-white text-text-muted ring-1 ring-border/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] group-hover:from-primary/[0.12] group-hover:text-primary-dark group-hover:ring-primary/22"
+      }`}
+      aria-hidden
+    >
+      <Icon size={12} strokeWidth={2} className="transition-transform duration-200 group-hover:scale-105" />
+    </span>
+  );
+}
+
 function isPrimaryNavActive(pathname, href, searchParams) {
   const q = href.indexOf("?");
   const cleanHref = q === -1 ? href : href.slice(0, q);
@@ -93,9 +135,12 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     else setSettingsOpen(false);
   }, [isSettingsActive]);
 
+  /** Only collapse when leaving /leads — never on /calendar while opening pipeline (avoids wiping state before navigation). */
   useEffect(() => {
-    if (!isLeadsArea) setPipelineNavOpen(false);
-  }, [isLeadsArea]);
+    if (!pathname.startsWith("/leads")) {
+      setPipelineNavOpen(false);
+    }
+  }, [pathname]);
 
   useEffect(() => {
     if (!isMobileOpen) return;
@@ -136,6 +181,9 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     router.push("/log-in");
   };
 
+  /** Submenu + Pipeline “selected” chrome only on /leads — never while on Calendar or other routes. */
+  const pipelineExpandedUI = pipelineNavOpen && isLeadsArea;
+
   /**
    * Settings expanded → no primary “selected” (sub-links carry state).
    * On /leads/* the Leads link never uses the same strong pill as other nav items (Pipeline carries expanded focus),
@@ -147,11 +195,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     if (settingsOpen) return false;
     if (item.id === "leads" && isLeadsArea) return false;
     if (pipelineNavOpen && !isLeadsArea) return false;
-    if (pipelineNavOpen && isLeadsArea) return routeActive && item.id !== "leads";
+    if (pipelineExpandedUI) return routeActive && item.id !== "leads";
     return routeActive;
   };
 
-  const pipelineRowExpanded = pipelineNavOpen;
   const pipelineRowInLeadsWorkspace = isLeadsArea && !pipelineNavOpen;
 
   const leadsNavInWorkspace = (item) => item.id === "leads" && isLeadsArea && !pipelineNavOpen;
@@ -159,36 +206,48 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const sidebarInner = (
     <aside
       ref={menuRef}
-      className="h-screen w-[272px] bg-white/95 backdrop-blur border-r border-border flex flex-col"
+      className="flex h-screen w-60 min-h-0 flex-col border-r border-border/70 bg-gradient-to-b from-white via-background-light/30 to-background-light shadow-[2px_0_24px_rgba(45,55,72,0.05)] backdrop-blur-sm"
     >
-      <div className="h-16 px-4 border-b border-border flex items-center justify-between">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2.5"
-          onClick={() => onCloseMobile?.()}
-        >
-          <span className="h-9 w-9 rounded-md grid place-items-center bg-gradient-to-br from-primary to-primary-dark text-white shadow">
-            <Bot size={18} />
-          </span>
-          <div className="leading-tight">
-            <div className="text-sm font-bold text-text-heading">Nesti AI</div>
-            <div className="text-[11px] text-text-muted">Workspace</div>
-          </div>
-        </Link>
-        {isMobileOpen ? (
-          <button
-            type="button"
+      <div className="relative shrink-0 border-b border-border/50 px-3 py-2.5">
+        <div
+          className="pointer-events-none absolute inset-x-3 bottom-0 h-px bg-gradient-to-r from-transparent via-primary/20 to-transparent"
+          aria-hidden
+        />
+        <div className="flex items-center justify-between gap-2">
+          <Link
+            href="/dashboard"
+            className="group flex min-w-0 items-center gap-2 rounded-lg py-0.5 transition hover:bg-white/70"
             onClick={() => onCloseMobile?.()}
-            className="lg:hidden h-8 w-8 rounded-md border border-border text-text-body grid place-items-center hover:bg-primary/5"
-            aria-label="Close menu"
           >
-            <X size={16} />
-          </button>
-        ) : null}
+            <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg grid place-items-center bg-gradient-to-br from-primary via-primary to-primary-dark text-white shadow-[0_4px_16px_rgba(52,199,89,0.4)] ring-1 ring-white/50 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-[0_6px_20px_rgba(52,199,89,0.45)]">
+              <span
+                className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent opacity-80"
+                aria-hidden
+              />
+              <Bot size={16} strokeWidth={2} className="relative drop-shadow-sm" />
+            </span>
+            <div className="min-w-0 leading-tight">
+              <div className="font-heading text-sm font-bold tracking-tight text-text-heading">
+                Nesti AI
+              </div>
+              <div className="text-[10px] font-medium text-text-muted">Workspace</div>
+            </div>
+          </Link>
+          {isMobileOpen ? (
+            <button
+              type="button"
+              onClick={() => onCloseMobile?.()}
+              className="lg:hidden h-8 w-8 shrink-0 rounded-lg border border-border/70 bg-gradient-to-br from-background-lighter to-white text-text-body shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] grid place-items-center transition hover:border-primary/30 hover:text-primary-dark hover:shadow-sm"
+              aria-label="Close menu"
+            >
+              <X size={15} strokeWidth={2} />
+            </button>
+          ) : null}
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-3 py-3 space-y-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-        <div className="space-y-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2 space-y-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+        <div className="space-y-0.5">
           {PRIMARY_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = primaryItemActive(item);
@@ -202,69 +261,69 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                     setPipelineNavOpen(false);
                     onCloseMobile?.();
                   }}
-                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition ${
+                  className={`group relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-semibold transition-all duration-200 ${
                     active
-                      ? "bg-primary/10 text-primary-dark"
+                      ? "bg-gradient-to-r from-primary/14 to-primary/5 text-primary-dark shadow-sm ring-1 ring-primary/10"
                       : leadsHere
-                        ? "bg-primary/[0.08] text-primary-dark border border-primary/15"
-                        : "text-text-body hover:bg-primary/5 hover:text-text-heading"
+                        ? "bg-primary/[0.08] text-primary-dark ring-1 ring-primary/10"
+                        : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
                   }`}
                   aria-current={active || leadsHere ? "page" : undefined}
                 >
-                  <span
-                    className={`h-8 w-8 rounded-md grid place-items-center ${
-                      active
-                        ? "bg-primary/20 text-primary-dark"
-                        : leadsHere
-                          ? "bg-primary/15 text-primary-dark"
-                          : "bg-background-light text-text-muted"
-                    }`}
-                  >
-                    <Icon size={16} />
-                  </span>
-                  <span>{item.label}</span>
+                  {(active || leadsHere) && (
+                    <span
+                      className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary"
+                      aria-hidden
+                    />
+                  )}
+                  <NavIconTile
+                    Icon={Icon}
+                    variant={active ? "active" : leadsHere ? "soft" : "idle"}
+                  />
+                  <span className="min-w-0 truncate">{item.label}</span>
                 </Link>
 
                 {item.id === "leads" ? (
                   <>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       <button
                         type="button"
                         onClick={() => {
-                          setPipelineNavOpen((prev) => !prev);
                           setSettingsOpen(false);
+                          if (!isLeadsArea) {
+                            setPipelineNavOpen(true);
+                            router.push("/leads");
+                            onCloseMobile?.();
+                            return;
+                          }
+                          setPipelineNavOpen((prev) => !prev);
                         }}
-                        className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold transition ${
-                          pipelineRowExpanded
-                            ? "bg-primary/10 text-primary-dark"
+                        className={`group flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[13px] font-semibold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background-light ${
+                          pipelineExpandedUI
+                            ? "bg-gradient-to-r from-primary/14 to-primary/5 text-primary-dark shadow-sm ring-1 ring-primary/10"
                             : pipelineRowInLeadsWorkspace
-                              ? "bg-primary/[0.07] text-text-heading"
-                              : "text-text-body hover:bg-primary/5 hover:text-text-heading"
+                              ? "bg-white/90 text-text-heading ring-1 ring-border/60"
+                              : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
                         }`}
-                        aria-expanded={pipelineNavOpen}
+                        aria-expanded={pipelineExpandedUI}
                       >
-                        <span className="flex items-center gap-2.5">
-                          <span
-                            className={`h-8 w-8 rounded-md grid place-items-center ${
-                              pipelineRowExpanded
-                                ? "bg-primary/20 text-primary-dark"
-                                : pipelineRowInLeadsWorkspace
-                                  ? "bg-primary/12 text-primary-dark/90"
-                                  : "bg-background-light text-text-muted"
-                            }`}
-                          >
-                            <GitBranch size={16} />
-                          </span>
-                          Pipeline
+                        <span className="flex min-w-0 items-center gap-2">
+                          <NavIconTile
+                            Icon={GitBranch}
+                            variant={pipelineExpandedUI ? "active" : "idle"}
+                          />
+                          <span className="truncate">Pipeline</span>
                         </span>
                         <ChevronDown
-                          size={16}
-                          className={`transition-transform ${pipelineNavOpen ? "rotate-180" : ""}`}
+                          size={15}
+                          className={`shrink-0 text-text-muted transition-transform duration-200 ${
+                            pipelineExpandedUI ? "rotate-180 text-primary-dark" : ""
+                          }`}
                         />
                       </button>
 
                       <AnimatePresence initial={false}>
-                        {pipelineNavOpen ? (
+                        {pipelineExpandedUI ? (
                           <motion.div
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: "auto", opacity: 1 }}
@@ -272,7 +331,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                             transition={{ duration: 0.16 }}
                             className="overflow-hidden"
                           >
-                            <div className="pl-4 pr-1 py-1 space-y-1 border-l border-border/80 ml-4">
+                            <div className="ml-2 mt-0.5 space-y-0.5 rounded-lg border border-border/60 bg-white/80 py-1.5 pl-2 pr-1">
                               <LeadsPipelineSidebarNav
                                 embedded
                                 variant="settings"
@@ -291,23 +350,21 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                         setPipelineNavOpen(false);
                         onCloseMobile?.();
                       }}
-                      className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-sm font-medium transition ${
+                      className={`group relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-semibold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background-light ${
                         isCalendarRoute
-                          ? "bg-primary/10 text-primary-dark"
-                          : "text-text-body hover:bg-primary/5 hover:text-text-heading"
+                          ? "bg-gradient-to-r from-primary/14 to-primary/5 text-primary-dark shadow-sm ring-1 ring-primary/10"
+                          : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
                       }`}
                       aria-current={isCalendarRoute ? "page" : undefined}
                     >
-                      <span
-                        className={`h-8 w-8 rounded-md grid place-items-center ${
-                          isCalendarRoute
-                            ? "bg-primary/20 text-primary-dark"
-                            : "bg-background-light text-text-muted"
-                        }`}
-                      >
-                        <CalendarDays size={16} />
-                      </span>
-                      <span>Calendar</span>
+                      {isCalendarRoute ? (
+                        <span
+                          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary"
+                          aria-hidden
+                        />
+                      ) : null}
+                      <NavIconTile Icon={CalendarDays} variant={isCalendarRoute ? "active" : "idle"} />
+                      <span className="truncate">Calendar</span>
                     </Link>
                   </>
                 ) : null}
@@ -316,89 +373,87 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
           })}
         </div>
 
-        <div className="space-y-1">
-          <button
-            type="button"
-            onClick={() => {
-              setSettingsOpen((prev) => !prev);
-              setPipelineNavOpen(false);
-            }}
-            className={`w-full flex items-center justify-between px-3 py-2 rounded-md text-sm font-semibold transition ${
-              settingsOpen
-                ? "bg-primary/10 text-primary-dark"
-                : "text-text-body hover:bg-primary/5 hover:text-text-heading"
-            }`}
-            aria-expanded={settingsOpen}
-          >
-            <span className="flex items-center gap-2.5">
-              <span
-                className={`h-8 w-8 rounded-md grid place-items-center ${
-                  settingsOpen
-                    ? "bg-primary/20 text-primary-dark"
-                    : "bg-background-light text-text-muted"
-                }`}
-              >
-                <Settings size={16} />
+        <div>
+          <p className="mb-1.5 px-1 text-[9px] font-bold uppercase tracking-[0.12em] text-text-muted">
+            Account
+          </p>
+          <div className="space-y-0.5">
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsOpen((prev) => !prev);
+                setPipelineNavOpen(false);
+              }}
+              className={`group flex w-full items-center justify-between rounded-lg px-2 py-1.5 text-[13px] font-semibold transition-all duration-200 ${
+                settingsOpen
+                  ? "bg-gradient-to-r from-primary/14 to-primary/5 text-primary-dark shadow-sm ring-1 ring-primary/10"
+                  : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
+              }`}
+              aria-expanded={settingsOpen}
+            >
+              <span className="flex items-center gap-2">
+                <NavIconTile Icon={Settings} variant={settingsOpen ? "active" : "idle"} />
+                Settings
               </span>
-              Settings
-            </span>
-            <ChevronDown
-              size={16}
-              className={`transition-transform ${settingsOpen ? "rotate-180" : ""}`}
-            />
-          </button>
+              <ChevronDown
+                size={15}
+                className={`shrink-0 text-text-muted transition-transform duration-200 ${
+                  settingsOpen ? "rotate-180 text-primary-dark" : ""
+                }`}
+              />
+            </button>
 
-          <AnimatePresence initial={false}>
-            {settingsOpen ? (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.16 }}
-                className="overflow-hidden"
-              >
-                <div className="pl-4 pr-1 py-1 space-y-1 border-l border-border/80 ml-4">
-                  {SETTINGS_ITEMS.map((item) => {
-                    const Icon = item.icon;
-                    const tabActive = pathname === "/settings" && settingsTab === item.tab;
-                    return (
-                      <Link
-                        key={item.id}
-                        href={`/settings?tab=${item.tab}`}
-                        onClick={() => onCloseMobile?.()}
-                        className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-xs font-medium transition ${
-                          tabActive
-                            ? "bg-primary/10 text-primary-dark"
-                            : "text-text-body hover:bg-primary/5"
-                        }`}
-                        aria-current={tabActive ? "page" : undefined}
-                      >
-                        <Icon size={14} />
-                        {item.label}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+            <AnimatePresence initial={false}>
+              {settingsOpen ? (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: "auto", opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.16 }}
+                  className="overflow-hidden"
+                >
+                  <div className="ml-2 mt-0.5 space-y-0.5 rounded-lg border border-border/60 bg-white/80 py-1.5 pl-2 pr-1">
+                    {SETTINGS_ITEMS.map((item) => {
+                      const Icon = item.icon;
+                      const tabActive = pathname === "/settings" && settingsTab === item.tab;
+                      return (
+                        <Link
+                          key={item.id}
+                          href={`/settings?tab=${item.tab}`}
+                          onClick={() => onCloseMobile?.()}
+                          className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-snug transition ${
+                            tabActive
+                              ? "bg-primary/12 text-primary-dark ring-1 ring-primary/12"
+                              : "text-text-body hover:bg-primary/5"
+                          }`}
+                          aria-current={tabActive ? "page" : undefined}
+                        >
+                          <Icon size={13} strokeWidth={2} className="shrink-0" />
+                          <span className="min-w-0">{item.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              ) : null}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
-      <div className="border-t border-border p-3 space-y-2">
+      <div className="shrink-0 space-y-1.5 border-t border-border/60 bg-gradient-to-t from-background-light/70 to-white/95 p-2.5">
         <Link
           href={isMounted && displayEmail ? `/profile?email=${displayEmail}` : "/profile"}
           onClick={() => onCloseMobile?.()}
-          className="flex items-center gap-2.5 px-2.5 py-2 rounded-md bg-background-light hover:bg-primary/5 transition"
+          className="group flex items-center gap-2 rounded-lg border border-border/70 bg-white px-2 py-1.5 shadow-sm transition hover:border-primary/25 hover:shadow-md hover:shadow-primary/5"
         >
-          <span className="h-8 w-8 rounded-md bg-primary text-white grid place-items-center text-xs font-semibold">
-            {initials || "U"}
+          <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary via-primary to-primary-dark text-[10px] font-bold text-white grid place-items-center shadow-[0_3px_12px_rgba(52,199,89,0.35)] ring-1 ring-white/45 transition duration-200 group-hover:scale-[1.02]">
+            <span className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-70" aria-hidden />
+            <span className="relative">{initials || "U"}</span>
           </span>
-          <span className="min-w-0">
-            <span className="block text-xs font-semibold text-text-heading truncate">
-              {displayName}
-            </span>
-            <span className="block text-[11px] text-text-muted truncate">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-bold text-text-heading">{displayName}</span>
+            <span className="mt-px block truncate text-[10px] font-medium text-text-muted">
               {displayEmail || "Open public profile"}
             </span>
           </span>
@@ -406,9 +461,11 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
         <button
           type="button"
           onClick={handleLogout}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md text-xs font-semibold border border-red-200 text-red-600 hover:bg-red-50 transition"
+          className="group flex w-full items-center justify-center gap-2 rounded-lg border border-red-200/90 bg-white px-2 py-1.5 text-[11px] font-bold text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300"
         >
-          <LogOut size={14} />
+          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-red-50 text-red-600 ring-1 ring-red-100 transition group-hover:bg-red-100 group-hover:ring-red-200/80">
+            <LogOut size={12} strokeWidth={2} />
+          </span>
           Sign out
         </button>
       </div>
@@ -429,9 +486,9 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
               onClick={() => onCloseMobile?.()}
             />
             <motion.div
-              initial={{ x: -320 }}
+              initial={{ x: -260 }}
               animate={{ x: 0 }}
-              exit={{ x: -320 }}
+              exit={{ x: -260 }}
               transition={{ type: "spring", damping: 28, stiffness: 260 }}
               className="fixed inset-y-0 left-0 z-[80] lg:hidden"
             >

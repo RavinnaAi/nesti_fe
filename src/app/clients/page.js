@@ -7,7 +7,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, User, Users } from "lucide-reac
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
-import { AppointmentStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
+import { NurtureConsultationStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
 import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
@@ -222,9 +222,9 @@ export default function ClientsPage() {
                     <th className={`${th} !pl-px`}>Phone</th>
                     <th className={th}>Location</th>
                     <th className={th}>Timeline</th>
-                    <th className={`${th} !pr-px`}>Mortgage</th>
-                    <th className={`${th} !pl-px min-w-[7.25rem] text-right sm:min-w-[8.25rem]`}>Budget</th>
-                    <th className={th}>Appt</th>
+                    <th className={`${th} pr-2`}>Mortgage</th>
+                    <th className={`${th} pl-0 pr-4 text-right sm:pr-5`}>Budget</th>
+                    <th className={`${th} pl-1`}>Nurture</th>
                     <th className={`${th} text-center tabular-nums`}>Leads</th>
                   </tr>
                 </thead>
@@ -292,12 +292,12 @@ export default function ClientsPage() {
                             {humanize(p.timeline)}
                           </span>
                         </td>
-                        <td className={`${tdMuted} !pr-px`}>
+                        <td className={`${tdMuted} pr-2`}>
                           <span className="line-clamp-2 max-w-[100px]" title={humanize(q.mortgage_status)}>
                             {humanize(q.mortgage_status)}
                           </span>
                         </td>
-                        <td className={`${td} !pl-px min-w-[7.25rem] whitespace-nowrap text-right sm:min-w-[8.25rem]`}>
+                        <td className={`${td} whitespace-nowrap pl-0 pr-4 text-right sm:pr-5`}>
                           {budgetDisplay ? (
                             <BudgetCell display={budgetDisplay} />
                           ) : (
@@ -309,8 +309,8 @@ export default function ClientsPage() {
                             </span>
                           )}
                         </td>
-                        <td className={`${tdMuted} align-middle`}>
-                          <AppointmentStatusChip status={profile.appointment_status} />
+                        <td className={`${tdMuted} pl-1 align-middle sm:pl-2`}>
+                          <NurtureConsultationStatusChip booked={profile.nurture_consultation_booked} />
                         </td>
                         <td className={`${td} text-center align-middle tabular-nums`}>
                           <div className="flex justify-center">

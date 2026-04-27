@@ -14,6 +14,7 @@ import {
   Tooltip,
   BarChart,
   Bar,
+  Cell,
   Legend,
 } from "recharts";
 import { BarChart3, Mail, CalendarCheck } from "lucide-react";
@@ -25,6 +26,18 @@ const PRIMARY = "#34C759";
 const PRIMARY_DARK = "#2AA84A";
 const ACCENT = "#4DD469";
 const MUTED = "#94a3b8";
+
+/**
+ * Funnel bar fills — same hue families as `DashboardKpiStrip` (emerald / sky / violet / amber / rose)
+ * so the chart reads as one Nesti dashboard, not a separate color system.
+ */
+const FUNNEL_BAR_COLORS = {
+  deals: "#e11d48", // rose-600 — Deals tile
+  lead_created: "#059669", // emerald-600 — New leads
+  lead_updated: "#0284c7", // sky-600 — Lead views / activity
+  appointment_booked: "#9333ea", // violet-600 — Appointments
+  appointment_canceled: "#d97706", // amber-600 — nurture / caution (distinct from wins)
+};
 
 /** Solid grid lines (avoid dashed “dotted” look from strokeDasharray). */
 const gridStroke = "#e2e8f0";
@@ -56,6 +69,7 @@ function formatUsdCompact(n) {
 export default function DashboardAnalyticsPanels({
   windowDays = 30,
   funnel,
+  summary = null,
   series = [],
   intentTrend = [],
   budgetTrend = [],
@@ -64,10 +78,18 @@ export default function DashboardAnalyticsPanels({
 }) {
   const stages = funnel?.stages || [];
 
-  const funnelBars = stages.map((s) => ({
-    name: s.label.replace(/^Lead /, "").replace(/^Appointment /, "Appt "),
-    count: s.count,
-  }));
+  const dealsClosedWon = summary?.totals?.leads_closed_won;
+
+  const funnelBars = [
+    ...(typeof dealsClosedWon === "number"
+      ? [{ name: "Deals (closed won)", count: dealsClosedWon, segment: "deals" }]
+      : []),
+    ...stages.map((s) => ({
+      name: s.label.replace(/^Lead /, "").replace(/^Appointment /, "Appt "),
+      count: s.count,
+      segment: s.id,
+    })),
+  ];
 
   const nurtureEmailsTotal = useMemo(
     () => series.reduce((sum, row) => sum + (Number(row.nurture_email_sent) || 0), 0),
@@ -194,7 +216,9 @@ export default function DashboardAnalyticsPanels({
             <BarChart3 size={16} className="text-primary" />
             <h3 className="text-sm font-bold text-text-heading">Funnel</h3>
           </div>
-          <p className="text-xs text-text-muted mb-3">Event counts in the selected window</p>
+          <p className="text-xs text-text-muted mb-3">
+            Deals use closed-won leads; other rows are activity event counts in the window.
+          </p>
           <div className="h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={funnelBars} layout="vertical" margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
@@ -202,7 +226,14 @@ export default function DashboardAnalyticsPanels({
                 <XAxis type="number" tick={{ fontSize: 10, fill: MUTED }} allowDecimals={false} />
                 <YAxis type="category" dataKey="name" width={100} tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name="Count" fill={PRIMARY} radius={[0, 4, 4, 0]} />
+                <Bar dataKey="count" name="Count" radius={[0, 4, 4, 0]}>
+                  {funnelBars.map((row) => (
+                    <Cell
+                      key={`${row.segment}-${row.name}`}
+                      fill={FUNNEL_BAR_COLORS[row.segment] || "#64748b"}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>

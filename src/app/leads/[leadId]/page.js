@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowLeft, Trash2 } from "lucide-react";
@@ -37,6 +37,7 @@ import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
 import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
 import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
+import LeadsConsultationTab from "@/components/leads/LeadsConsultationTab";
 import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
 import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
 import { LeadDetailPageSkeleton } from "@/components/ui/ContentSkeletons";
@@ -428,6 +429,7 @@ function LeadWorkspacePageContent() {
     onSuccess: () => {
       toast.success("Nurture email sent");
       queryClient.invalidateQueries({ queryKey: ["chat-nurture-logs", token, leadId] });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail", token, leadId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
@@ -465,6 +467,16 @@ function LeadWorkspacePageContent() {
     },
     onError: (err) => toast.error(err?.message || "Could not cancel appointment"),
   });
+
+  const selectTab = useCallback(
+    (tabId) => {
+      setActiveTab(tabId);
+      const p = new URLSearchParams(searchParams.toString());
+      p.set("tab", tabId);
+      router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   const patchLeadMutation = useMutation({
     mutationFn: (payload) => patchLead({ token, id: leadId, ...payload }),
@@ -524,12 +536,7 @@ function LeadWorkspacePageContent() {
             <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
               <LeadsWorkspaceTabs
                 activeTab={activeTab}
-                onChange={(tabId) => {
-                  setActiveTab(tabId);
-                  const p = new URLSearchParams(searchParams.toString());
-                  p.set("tab", tabId);
-                  router.replace(`${pathname}?${p.toString()}`, { scroll: false });
-                }}
+                onChange={selectTab}
                 endSlot={
                   <button
                     type="button"
@@ -553,7 +560,7 @@ function LeadWorkspacePageContent() {
                 conversationMeta={conversationMeta}
                 formatMetaEntries={formatMetaEntries}
                 onOpenMeta={() => {}}
-                onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutate()}
+                onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutateAsync()}
                 cancelCalendlyPending={cancelCalendlyMutation.isPending}
               />
             ) : null}
@@ -583,6 +590,15 @@ function LeadWorkspacePageContent() {
                 propertyMatches={propertyMatches}
                 propertyMatchesQuery={propertyMatchesQuery}
                 propertyMatchesPayload={propertyMatchesQuery.data || null}
+              />
+            ) : null}
+
+            {activeTab === "consultation" ? (
+              <LeadsConsultationTab
+                lead={leadDetailQuery.data?.lead || null}
+                onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutateAsync()}
+                cancelCalendlyPending={cancelCalendlyMutation.isPending}
+                onGoToNurture={() => selectTab("nurture")}
               />
             ) : null}
 

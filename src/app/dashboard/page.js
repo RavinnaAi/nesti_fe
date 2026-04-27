@@ -449,6 +449,7 @@ export default function DashboardPage() {
         <DashboardAnalyticsPanels
           windowDays={analyticsTimeseriesQuery.data?.window_days || windowDays}
           funnel={analyticsFunnelQuery.data?.funnel}
+          summary={analyticsSummaryQuery.data?.summary}
           series={chartSeries}
           intentTrend={intentTrend}
           budgetTrend={budgetTrend}

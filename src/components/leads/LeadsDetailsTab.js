@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import { CheckCircle2, Info, XCircle } from "lucide-react";
 
 export default function LeadsDetailsTab({
@@ -13,6 +15,29 @@ export default function LeadsDetailsTab({
   onCancelCalendlyAppointment,
   cancelCalendlyPending = false,
 }) {
+  const [showCalendlyCancelModal, setShowCalendlyCancelModal] = useState(false);
+  const [calendlyCancelSubmitting, setCalendlyCancelSubmitting] = useState(false);
+
+  useEffect(() => {
+    if (!showCalendlyCancelModal) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showCalendlyCancelModal]);
+
+  useEffect(() => {
+    if (!showCalendlyCancelModal) return;
+    const onKey = (e) => {
+      if (e.key === "Escape" && !calendlyCancelSubmitting && !cancelCalendlyPending) {
+        setShowCalendlyCancelModal(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showCalendlyCancelModal, calendlyCancelSubmitting, cancelCalendlyPending]);
+
   const leadData = lead && typeof lead === "object" ? lead : {};
   const property = leadData.property || {};
   const qualification = leadData.qualification || {};
@@ -186,19 +211,13 @@ export default function LeadsDetailsTab({
               <div className="space-y-1.5 pt-1 border-t border-border/60">
                 <button
                   type="button"
-                  disabled={cancelCalendlyPending}
-                  onClick={() => {
-                    if (
-                      window.confirm(
-                        "Cancel this Calendly appointment? Invitees are notified according to your Calendly settings."
-                      )
-                    ) {
-                      onCancelCalendlyAppointment();
-                    }
-                  }}
+                  disabled={cancelCalendlyPending || calendlyCancelSubmitting}
+                  onClick={() => setShowCalendlyCancelModal(true)}
                   className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {cancelCalendlyPending ? "Canceling…" : "Cancel Calendly appointment"}
+                  {cancelCalendlyPending || calendlyCancelSubmitting
+                    ? "Canceling…"
+                    : "Cancel Calendly appointment"}
                 </button>
                 <p className="text-[11px] text-text-muted leading-snug">
                   Cancels the scheduled event via Calendly (1:1 events). Some group-style events may
@@ -212,6 +231,70 @@ export default function LeadsDetailsTab({
       ) : (
         <div className="text-sm text-text-muted">Choose a lead to view details.</div>
       )}
+
+      {showCalendlyCancelModal &&
+      typeof document !== "undefined" &&
+      typeof onCancelCalendlyAppointment === "function"
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 p-4 backdrop-blur-[2px]"
+              role="presentation"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget && !calendlyCancelSubmitting && !cancelCalendlyPending) {
+                  setShowCalendlyCancelModal(false);
+                }
+              }}
+            >
+              <div
+                className="w-full max-w-md rounded-xl border border-border bg-white p-5 shadow-xl"
+                role="alertdialog"
+                aria-modal="true"
+                aria-labelledby="lead-calendly-cancel-title"
+                aria-describedby="lead-calendly-cancel-desc"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <h3 id="lead-calendly-cancel-title" className="text-sm font-bold text-text-heading">
+                  Cancel this meeting?
+                </h3>
+                <p id="lead-calendly-cancel-desc" className="mt-2 text-sm leading-relaxed text-text-body">
+                  This removes the event in Calendly. The invitee is notified according to your Calendly
+                  settings, and the lead is updated in Nesti.
+                </p>
+                <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <button
+                    type="button"
+                    disabled={calendlyCancelSubmitting || cancelCalendlyPending}
+                    onClick={() => setShowCalendlyCancelModal(false)}
+                    className="rounded-lg border border-border bg-white px-3 py-2 text-sm font-semibold text-text-heading transition hover:bg-background-light disabled:opacity-60"
+                  >
+                    Go back
+                  </button>
+                  <button
+                    type="button"
+                    disabled={calendlyCancelSubmitting || cancelCalendlyPending}
+                    onClick={async () => {
+                      setCalendlyCancelSubmitting(true);
+                      try {
+                        await onCancelCalendlyAppointment();
+                        setShowCalendlyCancelModal(false);
+                      } catch {
+                        /* toast from parent mutation */
+                      } finally {
+                        setCalendlyCancelSubmitting(false);
+                      }
+                    }}
+                    className="rounded-lg border border-red-200 bg-red-600 px-3 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {calendlyCancelSubmitting || cancelCalendlyPending
+                      ? "Canceling…"
+                      : "Yes, cancel in Calendly"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
     </div>
   );
 }

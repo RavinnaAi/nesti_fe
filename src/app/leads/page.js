@@ -37,6 +37,7 @@ import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
 import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
 import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
+import LeadsConsultationTab from "@/components/leads/LeadsConsultationTab";
 import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
 import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
 import { LeadsPageTableSkeleton } from "@/components/ui/ContentSkeletons";
@@ -180,6 +181,37 @@ const getMatchesCount = (conversation) => {
     if (n !== null) return n;
   }
   return 0;
+};
+
+/** List-row consultation summary: pipeline Status column stays match-only; this is Calendly + nurture. */
+const getConsultationListCell = (row) => {
+  const appt = String(row?.appointment_status ?? "").toLowerCase();
+  const nurture = Boolean(row?.nurture_consultation_booked);
+  const st = String(row?.status ?? "").toLowerCase();
+  const pipeBooked = st === "consult_booked" || st === "showing_booked";
+  if (appt === "canceled") {
+    return {
+      label: "Canceled",
+      title: "Appointment or Calendly event marked as canceled",
+      className: "bg-amber-50 text-amber-800 border-amber-200",
+    };
+  }
+  if (appt === "booked" || nurture || pipeBooked) {
+    const bits = [];
+    if (pipeBooked) bits.push("pipeline consult/showing");
+    if (appt === "booked") bits.push("Calendly or resolved booking");
+    if (nurture) bits.push("nurture email meeting");
+    return {
+      label: "Booked",
+      title: bits.length ? bits.join(" · ") : "Consultation booked",
+      className: "bg-violet-50 text-violet-800 border-violet-200",
+    };
+  }
+  return {
+    label: "Not booked",
+    title: "No booking signal on this lead row yet",
+    className: "bg-slate-50 text-slate-600 border-slate-200",
+  };
 };
 
 function LeadsPageContent() {
@@ -537,6 +569,7 @@ function LeadsPageContent() {
         refine_instruction: "",
       }));
       queryClient.invalidateQueries({ queryKey: ["chat-nurture-logs", token, selectedLeadId] });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail", token, selectedLeadId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
@@ -685,13 +718,14 @@ function LeadsPageContent() {
               <div className="p-4 text-sm text-text-muted">No leads found.</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[960px] table-auto">
+                <table className="w-full min-w-[1060px] table-auto">
                   <thead className="bg-primary/[0.04] border-b border-border">
                     <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
                       <th className="px-3 py-2">Type</th>
                       <th className="px-3 py-2">Name</th>
                       <th className="px-3 py-2">Email</th>
                       <th className="px-3 py-2">Status</th>
+                      <th className="px-3 py-2">Consult</th>
                       <th className="px-3 py-2">Intent</th>
                       <th className="px-3 py-2">Location</th>
                       <th className="px-3 py-2">Matches</th>
@@ -719,6 +753,7 @@ function LeadsPageContent() {
                       const isActive = selectedLeadId && String(selectedLeadId) === id;
                       const pipeStatus = conversation?.status;
                       const statusInfo = getStatusDisplay(pipeStatus);
+                      const consultCell = getConsultationListCell(conversation);
 
                       const workspaceHref = toLeadWorkspace(id);
                       return (
@@ -757,6 +792,14 @@ function LeadsPageContent() {
                           <td className="px-3 py-2.5">
                             <span className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-snug whitespace-nowrap ${statusInfo.color}`}>
                               {statusInfo.label}
+                            </span>
+                          </td>
+                          <td className="px-3 py-2.5">
+                            <span
+                              className={`inline-block max-w-[140px] rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-snug ${consultCell.className}`}
+                              title={consultCell.title}
+                            >
+                              {consultCell.label}
                             </span>
                           </td>
                           <td className="px-3 py-2.5 capitalize">{String(meta.intent || "—")}</td>
@@ -846,7 +889,7 @@ function LeadsPageContent() {
                   conversationMeta={conversationMeta}
                   formatMetaEntries={formatMetaEntries}
                   onOpenMeta={() => {}}
-                  onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutate()}
+                  onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutateAsync()}
                   cancelCalendlyPending={cancelCalendlyMutation.isPending}
                 />
               ) : null}
@@ -876,6 +919,15 @@ function LeadsPageContent() {
                   propertyMatches={propertyMatches}
                   propertyMatchesQuery={propertyMatchesQuery}
                   propertyMatchesPayload={propertyMatchesQuery.data || null}
+                />
+              ) : null}
+
+              {activeTab === "consultation" ? (
+                <LeadsConsultationTab
+                  lead={leadDetailQuery.data?.lead || null}
+                  onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutateAsync()}
+                  cancelCalendlyPending={cancelCalendlyMutation.isPending}
+                  onGoToNurture={() => setActiveTab("nurture")}
                 />
               ) : null}
 

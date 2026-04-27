@@ -9,6 +9,7 @@ export const LEAD_WORKSPACE_TABS = [
   { id: "conversation", label: "Conversation" },
   { id: "actions", label: "Actions" },
   { id: "property_matches", label: "Property Matches" },
+  { id: "consultation", label: "Consultation" },
   { id: "nurture", label: "Nurture Email" },
   { id: "pipeline", label: "Notes" },
   { id: "others", label: "Others" },

@@ -8,6 +8,7 @@ import {
   CALENDLY_OAUTH_BROADCAST_CHANNEL,
   CALENDLY_OAUTH_MESSAGE_SOURCE,
   CALENDLY_OAUTH_RETURN_KEY,
+  CALENDLY_OAUTH_WINDOW_NAME,
   safeCalendlyReturnPath,
 } from "@/lib/calendlyOAuthPopup";
 
@@ -59,8 +60,22 @@ function CalendlyCallbackInner() {
       broadcastResult("error", message);
     }
 
+    const isOAuthPopup =
+      window.name === CALENDLY_OAUTH_WINDOW_NAME || Boolean(window.opener);
+
     const t = window.setTimeout(() => {
-      router.replace(returnTo);
+      if (isOAuthPopup) {
+        try {
+          window.close();
+        } catch {
+          /* ignore */
+        }
+        if (!window.closed) {
+          router.replace(returnTo);
+        }
+      } else {
+        router.replace(returnTo);
+      }
     }, 80);
     return () => window.clearTimeout(t);
   }, [searchParams, router]);

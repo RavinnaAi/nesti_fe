@@ -83,7 +83,7 @@ export default function LeadsPipelineSidebarNav({
 
   const list =
     variant === "settings" ? (
-      <div className="space-y-1">
+      <div className="space-y-0.5">
         {items.map((item) => {
           const href = buildLeadsHref(searchParams, item);
           const active = isItemActive(searchParams, item);
@@ -93,15 +93,24 @@ export default function LeadsPipelineSidebarNav({
               key={item.key}
               href={href}
               onClick={() => onNavigate?.()}
-              className={`flex items-center gap-2 px-2.5 py-2 rounded-md text-xs font-medium transition ${
+              className={`group flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold transition ${
                 active
-                  ? "bg-primary/10 text-primary-dark"
-                  : "text-text-body hover:bg-primary/5"
+                  ? "bg-primary/[0.11] text-primary-dark ring-1 ring-primary/12 shadow-sm"
+                  : "text-text-body hover:bg-primary/[0.06]"
               }`}
               aria-current={active ? "page" : undefined}
             >
-              <Icon size={14} className="shrink-0 opacity-90" />
-              <span className="truncate">{item.label}</span>
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md transition-all duration-200 ${
+                  active
+                    ? "bg-gradient-to-br from-primary to-primary-dark text-white shadow-[0_2px_8px_rgba(52,199,89,0.3)] ring-1 ring-white/30"
+                    : "bg-gradient-to-br from-background-lighter to-white text-text-muted ring-1 ring-border/50 shadow-[inset_0_1px_0_rgba(255,255,255,0.9)] group-hover:from-primary/[0.12] group-hover:text-primary-dark group-hover:ring-primary/22"
+                }`}
+                aria-hidden
+              >
+                <Icon size={12} strokeWidth={2} className="transition-transform group-hover:scale-105" />
+              </span>
+              <span className="min-w-0 truncate">{item.label}</span>
             </Link>
           );
         })}
