@@ -30,7 +30,7 @@ export function useAuthGuard() {
   useEffect(() => {
     if (!token || !profileQuery.isError) return;
     const status = profileQuery.error?.status;
-    if (status !== 401 && status !== 403) return;
+    if (status !== 401) return;
     dispatch(logoutAndClearAll());
     router.replace("/log-in");
   }, [token, profileQuery.isError, profileQuery.error, dispatch, router]);
@@ -52,7 +52,11 @@ export function useAuthGuard() {
       role: profile?.role || professionalProfile?.professional_type || "",
       calendlyUrl: calendlyFromProfile,
       profileImage:
-        professionalProfile?.img_url || profile?.img_url || profile?.profile_image || "",
+        profile?.profile_image ||
+        professionalProfile?.img_url ||
+        profile?.img_url ||
+        "",
+      coverImage: profile?.cover_image || "",
     };
 
     const businessPayload = {

@@ -14,6 +14,8 @@ export default function ChatSelect({
   triggerClassName = "",
   disabled = false,
   id: idProp,
+  activeClass = "bg-primary/15 text-primary font-semibold",
+  hoverClass = "hover:bg-primary/10 hover:text-primary",
 }) {
   const uid = useId();
   const id = idProp || uid;
@@ -73,8 +75,8 @@ export default function ChatSelect({
                   aria-selected={active}
                   className={`w-full px-3 py-2 text-left text-xs transition ${
                     active
-                      ? "bg-primary/15 text-primary font-semibold"
-                      : "text-text-heading hover:bg-primary/10 hover:text-primary"
+                      ? activeClass
+                      : `text-text-heading ${hoverClass}`
                   }`}
                   onClick={() => {
                     onChange(opt.value);

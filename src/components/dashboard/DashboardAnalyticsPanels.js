@@ -72,6 +72,8 @@ export default function DashboardAnalyticsPanels({
   summary = null,
   series = [],
   intentTrend = [],
+  /** `buyer_seller` (agents) | `lawyer_transaction` (lawyers) — from analytics API */
+  intentMetric = "buyer_seller",
   budgetTrend = [],
   isLoading,
   isError,
@@ -242,8 +244,14 @@ export default function DashboardAnalyticsPanels({
 
       <div className="grid grid-cols-1 xl:grid-cols-5 gap-4">
         <div className="xl:col-span-3 rounded-xl border border-border bg-white p-4 shadow-sm">
-          <h3 className="text-sm font-bold text-text-heading mb-1">Lead intent trend</h3>
-          <p className="text-xs text-text-muted mb-3">Daily buyers vs sellers (from your CRM list)</p>
+          <h3 className="text-sm font-bold text-text-heading mb-1">
+            {intentMetric === "lawyer_transaction" ? "Closing file mix" : "Lead intent trend"}
+          </h3>
+          <p className="text-xs text-text-muted mb-3">
+            {intentMetric === "lawyer_transaction"
+              ? "Daily new leads by transaction type (purchase, refi, title transfer vs home sale)."
+              : "Daily buyers vs sellers (from your CRM list)."}
+          </p>
           <div className="h-[240px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={intentTrend} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -256,28 +264,59 @@ export default function DashboardAnalyticsPanels({
                     <stop offset="0%" stopColor={ACCENT} stopOpacity={0.25} />
                     <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
                   </linearGradient>
+                  <linearGradient id="intentFillPurchaseSide" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={PRIMARY} stopOpacity={0.35} />
+                    <stop offset="100%" stopColor={PRIMARY} stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="intentFillSaleSide" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={ACCENT} stopOpacity={0.25} />
+                    <stop offset="100%" stopColor={ACCENT} stopOpacity={0} />
+                  </linearGradient>
                 </defs>
                 <CartesianGrid stroke={gridStroke} vertical={false} />
                 <XAxis dataKey="label" tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} />
                 <YAxis tick={{ fontSize: 10, fill: MUTED }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<ChartTooltip />} />
                 <Legend wrapperStyle={{ fontSize: 12 }} />
-                <Area
-                  type="monotone"
-                  dataKey="buyers"
-                  name="Buyers"
-                  stroke={PRIMARY_DARK}
-                  strokeWidth={2}
-                  fill="url(#intentFillBuyers)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="sellers"
-                  name="Sellers"
-                  stroke={ACCENT}
-                  strokeWidth={2}
-                  fill="url(#intentFillSellers)"
-                />
+                {intentMetric === "lawyer_transaction" ? (
+                  <>
+                    <Area
+                      type="monotone"
+                      dataKey="purchase_side"
+                      name="Purchase · refi · title"
+                      stroke={PRIMARY_DARK}
+                      strokeWidth={2}
+                      fill="url(#intentFillPurchaseSide)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sale_side"
+                      name="Home sale"
+                      stroke={ACCENT}
+                      strokeWidth={2}
+                      fill="url(#intentFillSaleSide)"
+                    />
+                  </>
+                ) : (
+                  <>
+                    <Area
+                      type="monotone"
+                      dataKey="buyers"
+                      name="Buyers"
+                      stroke={PRIMARY_DARK}
+                      strokeWidth={2}
+                      fill="url(#intentFillBuyers)"
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="sellers"
+                      name="Sellers"
+                      stroke={ACCENT}
+                      strokeWidth={2}
+                      fill="url(#intentFillSellers)"
+                    />
+                  </>
+                )}
               </AreaChart>
             </ResponsiveContainer>
           </div>

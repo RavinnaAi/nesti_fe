@@ -245,7 +245,9 @@ export function useProfileQuery() {
     onError: (error) => {
       toastError(error);
       const status = error?.status;
-      if (status === 401 || status === 403) {
+      // Only invalid/expired session should clear auth. 403 here would be unexpected for GET /auth/profile;
+      // other features return 403 for role/rules and must not log the user out.
+      if (status === 401) {
         dispatch(logoutAndClearAll());
       }
     },

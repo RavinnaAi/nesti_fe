@@ -2,7 +2,7 @@
 
 export const dynamic = "force-dynamic";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
@@ -13,6 +13,7 @@ import ChatbotEmbed from "@/components/settings/ChatbotEmbed";
 import BusinessInformation from "@/components/settings/BusinessInformation";
 import IcpIntegrationCard from "@/components/settings/IcpIntegrationCard";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useProfileQuery } from "@/hooks/useAuthApi";
 import { toast } from "react-toastify";
 import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
 import {
@@ -51,6 +52,7 @@ function SettingsPageFallback() {
 
 function SettingsPageContent() {
   const { isAuthenticated } = useAuthGuard();
+  const profileQuery = useProfileQuery();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -178,32 +180,99 @@ function SettingsPageContent() {
     }
   }, [searchParams, router]);
 
-  const ActiveComponent = useMemo(() => {
+  const goToBusinessTab = useCallback(() => {
+    setActiveTab("business");
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("tab", "business");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : `${pathname}?tab=business`, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  /**
+   * After business "Save changes": go to dashboard only on first-time completion (signup onboarding).
+   * Returning users who already completed setup stay on Settings when updating.
+   */
+  const onBusinessSaveSuccess = useCallback(async () => {
+    const snapshot = queryClient.getQueryData(["profile"]);
+    const wasIncomplete = !snapshot?.profile_setup?.is_complete;
+    await queryClient.refetchQueries({ queryKey: ["profile"] });
+    const data = queryClient.getQueryData(["profile"]);
+    if (data?.profile_setup?.is_complete && wasIncomplete) {
+      router.replace("/dashboard");
+    }
+  }, [queryClient, router]);
+
+  /**
+   * After personal save: dashboard only if this save finished first-time onboarding; else business tab if still incomplete.
+   * If profile was already complete, stay on Personal (normal edits).
+   */
+  const onPersonalSaveSuccess = useCallback(async () => {
+    const snapshot = queryClient.getQueryData(["profile"]);
+    const wasIncomplete = !snapshot?.profile_setup?.is_complete;
+    await queryClient.refetchQueries({ queryKey: ["profile"] });
+    const data = queryClient.getQueryData(["profile"]);
+    if (data?.profile_setup?.is_complete && wasIncomplete) {
+      router.replace("/dashboard");
+      return;
+    }
+    if (!data?.profile_setup?.is_complete) {
+      goToBusinessTab();
+    }
+  }, [queryClient, router, goToBusinessTab]);
+
+  const tabContent = useMemo(() => {
     switch (activeTab) {
       case "personal":
-        return PersonalInfo;
+        return <PersonalInfo onSaveSuccess={onPersonalSaveSuccess} />;
       case "password":
-        return ChangePassword;
+        return <ChangePassword />;
       case "subscription":
-        return SubscriptionInfo;
+        return <SubscriptionInfo />;
       case "chatbot":
-        return ChatbotEmbed;
+        return <ChatbotEmbed />;
       case "business":
-        return BusinessInformation;
+        return <BusinessInformation onSaveSuccess={onBusinessSaveSuccess} />;
       case "icp":
-        return IcpIntegrationCard;
+        return <IcpIntegrationCard />;
       default:
-        return PersonalInfo;
+        return <PersonalInfo onSaveSuccess={onPersonalSaveSuccess} />;
     }
-  }, [activeTab]);
+  }, [activeTab, onPersonalSaveSuccess, onBusinessSaveSuccess]);
 
-  const Content = ActiveComponent;
+  const profileSetup = profileQuery.data?.profile_setup;
+  const setupIncomplete =
+    profileQuery.isSuccess && profileSetup && !profileSetup.is_complete;
 
   if (!isMounted) return null;
   if (!isAuthenticated) return null;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6">
+    <div className="max-w-5xl mx-auto px-4 pb-6 pt-8 sm:pt-9">
+      {setupIncomplete ? (
+        <div
+          className="mb-4 rounded-xl border border-amber-200/90 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-sm"
+          role="status"
+        >
+          <p className="font-semibold text-amber-950">Finish your workspace setup</p>
+          <p className="mt-1.5 leading-relaxed text-amber-900/95">
+            Complete <strong>Personal Information</strong> (name, email, phone) and{" "}
+            <strong>Business Information</strong> (company name and where you serve). Other areas of the app stay
+            locked until both are done.
+          </p>
+          <ul className="mt-2 list-inside list-disc text-xs text-amber-900/85">
+            {!profileSetup.personal_complete ? (
+              <li>Personal: add phone and confirm your name and email.</li>
+            ) : null}
+            {!profileSetup.business_complete ? (
+              <li>
+                Business: add <strong>company / brokerage</strong> (Basics). For service area, use{" "}
+                <strong>Location</strong> on Basics and/or <strong>target neighborhoods</strong> under Style &amp;
+                Metrics.
+              </li>
+            ) : null}
+          </ul>
+        </div>
+      ) : null}
       <div className="rounded-xl border border-border bg-white shadow-sm">
         <AnimatePresence mode="wait">
           <motion.div
@@ -214,7 +283,7 @@ function SettingsPageContent() {
             transition={{ duration: 0.18 }}
             className="p-6"
           >
-            <Content />
+            {tabContent}
           </motion.div>
         </AnimatePresence>
       </div>

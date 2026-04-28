@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { ShieldCheck, RefreshCw } from "lucide-react";
+import Image from "next/image";
+import { RefreshCw } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -41,15 +42,34 @@ export default function DashboardPage() {
   const queryClient = useQueryClient();
   const { user, token } = useAppSelector((state) => state.auth);
   const personalInfo = useAppSelector((state) => state.profile.personalInfo);
-  const coverImage = personalInfo?.coverImage;
+  const businessInfo = useAppSelector((state) => state.profile.businessInfo);
   const { isAuthenticated, profile } = useAuthGuard();
   const activeUser = profile?.user || profile?.data || user;
 
-  const profileImageUrl =
-    activeUser?.profileImage ||
-    activeUser?.profile_image ||
-    profile?.user?.profileImage ||
-    profile?.user?.profile_image;
+  const apiUser = profile?.user;
+  const coverImageUrl = useMemo(() => {
+    const fromStore = personalInfo?.coverImage && String(personalInfo.coverImage).trim();
+    const fromApi = apiUser?.cover_image && String(apiUser.cover_image).trim();
+    const fromActive = activeUser?.cover_image && String(activeUser.cover_image).trim();
+    return fromStore || fromApi || fromActive || "";
+  }, [personalInfo?.coverImage, apiUser?.cover_image, activeUser?.cover_image]);
+
+  const profileImageUrl = useMemo(() => {
+    const fromStore = personalInfo?.profileImage && String(personalInfo.profileImage).trim();
+    const fromApi =
+      apiUser?.profile_image && String(apiUser.profile_image).trim();
+    const fromActive =
+      activeUser?.profile_image ||
+      activeUser?.profileImage ||
+      "";
+    const s = String(fromStore || fromApi || fromActive || "").trim();
+    return s || "";
+  }, [
+    personalInfo?.profileImage,
+    apiUser?.profile_image,
+    activeUser?.profile_image,
+    activeUser?.profileImage,
+  ]);
 
   const avatarInitials = useMemo(() => {
     const displayName =
@@ -69,14 +89,45 @@ export default function DashboardPage() {
       .join("");
   }, [activeUser, personalInfo]);
 
-  const welcomeFirstName =
-    activeUser?.firstName || activeUser?.first_name || personalInfo?.firstName || "";
+  const userRole = activeUser?.role || "agent";
+
+  const displayFullName = useMemo(() => {
+    const fromBiz = businessInfo?.fullName && String(businessInfo.fullName).trim();
+    if (fromBiz) return fromBiz;
+    const fromPersonal = [personalInfo?.firstName, personalInfo?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (fromPersonal) return fromPersonal;
+    return (
+      activeUser?.name ||
+      [activeUser?.first_name, activeUser?.last_name].filter(Boolean).join(" ").trim() ||
+      [activeUser?.firstName, activeUser?.lastName].filter(Boolean).join(" ").trim() ||
+      ""
+    );
+  }, [businessInfo?.fullName, personalInfo, activeUser]);
+
+  const roleBadgeText = useMemo(() => {
+    const raw = String(businessInfo?.professionalType || userRole || "").trim();
+    if (!raw) return "";
+    return raw.replace(/_/g, " ").toUpperCase();
+  }, [businessInfo?.professionalType, userRole]);
+
+  const heroBio = useMemo(() => {
+    const t = businessInfo?.testimonial || businessInfo?.bio;
+    return typeof t === "string" ? t.trim() : "";
+  }, [businessInfo?.testimonial, businessInfo?.bio]);
 
   const [isMounted, setIsMounted] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [newLeadToNotify, setNewLeadToNotify] = useState(null);
   const [shownLeadIds, setShownLeadIds] = useState(new Set());
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
+  const [avatarBroken, setAvatarBroken] = useState(false);
+
+  useEffect(() => {
+    setAvatarBroken(false);
+  }, [profileImageUrl]);
 
   const leadsQuery = useQuery({
     queryKey: ["dashboard-leads", token],
@@ -114,7 +165,7 @@ export default function DashboardPage() {
   });
 
   const leadTrendsQuery = useQuery({
-    queryKey: ["dashboard-analytics-lead-trends", token, windowDays],
+    queryKey: ["dashboard-analytics-lead-trends", token, windowDays, userRole],
     enabled: Boolean(token),
     queryFn: () => fetchChatAnalyticsLeadTrends({ token, days: windowDays }),
     staleTime: 60_000,
@@ -256,6 +307,8 @@ export default function DashboardPage() {
     [leadTrendsQuery.data]
   );
 
+  const intentMetric = leadTrendsQuery.data?.intent_metric || "buyer_seller";
+
   /** Nurture sends per UTC day: merge KPI timeseries with NurtureLog rows (logs backfill before KPI existed). */
   const chartSeries = useMemo(() => {
     const base = analyticsTimeseriesQuery.data?.series;
@@ -296,101 +349,118 @@ export default function DashboardPage() {
     );
   }
 
-  const heroStyle = coverImage
-    ? {
-      backgroundImage: `
-  linear-gradient(rgba(0,0,0,0.6), rgba(0,0,0,0.6)),
-  url(${coverImage})
-`,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
-      backgroundRepeat: 'no-repeat',
-
-    }
-    : {};
+  const hasCover = Boolean(coverImageUrl);
+  const avatarAlt = displayFullName || "Profile";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      {/* pt-* not py-10: avoids a large empty band under the workspace header (that gap was padding-top). */}
-      <div className="max-w-6xl mx-auto space-y-8 px-4 pb-10 pt-3 sm:px-6 sm:pt-4">
-        {/* Hero — layered gradient, glass badge, staggered entrance */}
+    <div className="relative z-[1] min-h-screen bg-white">
+      <div className="max-w-6xl mx-auto space-y-8 px-4 pb-10 pt-5 sm:px-6 sm:pt-6">
+        {/* Hero — same two-part card as Settings → Personal information (cover strip + white footer row) */}
         <motion.section
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
-          className={`relative isolate overflow-hidden rounded-2xl border p-6 shadow-xl md:p-8 ${
-            coverImage
-              ? "border-white/10 text-white ring-1 ring-white/10 shadow-black/20"
-              : "border-primary/20 bg-gradient-to-br from-primary via-primary-dark/95 to-emerald-700/90 text-white ring-1 ring-white/15 shadow-primary/25"
-          }`}
-          style={heroStyle}
+          transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm"
         >
-          {/* Photo cover: darken for readability */}
-          {coverImage ? (
-            <div
-              className="pointer-events-none absolute inset-0 z-0 rounded-2xl bg-gradient-to-r from-black/75 via-black/55 to-black/35"
-              aria-hidden
-            />
-          ) : null}
-          {/* Soft light orbs (gradient hero only) */}
-          {!coverImage ? (
-            <>
+          <div className="relative aspect-[16/5] w-full min-h-[10rem] sm:min-h-[11rem] md:min-h-[12rem]">
+            {hasCover ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={coverImageUrl}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"
+                  aria-hidden
+                />
+              </>
+            ) : (
               <div
-                className="pointer-events-none absolute -right-12 -top-20 z-0 h-56 w-56 rounded-full bg-white/20 blur-3xl motion-safe:animate-[pulse_5s_ease-in-out_infinite]"
+                className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark/95 to-emerald-700/90"
                 aria-hidden
               />
-              <div
-                className="pointer-events-none absolute -bottom-24 left-1/4 z-0 h-40 w-40 rounded-full bg-emerald-400/25 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite_1s]"
-                aria-hidden
-              />
-            </>
-          ) : null}
+            )}
+            {!hasCover ? (
+              <>
+                <div
+                  className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl motion-safe:animate-[pulse_5s_ease-in-out_infinite]"
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute -bottom-20 left-1/4 h-36 w-36 rounded-full bg-emerald-400/25 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite_1s]"
+                  aria-hidden
+                />
+              </>
+            ) : null}
+          </div>
 
-          <div className="relative z-[1] flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-8">
-            <motion.div
-              className="shrink-0"
-              initial={{ opacity: 0, scale: 0.94 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.1, duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <div className="relative">
-                <div className="absolute inset-0 rounded-2xl bg-white/25 blur-md motion-safe:animate-pulse" aria-hidden />
-                <div className="relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border-2 border-white/50 bg-white text-lg font-bold text-primary-dark shadow-lg ring-2 ring-white/30 md:h-[5.25rem] md:w-[5.25rem] md:text-xl">
-                  {profileImageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={profileImageUrl} alt="" className="h-full w-full object-cover" />
+          <div className="relative flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-7 sm:pb-6">
+            <div className="flex min-w-0 flex-1 items-end gap-4 sm:gap-5">
+              <motion.div
+                className="relative z-[1] -mt-8 shrink-0 sm:-mt-10"
+                initial={{ opacity: 0, scale: 0.96 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
+                  {profileImageUrl && !avatarBroken ? (
+                    <Image
+                      src={profileImageUrl}
+                      alt={avatarAlt}
+                      width={220}
+                      height={220}
+                      className="h-full w-full object-cover object-center"
+                      sizes="(max-width: 768px) 72px, 84px"
+                      priority
+                      unoptimized={
+                        profileImageUrl.startsWith("data:") || profileImageUrl.startsWith("blob:")
+                      }
+                      onError={() => setAvatarBroken(true)}
+                    />
                   ) : (
-                    avatarInitials
+                    <span className="flex h-full w-full items-center justify-center text-lg font-bold text-primary-dark select-none sm:text-xl" aria-hidden>
+                      {avatarInitials}
+                    </span>
                   )}
                 </div>
-              </div>
-            </motion.div>
+                <span className="absolute -bottom-1 -right-1 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
+                  Active
+                </span>
+              </motion.div>
+
+              <motion.div
+                className="min-w-0 flex-1 pb-0.5"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="text-base font-semibold tracking-tight text-text-heading sm:text-lg">
+                    {displayFullName || "Your workspace"}
+                  </h1>
+                  {roleBadgeText ? (
+                    <span className="rounded-full border border-border/80 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-heading">
+                      {roleBadgeText}
+                    </span>
+                  ) : null}
+                </div>
+                {heroBio ? (
+                  <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-text-muted">{heroBio}</p>
+                ) : (
+                  <p className="mt-1.5 text-sm text-text-muted/80 italic">No bio added yet.</p>
+                )}
+              </motion.div>
+            </div>
 
             <motion.div
-              className="min-w-0 flex-1 space-y-3"
-              initial={{ opacity: 0, y: 14 }}
+              className="flex w-full shrink-0 sm:w-auto sm:pb-1"
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.18, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+              transition={{ delay: 0.16, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/25 bg-white/15 px-3 py-1.5 text-xs font-semibold text-white shadow-sm backdrop-blur-md">
-                <ShieldCheck size={14} className="shrink-0 opacity-95" aria-hidden />
-                Secure workspace
-              </span>
-              <h1 className="font-heading text-2xl font-bold tracking-tight text-white drop-shadow-sm sm:text-3xl md:text-[1.75rem] md:leading-tight lg:text-4xl">
-                Welcome back{welcomeFirstName ? `, ${welcomeFirstName}` : "!"}
-              </h1>
-              <p className="max-w-xl text-sm leading-relaxed text-white/90 md:text-base">
-                Track your pipeline, nurture hot leads, and close faster.
-              </p>
-            </motion.div>
-
-            <motion.div
-              className="flex shrink-0 sm:ml-auto"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.28, duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <DashboardCalendlyButton className="w-full sm:w-auto" />
+              <DashboardCalendlyButton surface="light" className="w-full sm:w-auto" />
             </motion.div>
           </div>
         </motion.section>
@@ -452,6 +522,7 @@ export default function DashboardPage() {
           summary={analyticsSummaryQuery.data?.summary}
           series={chartSeries}
           intentTrend={intentTrend}
+          intentMetric={intentMetric}
           budgetTrend={budgetTrend}
           isLoading={
             analyticsFunnelQuery.isLoading ||

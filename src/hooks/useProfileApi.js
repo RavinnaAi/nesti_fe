@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -26,6 +26,8 @@ function mapBackendProfileToStore(data) {
       phone: profile?.phone || "",
       calendlyUrl: profile?.calendly_link || "",
       location: profile?.location || "",
+      profileImage: user?.profile_image || "",
+      coverImage: user?.cover_image || "",
       fullName:
         profile?.full_name ||
         [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim(),
@@ -67,8 +69,42 @@ function mapBackendProfileToStore(data) {
   };
 }
 
+/** Multipart upload to Cloudinary; updates User.profile_image or User.cover_image on the server. */
+export function useUploadProfileMedia() {
+  const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
+  const { token } = useAppSelector((state) => state.auth);
+
+  return useMutation({
+    mutationFn: ({ file, kind }) => {
+      if (!token) throw new Error("missing or invalid Authorization header");
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("kind", kind);
+      return apiClient({
+        url: API_ENDPOINTS.professionals.uploadImage,
+        method: "POST",
+        data: fd,
+        token,
+      });
+    },
+    onSuccess: (data) => {
+      dispatch(
+        setPersonalInfo({
+          profileImage: data?.profile_image || "",
+          coverImage: data?.cover_image || "",
+        })
+      );
+      void queryClient.invalidateQueries({ queryKey: ["profile"] });
+      toast.success(data?.message || "Image uploaded");
+    },
+    onError: toastError,
+  });
+}
+
 export function useSavePersonalInfo() {
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const { token } = useAppSelector((state) => state.auth);
 
   return useMutation({
@@ -85,6 +121,7 @@ export function useSavePersonalInfo() {
       const mapped = mapBackendProfileToStore(data);
       dispatch(setPersonalInfo(Object.keys(mapped.personal).length ? mapped.personal : variables));
       dispatch(setBusinessInfo(mapped.business));
+      void queryClient.refetchQueries({ queryKey: ["profile"] });
       toast.success(data?.message || "Profile updated successfully");
     },
     onError: toastError,
@@ -93,6 +130,7 @@ export function useSavePersonalInfo() {
 
 export function useSaveBusinessInfo() {
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const { token } = useAppSelector((state) => state.auth);
 
   return useMutation({
@@ -121,6 +159,7 @@ export function useSaveBusinessInfo() {
       if (!silent) {
         toast.success(data?.message || "Business info updated successfully");
       }
+      void queryClient.refetchQueries({ queryKey: ["profile"] });
     },
     onError: toastError,
   });

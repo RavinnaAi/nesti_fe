@@ -7,6 +7,7 @@ import {
   fetchChatPropertyMatches,
   getOrCreateSessionId,
   getVisitorId,
+  postChatScorePreview,
   resetChatIdentity,
   sendChatMessage,
   setVisitorId,
@@ -15,6 +16,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import QuickReplyButtons from "./QuickReplyButtons";
 import ConversationProgress from "./ConversationProgress";
 import AgentLeadOnboarding from "./AgentLeadOnboarding";
+import RolePreflightLeadForm from "./RolePreflightLeadForm";
 import {
   agentUserSummaryLine,
   buildAgentFormContactOverride,
@@ -26,6 +28,26 @@ import {
   PRE_CHAT_STEPS,
   widgetRoleToChatAgentType,
 } from "./agentLeadCapture";
+import {
+  buildLawyerFormContact,
+  buildLawyerFormData,
+  buildLawyerLeadProfileNarrative,
+  buildLawyerOpeningMessage,
+  buildMortgageFormContact,
+  buildMortgageFormData,
+  buildMortgageLeadProfileNarrative,
+  buildMortgageOpeningMessage,
+  emptyPreflightDraftForRole,
+  LAWYER_PREFLIGHT_HEADER_LABELS,
+  MORTGAGE_PREFLIGHT_HEADER_LABELS,
+  ROLE_LIVE_CHAT_PROGRESS_STEPS,
+  rolePreflightUserSummaryLine,
+} from "./rolePreflightCapture";
+import {
+  getChatWidgetRolePresentation,
+  getWidgetRoleShortLabel,
+  normalizeWidgetRole,
+} from "@/lib/chatWidgetRoleUi";
 import { parseInlineMarkdownLinks } from "@/lib/chatMarkdown";
 const formatTime = (date) =>
   date.toLocaleTimeString([], {
@@ -120,6 +142,46 @@ const isBulletLine = (trimmed) => Boolean(trimmed && BULLET_LINE_RE.test(trimmed
 
 const stripBulletMarker = (trimmed) => trimmed.replace(BULLET_LINE_RE, "");
 
+function jaccardWordSimilarity(a, b) {
+  const wordsA = new Set(String(a).toLowerCase().split(/\W+/).filter((w) => w.length > 2));
+  const wordsB = new Set(String(b).toLowerCase().split(/\W+/).filter((w) => w.length > 2));
+  let inter = 0;
+  for (const w of wordsA) if (wordsB.has(w)) inter += 1;
+  const union = wordsA.size + wordsB.size - inter;
+  return union === 0 ? 0 : inter / union;
+}
+
+function areProseBlocksRedundant(a, b) {
+  const na = String(a).toLowerCase().replace(/\s+/g, " ").trim();
+  const nb = String(b).toLowerCase().replace(/\s+/g, " ").trim();
+  if (na.length < 28 || nb.length < 28) return false;
+  if (jaccardWordSimilarity(na, nb) >= 0.45) return true;
+  const snip = 56;
+  if (na.includes(nb.slice(0, Math.min(snip, nb.length))) || nb.includes(na.slice(0, Math.min(snip, na.length))))
+    return true;
+  return false;
+}
+
+/** Collapse near-duplicate paragraphs from the assistant (common with closing / legal copy). */
+function dedupeLawyerAssistantProse(raw) {
+  const blocks = String(raw ?? "")
+    .split(/\n\n+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (blocks.length < 2) return String(raw ?? "");
+  const out = [blocks[0]];
+  for (let i = 1; i < blocks.length; i += 1) {
+    const cur = blocks[i];
+    const prev = out[out.length - 1];
+    if (areProseBlocksRedundant(prev, cur)) {
+      if (cur.length > prev.length) out[out.length - 1] = cur;
+      continue;
+    }
+    out.push(cur);
+  }
+  return out.join("\n\n");
+}
+
 /** Splits message into prose blocks, blank spacers, and consecutive markdown-style bullet runs. */
 const segmentMessageLines = (raw) => {
   const lines = String(raw ?? "").split("\n");
@@ -157,7 +219,7 @@ const segmentMessageLines = (raw) => {
   return segments;
 };
 
-const renderMessageSegments = (content, msgIdx, isUser) => {
+const renderMessageSegments = (content, msgIdx, isUser, widgetRole = "agent") => {
   const linkClass = isUser ? "text-white underline" : "text-primary";
   const segments = segmentMessageLines(content);
   const nodes = [];
@@ -181,9 +243,12 @@ const renderMessageSegments = (content, msgIdx, isUser) => {
       continue;
     }
     if (seg.type === "bullets") {
-      const listClassName = !isUser
-        ? "my-1.5 rounded-xl border border-border/80 bg-gradient-to-b from-emerald-50/40 to-background-light/95 px-3 py-2.5 space-y-2 shadow-sm"
-        : "my-1 space-y-1.5";
+      const lawyerAssistant = !isUser && widgetRole === "lawyer";
+      const listClassName = lawyerAssistant
+        ? "my-1.5 rounded-lg border border-slate-200/90 bg-slate-50 px-3 py-2 space-y-1.5"
+        : !isUser
+          ? "my-1.5 rounded-xl border border-border/80 bg-gradient-to-b from-emerald-50/40 to-background-light/95 px-3 py-2.5 space-y-2 shadow-sm"
+          : "my-1 space-y-1.5";
       nodes.push(
         <div key={`msg-${msgIdx}-bl-${k++}`} className={listClassName}>
           {seg.lines.map((line, bi) => {
@@ -193,7 +258,7 @@ const renderMessageSegments = (content, msgIdx, isUser) => {
               <div key={`msg-${msgIdx}-b-${bi}`} className="flex gap-2.5 items-start text-left">
                 <span
                   className={`mt-0.5 shrink-0 w-5 text-center text-[13px] font-semibold leading-relaxed ${
-                    isUser ? "text-white/90" : "text-primary"
+                    isUser ? "text-white/90" : lawyerAssistant ? "text-indigo-600" : "text-primary"
                   }`}
                   aria-hidden
                 >
@@ -218,14 +283,35 @@ export default function ChatWidget({
   widgetRole,
   defaultOpen = true,
   allowLauncher = true,
-  launcherLabel = "Open chat",
-  title = "Real Estate Assistant",
-  subtitle = "Ready to help • Secure chat",
+  launcherLabel,
+  title,
+  subtitle,
   inlineMode = false,
-  initialGreeting = "Hello! How can I help with your real estate journey today?",
+  initialGreeting,
+  /** Public HTTPS URL for embed owner avatar (from /api/embed/resolve or session). */
+  hostAvatarUrl = "",
+  /** Fallback header name when `title` is not set (e.g. professional full name). */
+  hostDisplayName = "",
 }) {
-  const resolvedRole = widgetRole || "agent";
+  const resolvedRole = normalizeWidgetRole(widgetRole);
+  const roleUi = getChatWidgetRolePresentation(resolvedRole);
+  const roleBadgeLabel = getWidgetRoleShortLabel(resolvedRole);
+  const trimmedHostName = hostDisplayName != null && String(hostDisplayName).trim() ? String(hostDisplayName).trim() : "";
+  const displayTitle =
+    title != null && String(title).trim()
+      ? String(title).trim()
+      : trimmedHostName || roleUi.defaultTitle;
+  const displaySubtitleBase =
+    subtitle != null && String(subtitle).trim()
+      ? String(subtitle).trim()
+      : roleUi.defaultSubtitle;
+  const displayGreeting =
+    initialGreeting != null && String(initialGreeting).trim()
+      ? String(initialGreeting).trim()
+      : roleUi.defaultGreeting;
+  const effectiveLauncherLabel = launcherLabel ?? roleUi.launcherAriaLabel;
   const useAgentLeadForm = resolvedRole === "agent";
+  const useRolePreflight = resolvedRole === "lawyer" || resolvedRole === "mortgage_broker";
 
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [messages, setMessages] = useState([]);
@@ -244,16 +330,34 @@ export default function ChatWidget({
   const lastOutboundUserTextRef = useRef("");
   const latestCalendlyLinkRef = useRef("");
 
-  const [leadFlowStep, setLeadFlowStep] = useState(() =>
-    resolvedRole !== "agent" ? "chat" : "intent",
-  );
+  const [leadFlowStep, setLeadFlowStep] = useState(() => {
+    if (resolvedRole === "agent") return "intent";
+    if (resolvedRole === "lawyer" || resolvedRole === "mortgage_broker") return "details";
+    return "chat";
+  });
   const [chosenIntent, setChosenIntent] = useState(null);
   const [leadDraft, setLeadDraft] = useState(() => emptyAgentLeadDraft());
+  const [rolePreflightDraft, setRolePreflightDraft] = useState(() =>
+    emptyPreflightDraftForRole(resolvedRole),
+  );
   const [formValidationError, setFormValidationError] = useState("");
   const [leadFormContact, setLeadFormContact] = useState(null);
+  const [rolePreflightStepIndex, setRolePreflightStepIndex] = useState(0);
+  const [hostAvatarBroken, setHostAvatarBroken] = useState(false);
+  const trimmedAvatarUrl = hostAvatarUrl != null && String(hostAvatarUrl).trim() ? String(hostAvatarUrl).trim() : "";
+  const showHostAvatar = Boolean(trimmedAvatarUrl && !hostAvatarBroken);
 
   useEffect(() => {
-    if (widgetRole && widgetRole !== "agent") {
+    setHostAvatarBroken(false);
+  }, [trimmedAvatarUrl]);
+
+  useEffect(() => {
+    const r = normalizeWidgetRole(widgetRole);
+    if (r === "lawyer" || r === "mortgage_broker") {
+      setLeadFlowStep("details");
+      setRolePreflightDraft(emptyPreflightDraftForRole(r));
+      setRolePreflightStepIndex(0);
+    } else if (r !== "agent") {
       setLeadFlowStep("chat");
     }
   }, [widgetRole]);
@@ -268,15 +372,16 @@ export default function ChatWidget({
 
   useEffect(() => {
     if (useAgentLeadForm && leadFlowStep !== "chat") return;
-    if (!initialGreeting || messages.length) return;
+    if (useRolePreflight && leadFlowStep !== "chat") return;
+    if (!displayGreeting || messages.length) return;
     setMessages([
       {
         role: "assistant",
-        content: initialGreeting,
+        content: displayGreeting,
         timestamp: new Date(),
       },
     ]);
-  }, [useAgentLeadForm, leadFlowStep, initialGreeting, messages.length]);
+  }, [useAgentLeadForm, useRolePreflight, leadFlowStep, displayGreeting, messages.length]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -467,6 +572,76 @@ export default function ChatWidget({
     }
   };
 
+  const handleStartChatFromRolePreflight = async () => {
+    if (!sessionId || !embedToken || loading || !useRolePreflight) return;
+
+    const name = rolePreflightDraft.name.trim();
+    const phone = rolePreflightDraft.phone.trim();
+    const email = rolePreflightDraft.email.trim();
+    if (!name || !phone || !email) {
+      setFormValidationError("Please add your name, phone, and email to continue.");
+      return;
+    }
+    setFormValidationError("");
+
+    const formData =
+      resolvedRole === "lawyer" ? buildLawyerFormData(rolePreflightDraft) : buildMortgageFormData(rolePreflightDraft);
+    const formContact =
+      resolvedRole === "lawyer"
+        ? buildLawyerFormContact(rolePreflightDraft)
+        : buildMortgageFormContact(rolePreflightDraft);
+    const opening =
+      resolvedRole === "lawyer" ? buildLawyerOpeningMessage(formData) : buildMortgageOpeningMessage(formData);
+    const summary = rolePreflightUserSummaryLine(resolvedRole, rolePreflightDraft);
+    const leadProfilePreview =
+      resolvedRole === "lawyer"
+        ? buildLawyerLeadProfileNarrative(rolePreflightDraft)
+        : buildMortgageLeadProfileNarrative(rolePreflightDraft);
+
+    const professionalType = resolvedRole === "lawyer" ? "lawyer" : "mortgage_broker";
+    void postChatScorePreview({ formContact, professionalType });
+
+    setLeadFormContact(formContact);
+    setLeadFlowStep("chat");
+    setMessages([
+      {
+        role: "user",
+        content: summary,
+        leadProfilePreview,
+        timestamp: new Date(),
+      },
+    ]);
+    setLoading(true);
+    setError("");
+    setQuickReplies([]);
+    lastOutboundUserTextRef.current = opening;
+    shouldFetchMatchesOnNextAssistantReplyRef.current = false;
+    lastPropertyMatchesSignatureRef.current = "";
+
+    try {
+      const response = await sendChatMessage({
+        message: opening,
+        sessionId,
+        embedToken,
+        visitorId,
+        agentType: widgetRoleToChatAgentType(resolvedRole),
+        formContact,
+      });
+      const payload = response?.data || response;
+      applyChatPayload(payload, visitorId, formContact);
+    } catch (err) {
+      setError(err?.message || "Request failed.");
+    } finally {
+      setTimeout(() => setLoading(false), 400);
+    }
+  };
+
+  const handleRolePreflightFormCancel = () => {
+    setFormValidationError("");
+    setRolePreflightDraft(emptyPreflightDraftForRole(resolvedRole));
+    setRolePreflightStepIndex(0);
+  };
+
   const handleKeyPress = (e) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -489,6 +664,11 @@ export default function ChatWidget({
         setLeadFlowStep("intent");
         setChosenIntent(null);
         setLeadDraft(emptyAgentLeadDraft());
+        setFormValidationError("");
+      } else if (useRolePreflight) {
+        setLeadFlowStep("details");
+        setRolePreflightDraft(emptyPreflightDraftForRole(resolvedRole));
+        setRolePreflightStepIndex(0);
         setFormValidationError("");
       }
     } catch (err) {
@@ -521,6 +701,10 @@ export default function ChatWidget({
       setLeadFlowStep("intent");
       setChosenIntent(null);
       setLeadDraft(emptyAgentLeadDraft());
+    } else if (useRolePreflight) {
+      setLeadFlowStep("details");
+      setRolePreflightDraft(emptyPreflightDraftForRole(resolvedRole));
+      setRolePreflightStepIndex(0);
     }
   };
 
@@ -564,7 +748,9 @@ export default function ChatWidget({
 
   const disabledSend = !input.trim() || loading || !embedToken;
   const showConversationProgress =
-    leadFlowStep === "chat" && (!useAgentLeadForm || !leadFormContact);
+    useAgentLeadForm && leadFlowStep === "chat" && Boolean(leadFormContact);
+  const showRoleChatProgress =
+    useRolePreflight && leadFlowStep === "chat" && Boolean(leadFormContact);
 
   const headerSubtitle =
     useAgentLeadForm && leadFlowStep !== "chat"
@@ -574,31 +760,65 @@ export default function ChatWidget({
           const label = LEAD_STEP_LABELS[leadFlowStep] || "";
           return `Step ${n} of ${PRE_CHAT_STEPS.length} · ${label}`;
         })()
-      : subtitle;
+      : useRolePreflight && leadFlowStep === "details"
+        ? (() => {
+            const labels =
+              resolvedRole === "lawyer" ? LAWYER_PREFLIGHT_HEADER_LABELS : MORTGAGE_PREFLIGHT_HEADER_LABELS;
+            const label = labels[rolePreflightStepIndex] || "";
+            return `Step ${rolePreflightStepIndex + 1} of 3 · ${label}`;
+          })()
+        : useRolePreflight && leadFlowStep === "chat"
+          ? ""
+          : displaySubtitleBase;
 
   const header = (
-    <div className="bg-white border-b border-border px-5 py-4 flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary/10 text-primary rounded-2xl flex items-center justify-center">
-          <MessageCircle size={18} />
-        </div>
-        <div>
-          <h3 className="font-semibold text-text-heading">{title}</h3>
-          <p className="text-xs text-text-muted">{headerSubtitle}</p>
+    <div className={roleUi.headerClass}>
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        {showHostAvatar ? (
+          <div
+            className={`flex h-10 w-10 shrink-0 overflow-hidden rounded-2xl ring-1 ${
+              resolvedRole === "agent"
+                ? "ring-border/30 bg-background-light"
+                : "ring-white/20 bg-white/10"
+            }`}
+          >
+            <img
+              src={trimmedAvatarUrl}
+              alt=""
+              className="h-full w-full object-cover"
+              onError={() => setHostAvatarBroken(true)}
+            />
+          </div>
+        ) : (
+          <div className={roleUi.iconBubbleClass}>
+            <MessageCircle size={18} aria-hidden />
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2 min-w-0">
+            {/* Use div, not h3: globals.css applies text-text-heading to all headings and can override role header colors. */}
+            <div className={`${roleUi.headerTitleClass} min-w-0`} role="heading" aria-level={3}>
+              {displayTitle}
+            </div>
+            <span className={roleUi.headerRoleBadgeClass}>{roleBadgeLabel}</span>
+          </div>
+          {headerSubtitle ? (
+            <p className={`m-0 mt-0.5 ${roleUi.headerSubtitleClass}`}>{headerSubtitle}</p>
+          ) : null}
         </div>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         <span
-          className="inline-flex items-center gap-1 px-2 py-1 text-[10px] rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100"
-          title="Assistant is available. Messages use HTTPS; realtime agent alerts use Socket.IO only in your logged-in dashboard."
+          className={roleUi.statusPillClass}
+          title="This assistant is online and ready to chat."
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          Available
+          <span className={roleUi.statusDotClass} />
+          Online
         </span>
         {!inlineMode ? (
           <button
             onClick={() => setIsOpen(false)}
-            className="p-2 hover:bg-background-light rounded-lg transition text-text-heading"
+            className={roleUi.closeButtonClass}
             aria-label="Close chat"
           >
             <X size={18} />
@@ -621,17 +841,28 @@ export default function ChatWidget({
               transition={{ duration: 0.3 }}
               className={`flex ${isUser ? "justify-end" : "justify-start"} items-end gap-2`}
             >
-              {!isUser && (
-                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 border border-primary/20">
+              {!isUser && showHostAvatar ? (
+                <div
+                  className={`w-8 h-8 rounded-full shrink-0 overflow-hidden border ${roleUi.accentBorder || "border-primary/20"}`}
+                >
+                  <img
+                    src={trimmedAvatarUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    onError={() => setHostAvatarBroken(true)}
+                  />
+                </div>
+              ) : !isUser && resolvedRole !== "lawyer" ? (
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 border ${roleUi.accentBgLighter || "bg-primary/10"} ${roleUi.accentText || "text-primary"} ${roleUi.accentBorder || "border-primary/20"}`}>
                   <MessageCircle size={14} />
                 </div>
-              )}
+              ) : null}
               <div
                 className={`${
-                  isUser && msg.leadProfilePreview ? "max-w-[min(92%,21rem)]" : "max-w-[85%]"
+                  isUser && msg.leadProfilePreview ? "max-w-[min(92%,21rem)]" : resolvedRole === "lawyer" && !isUser ? "max-w-[min(96%,24rem)]" : "max-w-[85%]"
                 } rounded-2xl px-4 py-2.5 shadow-sm relative ${
                   isUser
-                    ? "bg-primary text-white"
+                    ? `${roleUi.accentBg || "bg-primary"} text-white`
                     : "bg-white border border-border text-text-heading"
                 }`}
               >
@@ -647,7 +878,14 @@ export default function ChatWidget({
                       paragraphs={msg.leadProfilePreview.paragraphs}
                     />
                   ) : (
-                    renderMessageSegments(msg.content ?? "", idx, isUser)
+                    renderMessageSegments(
+                      !isUser && resolvedRole === "lawyer"
+                        ? dedupeLawyerAssistantProse(msg.content ?? "")
+                        : (msg.content ?? ""),
+                      idx,
+                      isUser,
+                      resolvedRole,
+                    )
                   )}
                 </div>
                 <p
@@ -732,16 +970,18 @@ export default function ChatWidget({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex justify-start items-center gap-2"
+          className={`flex justify-start items-center ${resolvedRole === "lawyer" ? "gap-0" : "gap-2"}`}
         >
-          <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 animate-pulse">
-            <MessageCircle size={14} />
-          </div>
+          {resolvedRole !== "lawyer" ? (
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 animate-pulse ${roleUi.accentBgLighter || "bg-primary/10"} ${roleUi.accentText || "text-primary"}`}>
+              <MessageCircle size={14} />
+            </div>
+          ) : null}
           <div className="bg-white border border-border rounded-2xl px-5 py-3 flex items-center gap-3 shadow-sm">
             <div className="flex gap-1">
-              <span className="w-1.5 h-1.5 bg-primary/40 rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce"></span>
+              <span className={`w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:-0.3s] ${roleUi.accentDot40 || "bg-primary/40"}`}></span>
+              <span className={`w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:-0.15s] ${roleUi.accentDot60 || "bg-primary/60"}`}></span>
+              <span className={`w-1.5 h-1.5 rounded-full animate-bounce ${roleUi.accentDotFull || "bg-primary"}`}></span>
             </div>
             <span className="text-[10px] font-medium text-text-muted italic">Nesti is thinking...</span>
           </div>
@@ -754,9 +994,12 @@ export default function ChatWidget({
     </div>
   );
 
+  const showPreflightChatResetRow =
+    useRolePreflight && leadFlowStep === "chat" && messages.length > 0;
+
   const footer = (
-    <div className="p-4 border-t border-border bg-white">
-      <div className="flex gap-2 items-center">
+    <div className="border-t border-border bg-white">
+      <div className="p-4 flex gap-2 items-center">
         <input
           type="text"
           value={input}
@@ -764,12 +1007,12 @@ export default function ChatWidget({
           onKeyDown={handleKeyPress}
           placeholder={embedToken ? "Type your message..." : "Embed token missing"}
           disabled={!embedToken}
-          className="flex-1 px-4 py-2 border border-border rounded-xl bg-background-light shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/25 focus:border-primary disabled:opacity-50"
+          className={`flex-1 px-4 py-2 border border-border rounded-xl bg-background-light shadow-sm focus:outline-none focus:ring-2 disabled:opacity-50 ${roleUi.accentRingFocus || "focus:ring-primary/25 focus:border-primary"}`}
         />
         <button
           onClick={() => handleSend()}
           disabled={disabledSend}
-          className="px-4 py-2 bg-primary text-white rounded-xl hover:brightness-95 transition disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center shadow-sm disabled:hover:brightness-100"
+          className={`px-4 py-2 text-white rounded-xl transition disabled:opacity-45 disabled:cursor-not-allowed flex items-center justify-center shadow-sm disabled:hover:brightness-100 ${roleUi.accentBg || "bg-primary"} ${roleUi.accentBgHover || "hover:brightness-95"}`}
           aria-label={loading ? "Waiting for reply…" : "Send message"}
           aria-busy={loading}
         >
@@ -777,17 +1020,33 @@ export default function ChatWidget({
         </button>
       </div>
 
-      {messages.length > 0 && (
-        <button
-          onClick={useAgentLeadForm ? handleStartNewRequest : handleClear}
-          className="text-xs text-text-muted hover:text-text-heading mt-2 transition inline-flex items-center gap-1"
-        >
-          <RotateCcw size={12} />
-          {useAgentLeadForm ? "Start new request" : "Clear conversation"}
-        </button>
-      )}
+      {showPreflightChatResetRow ? (
+        <div className="shrink-0 border-t border-border/60 bg-white px-5 py-3 flex flex-wrap items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={handleStartNewRequest}
+            className="text-[11px] font-medium text-text-muted hover:text-text-heading px-2 py-1.5 rounded-lg transition"
+            title="Start a new request with a fresh form and chat"
+          >
+            Start new request
+          </button>
+        </div>
+      ) : messages.length > 0 ? (
+        <div className="px-4 pb-4">
+          <button
+            type="button"
+            onClick={useAgentLeadForm || useRolePreflight ? handleStartNewRequest : handleClear}
+            className="text-xs text-text-muted hover:text-text-heading transition inline-flex items-center gap-1"
+          >
+            <RotateCcw size={12} aria-hidden />
+            {useAgentLeadForm || useRolePreflight ? "Start new request" : "Clear conversation"}
+          </button>
+        </div>
+      ) : null}
     </div>
   );
+
+  const showRolePreflightPanel = useRolePreflight && leadFlowStep === "details";
 
   const mainPanel =
     useAgentLeadForm && leadFlowStep !== "chat" ? (
@@ -806,9 +1065,33 @@ export default function ChatWidget({
         onStartOver={handleStartNewRequest}
         validationError={formValidationError}
       />
+    ) : showRolePreflightPanel ? (
+      <RolePreflightLeadForm
+        role={resolvedRole}
+        roleUi={roleUi}
+        draft={rolePreflightDraft}
+        onFieldChange={(field, value) =>
+          setRolePreflightDraft((d) => ({ ...d, [field]: value }))
+        }
+        onStartChat={handleStartChatFromRolePreflight}
+        onStartOver={handleRolePreflightFormCancel}
+        preflightStepIndex={rolePreflightStepIndex}
+        onStepBack={() => setRolePreflightStepIndex((i) => Math.max(0, i - 1))}
+        onStepNext={() => setRolePreflightStepIndex((i) => Math.min(2, i + 1))}
+        validationError={formValidationError}
+        loading={loading}
+        embedTokenMissing={!embedToken}
+      />
     ) : (
       <>
-        {showConversationProgress ? <ConversationProgress step={step} /> : null}
+        {showConversationProgress || showRoleChatProgress ? (
+          <ConversationProgress
+            step={showRoleChatProgress ? 1 : step}
+            steps={showRoleChatProgress ? ROLE_LIVE_CHAT_PROGRESS_STEPS : undefined}
+            activeBgClass={roleUi.accentBgLight}
+            activeTextClass={roleUi.accentTextBold}
+          />
+        ) : null}
         {chatBody}
         {footer}
       </>
@@ -819,10 +1102,11 @@ export default function ChatWidget({
       {allowLauncher && !inlineMode && !isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 w-14 h-14 bg-primary rounded-full shadow-lg hover:shadow-xl transition-all flex items-center justify-center text-white z-50 hover:scale-110"
-          aria-label={launcherLabel}
+          type="button"
+          className={`fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl ${roleUi.launcherClass}`}
+          aria-label={effectiveLauncherLabel}
         >
-          <MessageCircle size={24} />
+          <MessageCircle size={24} className="shrink-0" aria-hidden />
         </button>
       )}
 

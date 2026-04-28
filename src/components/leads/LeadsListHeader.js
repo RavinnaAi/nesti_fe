@@ -7,7 +7,7 @@ import Link from "next/link";
  * @param {string} [props.filterLabel] — from getLeadsListFilterLabel
  * @param {React.ReactNode} [props.children] — search / filters (right side)
  */
-export default function LeadsListHeader({ filterLabel = "", children = null }) {
+export default function LeadsListHeader({ filterLabel = "", children = null, pageTitle = "Leads" }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
@@ -24,7 +24,7 @@ export default function LeadsListHeader({ filterLabel = "", children = null }) {
               </Link>
             </>
           ) : (
-            <h1 className="text-[26px] leading-tight font-bold text-text-heading">Leads</h1>
+            <h1 className="text-[26px] leading-tight font-bold text-text-heading">{pageTitle}</h1>
           )}
         </div>
         {filterLabel ? null : (

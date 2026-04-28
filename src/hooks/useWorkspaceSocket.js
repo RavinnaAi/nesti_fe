@@ -6,7 +6,7 @@ import { toast } from "react-toastify";
 import { getSocketOrigin } from "@/lib/api";
 
 /**
- * Subscribes to workspace Socket.IO when `token` is set (agent / mortgage broker dashboard).
+ * Subscribes to workspace Socket.IO when `token` is set (agent / mortgage broker / lawyer dashboard).
  * Not used by the public embed chatbot — that flow is HTTPS POST `/api/chat` only.
  *
  * Server: `node-backend/services/realtime/workspaceSocket.js`
@@ -54,8 +54,6 @@ export function useWorkspaceSocket(token, queryClient) {
       });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
-
-      if (payload?.notification_type === "lead_created") return;
 
       const title = payload?.title;
       if (title && typeof title === "string") {

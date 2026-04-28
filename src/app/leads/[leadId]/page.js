@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRecordLeadView } from "@/hooks/useRecordLeadView";
@@ -29,119 +29,29 @@ import {
 } from "@/lib/leadsClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
-import LeadsWorkspaceTabs from "@/components/leads/LeadsWorkspaceTabs";
+import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
 import { LEAD_WORKSPACE_TAB_IDS, normalizeLeadWorkspaceTabId } from "@/lib/leadWorkspaceTabsMeta";
-import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
-import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
-import LeadsConversationTab from "@/components/leads/LeadsConversationTab";
-import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
-import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
-import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
-import LeadsConsultationTab from "@/components/leads/LeadsConsultationTab";
-import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
-import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
+import LeadsWorkspacePanels from "@/components/leads/LeadsWorkspacePanels";
+import DeleteLeadConfirmModal from "@/components/leads/DeleteLeadConfirmModal";
 import { LeadDetailPageSkeleton } from "@/components/ui/ContentSkeletons";
-
-const normalizeList = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.items)) return data.items;
-  if (Array.isArray(data?.messages)) return data.messages;
-  return [];
-};
-
-const getActionConversationId = (lead) =>
-  lead?.conversation_id || lead?.conversationId || "";
-
-const getConversationMeta = (conversation) => {
-  let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
-  if (isMatched === null) {
-    const matchStatus = conversation?.match_status;
-    if (matchStatus === "matched" || matchStatus === true) {
-      isMatched = true;
-    } else {
-      isMatched =
-        conversation?.meta?.is_matched ??
-        conversation?.meta?.matched ??
-        conversation?.metadata?.is_matched ??
-        conversation?.metadata?.matched ??
-        null;
-    }
-  }
-
-  return {
-    intent:
-      conversation?.intent ||
-      conversation?.lead_intent ||
-      conversation?.intent_label ||
-      "Unknown",
-    leadScore:
-      conversation?.lead_score ??
-      conversation?.leadScore ??
-      conversation?.score ??
-      "—",
-    leadGrade:
-      conversation?.lead_grade ?? conversation?.leadGrade ?? conversation?.grade ?? "—",
-    channel: conversation?.channel || conversation?.source || "web",
-    qualified: conversation?.is_qualified ?? conversation?.isQualified ?? false,
-    isMatched,
-  };
-};
-
-const extractMeta = (value) => {
-  if (!value) return {};
-  return value?.meta || value?.metadata || value?.data?.meta || {};
-};
-
-const extractMessageMeta = (message) => {
-  if (!message) return {};
-  return message?.meta || message?.message_meta || message?.metadata || message?.data?.meta || {};
-};
-
-const formatMetaEntries = (meta) => {
-  if (!meta || typeof meta !== "object") return [];
-  return Object.entries(meta).filter(([, value]) => value !== undefined && value !== null);
-};
-
-function normalizeLeadId(value) {
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-  let decoded = raw;
-  try {
-    decoded = decodeURIComponent(raw);
-  } catch {
-    decoded = raw;
-  }
-  const fromQuery = decoded.match(/[?&]lead=([a-fA-F0-9]{24})/);
-  if (fromQuery?.[1]) return fromQuery[1];
-  const idMatch = decoded.match(/([a-fA-F0-9]{24})/);
-  return idMatch?.[1] || "";
-}
-
-/** Same-origin path (optional ?query) for router.push; blocks open redirects. */
-function sanitizeInternalReturnPath(raw) {
-  if (raw == null) return "";
-  let value = String(raw).trim();
-  if (!value) return "";
-  try {
-    value = decodeURIComponent(value);
-  } catch {
-    return "";
-  }
-  value = value.trim();
-  if (!value.startsWith("/") || value.startsWith("//")) return "";
-  if (/[\r\n\0]/.test(value)) return "";
-  const lower = value.toLowerCase();
-  if (lower.startsWith("/\\") || lower.includes("://")) return "";
-  const pathOnly = value.split("?")[0] || "";
-  if (!pathOnly.startsWith("/") || pathOnly.startsWith("//") || pathOnly.includes("//")) return "";
-  return value;
-}
+import {
+  extractMessageMeta,
+  getActionConversationId,
+  normalizeLeadId,
+  normalizeList,
+  sanitizeInternalReturnPath,
+} from "@/lib/leadsPageUtils";
 
 function LeadWorkspacePageContent() {
   const { isAuthenticated } = useAuthGuard();
-  const { token } = useAppSelector((state) => state.auth);
+  const { token, user: authUser } = useAppSelector((state) => state.auth);
+  const userRole = authUser?.role || "agent";
+  const roleFilteredTabs = useMemo(() => getLeadWorkspaceTabsForRole(userRole), [userRole]);
+  const allowedWorkspaceTabIds = useMemo(
+    () => new Set(roleFilteredTabs.map((t) => t.id)),
+    [roleFilteredTabs],
+  );
+  const defaultWorkspaceTab = roleFilteredTabs[0]?.id || "lead_profile";
   const params = useParams();
   const pathname = usePathname() || "";
   const router = useRouter();
@@ -204,12 +114,12 @@ function LeadWorkspacePageContent() {
   }, []);
 
   useEffect(() => {
-    if (tabFromUrl && LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl)) {
+    if (tabFromUrl && LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl) && allowedWorkspaceTabIds.has(tabFromUrl)) {
       setActiveTab(tabFromUrl);
     } else {
-      setActiveTab("lead_profile");
+      setActiveTab(defaultWorkspaceTab);
     }
-  }, [tabFromUrl, leadId]);
+  }, [tabFromUrl, leadId, allowedWorkspaceTabIds, defaultWorkspaceTab]);
 
   /** Canonicalize e.g. `tab=notes` → `tab=pipeline` without breaking bookmarks. */
   useEffect(() => {
@@ -221,6 +131,17 @@ function LeadWorkspacePageContent() {
     router.replace(`${pathname}?${p.toString()}`, { scroll: false });
   }, [rawTabParam, tabFromUrl, pathname, router, searchParams]);
 
+  /** Drop `tab` from the URL when it exists globally but is hidden for this role (e.g. lawyer / mortgage broker + property_matches). */
+  useEffect(() => {
+    if (!rawTabParam) return;
+    if (!tabFromUrl || !LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl)) return;
+    if (allowedWorkspaceTabIds.has(tabFromUrl)) return;
+    const p = new URLSearchParams(searchParams.toString());
+    p.delete("tab");
+    const qs = p.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [rawTabParam, tabFromUrl, pathname, router, searchParams, allowedWorkspaceTabIds]);
+
   useEffect(() => {
     if (!rawLeadIdParam || !leadId) return;
     if (rawLeadIdParam === leadId) return;
@@ -231,9 +152,21 @@ function LeadWorkspacePageContent() {
     if (safeBack) qs.set("back", safeBack);
     if (listStatusQ) qs.set("status", listStatusQ);
     if (listPipelineQ) qs.set("pipeline", listPipelineQ);
-    if (tabFromUrl && LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl)) qs.set("tab", tabFromUrl);
+    if (tabFromUrl && LEAD_WORKSPACE_TAB_IDS.has(tabFromUrl) && allowedWorkspaceTabIds.has(tabFromUrl)) {
+      qs.set("tab", tabFromUrl);
+    }
     router.replace(`/leads/${encodeURIComponent(leadId)}?${qs.toString()}`);
-  }, [rawLeadIdParam, leadId, backPage, backParamRaw, listStatusQ, listPipelineQ, tabFromUrl, router]);
+  }, [
+    rawLeadIdParam,
+    leadId,
+    backPage,
+    backParamRaw,
+    listStatusQ,
+    listPipelineQ,
+    tabFromUrl,
+    allowedWorkspaceTabIds,
+    router,
+  ]);
 
   const leadDetailQuery = useQuery({
     queryKey: ["lead-detail", token, leadId],
@@ -257,7 +190,11 @@ function LeadWorkspacePageContent() {
     queryFn: () => fetchLeadConversation({ token, leadId, page: 1, limit: 200 }),
   });
 
-  const messages = useMemo(() => normalizeList(messagesQuery.data), [messagesQuery.data]);
+  const messages = useMemo(() => {
+    const raw = messagesQuery.data?.messages;
+    if (Array.isArray(raw)) return raw;
+    return normalizeList(messagesQuery.data);
+  }, [messagesQuery.data]);
 
   const propertyMatchesQuery = useQuery({
     queryKey: ["lead-property-matches", token, leadId],
@@ -269,10 +206,12 @@ function LeadWorkspacePageContent() {
     const d = propertyMatchesQuery.data;
     const raw = d?.property_matches ?? d?.propertyMatches;
     if (Array.isArray(raw)) return raw;
+    if (Array.isArray(d)) return d;
     return normalizeList(d);
   }, [propertyMatchesQuery.data]);
 
-  const conversationMeta = useMemo(() => extractMeta(selectedConversation), [selectedConversation]);
+  const leadDetail = leadDetailQuery.data?.lead || null;
+
   const messageMeta = useMemo(() => {
     const latestWithMeta = [...messages].reverse().find((msg) => {
       const meta = extractMessageMeta(msg);
@@ -470,12 +409,13 @@ function LeadWorkspacePageContent() {
 
   const selectTab = useCallback(
     (tabId) => {
-      setActiveTab(tabId);
+      const next = allowedWorkspaceTabIds.has(tabId) ? tabId : defaultWorkspaceTab;
+      setActiveTab(next);
       const p = new URLSearchParams(searchParams.toString());
-      p.set("tab", tabId);
+      p.set("tab", next);
       router.replace(`${pathname}?${p.toString()}`, { scroll: false });
     },
-    [pathname, router, searchParams],
+    [pathname, router, searchParams, allowedWorkspaceTabIds, defaultWorkspaceTab],
   );
 
   const patchLeadMutation = useMutation({
@@ -532,168 +472,70 @@ function LeadWorkspacePageContent() {
             {leadDetailQuery.error?.message || "Could not load this lead."}
           </div>
         ) : (
-          <>
-            <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
-              <LeadsWorkspaceTabs
-                activeTab={activeTab}
-                onChange={selectTab}
-                endSlot={
-                  <button
-                    type="button"
-                    onClick={() => setShowDeleteConfirm(true)}
-                    disabled={deleteLeadMutation.isPending}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-700 border border-red-200 rounded-md px-2.5 py-1.5 bg-white hover:bg-red-50 transition disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <Trash2 size={14} aria-hidden />
-                    {deleteLeadMutation.isPending ? "Deleting…" : "Delete"}
-                  </button>
-                }
-              />
-            </div>
-
-            {activeTab === "lead_details" ? (
-              <LeadsDetailsTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-                messageMeta={messageMeta}
-                getConversationMeta={getConversationMeta}
-                conversationMeta={conversationMeta}
-                formatMetaEntries={formatMetaEntries}
-                onOpenMeta={() => {}}
-                onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutateAsync()}
-                cancelCalendlyPending={cancelCalendlyMutation.isPending}
-              />
-            ) : null}
-
-            {activeTab === "conversation" ? (
-              <LeadsConversationTab
-                selectedConversation={selectedConversation}
-                messageMeta={messageMeta}
-                messagesQuery={messagesQuery}
-                messages={messages}
-                formatMetaEntries={formatMetaEntries}
-                onOpenMeta={() => {}}
-              />
-            ) : null}
-
-            {activeTab === "actions" ? (
-              <LeadsAiActionsTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-              />
-            ) : null}
-
-            {activeTab === "property_matches" ? (
-              <LeadsPropertyMatchesTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-                propertyMatches={propertyMatches}
-                propertyMatchesQuery={propertyMatchesQuery}
-                propertyMatchesPayload={propertyMatchesQuery.data || null}
-              />
-            ) : null}
-
-            {activeTab === "consultation" ? (
-              <LeadsConsultationTab
-                lead={leadDetailQuery.data?.lead || null}
-                onCancelCalendlyAppointment={() => cancelCalendlyMutation.mutateAsync()}
-                cancelCalendlyPending={cancelCalendlyMutation.isPending}
-                onGoToNurture={() => selectTab("nurture")}
-              />
-            ) : null}
-
-            {activeTab === "lead_profile" ? (
-              <LeadsProfileTab
-                selectedConversation={selectedConversation}
-                lead={leadDetailQuery.data?.lead || null}
-              />
-            ) : null}
-
-            {activeTab === "pipeline" ? (
-              <LeadPipelineNotesPanel
-                lead={leadDetailQuery.data?.lead || null}
-                onPatchLead={(body) => patchLeadMutation.mutateAsync(body)}
-                patchLeadPending={patchLeadMutation.isPending}
-                pipelineListFilterHint={
-                  openedFromPipelineFilter ? (
-                    <p className="text-xs text-text-muted leading-relaxed">
-                      You opened this lead from a filtered pipeline view. Change the stage below.
-                    </p>
-                  ) : null
-                }
-              />
-            ) : null}
-
-            {activeTab === "others" ? (
-              <LeadsActionsTab
-                referralForm={referralForm}
-                setReferralForm={setReferralForm}
-                createReferralMutation={createReferralMutation}
-                selectedLeadId={leadId}
-                actionConversationId={actionConversationId}
-                conversationReferrals={conversationReferrals}
-                activeReferralId={activeReferralId}
-                setActiveReferralId={setActiveReferralId}
-                referralUpdate={referralUpdate}
-                setReferralUpdate={setReferralUpdate}
-                updateReferralMutation={updateReferralMutation}
-                mortgageForm={mortgageForm}
-                setMortgageForm={setMortgageForm}
-                mortgageMutation={mortgageMutation}
-                mortgageRuns={mortgageRuns}
-                closingForm={closingForm}
-                setClosingForm={setClosingForm}
-                closingMutation={closingMutation}
-                closingRuns={closingRuns}
-              />
-            ) : null}
-
-            {activeTab === "nurture" ? (
-              <LeadsNurtureTab
-                nurtureForm={nurtureForm}
-                setNurtureForm={setNurtureForm}
-                nurtureMutation={nurtureMutation}
-                nurtureDraftMutation={nurtureDraftMutation}
-                nurtureRefineMutation={nurtureRefineMutation}
-                selectedLeadId={leadId}
-                actionConversationId={actionConversationId}
-                nurtureLogs={nurtureLogs}
-                nurtureLogsLoading={nurtureLogsQuery.isLoading}
-              />
-            ) : null}
-          </>
+          <LeadsWorkspacePanels
+            activeTab={activeTab}
+            onActiveTabChange={selectTab}
+            roleFilteredTabs={roleFilteredTabs}
+            selectedLeadId={leadId}
+            selectedConversation={selectedConversation}
+            leadDetail={leadDetail}
+            messageMeta={messageMeta}
+            messages={messages}
+            messagesQuery={messagesQuery}
+            propertyMatches={propertyMatches}
+            propertyMatchesQuery={propertyMatchesQuery}
+            cancelCalendlyMutation={cancelCalendlyMutation}
+            patchLeadMutation={patchLeadMutation}
+            pipelineListFilterHint={
+              openedFromPipelineFilter ? (
+                <p className="text-xs text-text-muted leading-relaxed">
+                  You opened this lead from a filtered pipeline view. Change the stage below.
+                </p>
+              ) : null
+            }
+            onConsultationGoToNurture={() => selectTab("nurture")}
+            enableProfilePatch={false}
+            referralForm={referralForm}
+            setReferralForm={setReferralForm}
+            createReferralMutation={createReferralMutation}
+            activeReferralId={activeReferralId}
+            setActiveReferralId={setActiveReferralId}
+            referralUpdate={referralUpdate}
+            setReferralUpdate={setReferralUpdate}
+            updateReferralMutation={updateReferralMutation}
+            actionConversationId={actionConversationId}
+            conversationReferrals={conversationReferrals}
+            mortgageForm={mortgageForm}
+            setMortgageForm={setMortgageForm}
+            mortgageMutation={mortgageMutation}
+            mortgageRuns={mortgageRuns}
+            closingForm={closingForm}
+            setClosingForm={setClosingForm}
+            closingMutation={closingMutation}
+            closingRuns={closingRuns}
+            nurtureForm={nurtureForm}
+            setNurtureForm={setNurtureForm}
+            nurtureMutation={nurtureMutation}
+            nurtureDraftMutation={nurtureDraftMutation}
+            nurtureRefineMutation={nurtureRefineMutation}
+            nurtureLogs={nurtureLogs}
+            nurtureLogsLoading={nurtureLogsQuery.isLoading}
+            deleteLeadMutation={deleteLeadMutation}
+            onDeleteClick={() => setShowDeleteConfirm(true)}
+          />
         )}
       </div>
 
-      {showDeleteConfirm ? (
-        <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
-          <div className="w-full max-w-md rounded-xl border border-border bg-white shadow-2xl p-5">
-            <h3 className="text-base font-semibold text-text-heading">Delete lead?</h3>
-            <p className="mt-2 text-sm text-text-muted leading-relaxed">
-              This action cannot be undone.
-            </p>
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setShowDeleteConfirm(false)}
-                disabled={deleteLeadMutation.isPending}
-                className="px-3 py-2 text-xs font-semibold text-text-heading border border-border rounded-md hover:bg-background-light"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => deleteLeadMutation.mutate()}
-                disabled={deleteLeadMutation.isPending}
-                className="inline-flex items-center gap-2 px-3 py-2 text-xs font-semibold text-white bg-red-600 rounded-md hover:bg-red-700"
-              >
-                <Trash2 size={14} />
-                {deleteLeadMutation.isPending ? "Deleting..." : "Delete"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      <DeleteLeadConfirmModal
+        open={showDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={() => {
+          if (!leadId || deleteLeadMutation.isPending) return;
+          deleteLeadMutation.mutate();
+        }}
+        isPending={deleteLeadMutation.isPending}
+        description="This action cannot be undone."
+      />
     </div>
   );
 }

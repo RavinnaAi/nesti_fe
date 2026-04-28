@@ -67,7 +67,7 @@ const SUB_TABS = [
   { id: "story", label: "Story", icon: BookOpen },
 ];
 
-export default function BusinessInformation() {
+export default function BusinessInformation({ onSaveSuccess } = {}) {
   const dispatch = useAppDispatch();
   const storedBusiness = useAppSelector((state) => state.profile.businessInfo);
   const [focusedField, setFocusedField] = useState("");
@@ -134,9 +134,10 @@ export default function BusinessInformation() {
     }
     websiteLocationSaveTimerRef.current = setTimeout(async () => {
       websiteLocationSaveTimerRef.current = null;
-      const { website, location } = formRef.current;
+      const { website, location, companyName } = formRef.current;
       try {
         await saveBusinessInfo.mutateAsync({
+          company_name: String(companyName || "").trim(),
           website: website || "",
           location: location || "",
           silent: true,
@@ -150,7 +151,7 @@ export default function BusinessInformation() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
-    if (name === "website" || name === "location") {
+    if (name === "website" || name === "location" || name === "companyName") {
       scheduleWebsiteLocationAutosave();
     }
   };
@@ -173,6 +174,9 @@ export default function BusinessInformation() {
 
   /** Experience, Style & metrics, Audience & expertise, Story — does not touch basics fields. */
   const buildRestPayload = () => ({
+    company_name: String(form.companyName || "").trim(),
+    website: form.website || "",
+    location: form.location || "",
     target_neighborhoods: form.targetNeighborhoods || "",
     experience: form.experience || "",
     license_number: form.licenseNumber || "",
@@ -206,6 +210,7 @@ export default function BusinessInformation() {
           preferredClients,
         })
       );
+      await onSaveSuccess?.();
     } catch {
       /* error surfaced via toast in useSaveBusinessInfo hook */
     } finally {

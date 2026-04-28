@@ -108,12 +108,8 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
-  const [isMounted, setIsMounted] = useState(false);
+  const personalInfo = useAppSelector((state) => state.profile.personalInfo);
   const menuRef = useRef(null);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   const settingsTab = searchParams?.get("tab") || "";
   const settingsTabSet = useMemo(
@@ -165,9 +161,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     user?.name ||
     [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
     [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-    user?.email ||
     "User";
-  const displayEmail = user?.email || "";
+  const sidebarAvatarUrl = String(
+    user?.profile_image || personalInfo?.profileImage || ""
+  ).trim();
   const initials = displayName
     .split(" ")
     .filter(Boolean)
@@ -441,33 +438,37 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
         </div>
       </div>
 
-      <div className="shrink-0 space-y-1.5 border-t border-border/60 bg-gradient-to-t from-background-light/70 to-white/95 p-2.5">
-        <Link
-          href={isMounted && displayEmail ? `/profile?email=${displayEmail}` : "/profile"}
-          onClick={() => onCloseMobile?.()}
-          className="group flex items-center gap-2 rounded-lg border border-border/70 bg-white px-2 py-1.5 shadow-sm transition hover:border-primary/25 hover:shadow-md hover:shadow-primary/5"
-        >
-          <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg bg-gradient-to-br from-primary via-primary to-primary-dark text-[10px] font-bold text-white grid place-items-center shadow-[0_3px_12px_rgba(52,199,89,0.35)] ring-1 ring-white/45 transition duration-200 group-hover:scale-[1.02]">
+      <div className="shrink-0 border-t border-border/60 bg-gradient-to-t from-background-light/70 to-white/95 p-2.5">
+        <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-white px-2 py-1.5 shadow-sm">
+          <Link
+            href="/settings?tab=personal"
+            onClick={() => onCloseMobile?.()}
+            className="group relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary-dark text-[11px] font-bold text-white shadow-[0_3px_12px_rgba(52,199,89,0.35)] ring-2 ring-white transition duration-200 hover:scale-[1.02]"
+            title="Personal settings"
+          >
             <span className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-70" aria-hidden />
-            <span className="relative">{initials || "U"}</span>
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[11px] font-bold text-text-heading">{displayName}</span>
-            <span className="mt-px block truncate text-[10px] font-medium text-text-muted">
-              {displayEmail || "Open public profile"}
+            {sidebarAvatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={sidebarAvatarUrl}
+                alt=""
+                className="relative h-full w-full object-cover"
+              />
+            ) : (
+              <span className="relative">{initials || "U"}</span>
+            )}
+          </Link>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="group ml-auto inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200/90 bg-white px-2 py-1.5 text-[11px] font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50"
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600 ring-1 ring-red-100 transition group-hover:bg-red-100 group-hover:ring-red-200/80">
+              <LogOut size={12} strokeWidth={2} />
             </span>
-          </span>
-        </Link>
-        <button
-          type="button"
-          onClick={handleLogout}
-          className="group flex w-full items-center justify-center gap-2 rounded-lg border border-red-200/90 bg-white px-2 py-1.5 text-[11px] font-bold text-red-600 shadow-sm transition hover:bg-red-50 hover:border-red-300"
-        >
-          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-red-50 text-red-600 ring-1 ring-red-100 transition group-hover:bg-red-100 group-hover:ring-red-200/80">
-            <LogOut size={12} strokeWidth={2} />
-          </span>
-          Sign out
-        </button>
+            <span className="truncate">Sign out</span>
+          </button>
+        </div>
       </div>
     </aside>
   );

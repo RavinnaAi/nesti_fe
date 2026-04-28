@@ -132,6 +132,7 @@ export const API_ENDPOINTS = {
     profile: withBaseUrl("/api/professionals"),
     me: withBaseUrl("/api/professionals/me"),
     icp: withBaseUrl("/api/professionals/icp"),
+    uploadImage: withBaseUrl("/api/professionals/upload-image"),
   },
 };
 
@@ -174,9 +175,11 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
   const isAbsolute = url.startsWith("http://") || url.startsWith("https://");
   let fullUrl = isAbsolute ? url : `${BASE_URL}${url.startsWith("/") ? url : `/${url}`}`;
   fullUrl = normalizeApiUrl(fullUrl);
-  const headers = {
-    "Content-Type": "application/json",
-  };
+  const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
+  const headers = {};
+  if (!isFormData) {
+    headers["Content-Type"] = "application/json";
+  }
   if (token) {
     // rawToken: send the JWT directly without the "Bearer " prefix.
     // Some backend endpoints (e.g. verifyEmail, resetPassword) read
@@ -187,7 +190,7 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
   const response = await fetch(fullUrl, {
     method,
     headers,
-    body: data ? JSON.stringify(data) : undefined,
+    body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
     cache: "no-store",
   });
 
@@ -206,6 +209,7 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
       "Request failed. Please try again.";
     const error = new Error(message);
     error.status = response.status;
+    if (json?.code) error.code = json.code;
     throw error;
   }
 

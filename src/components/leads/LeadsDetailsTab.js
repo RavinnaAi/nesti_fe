@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CheckCircle2, Info, XCircle } from "lucide-react";
+import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
 export default function LeadsDetailsTab({
   selectedConversation,
@@ -39,6 +40,10 @@ export default function LeadsDetailsTab({
   }, [showCalendlyCancelModal, calendlyCancelSubmitting, cancelCalendlyPending]);
 
   const leadData = lead && typeof lead === "object" ? lead : {};
+  const profRole = leadData.professional_type;
+  const hideBuyerSellerIntent = profRole === "lawyer" || profRole === "mortgage_broker";
+  const isLawyerLead = profRole === "lawyer";
+  const isMortgageBrokerLead = profRole === "mortgage_broker";
   const property = leadData.property || {};
   const qualification = leadData.qualification || {};
   const conversion = leadData.conversion || {};
@@ -93,6 +98,14 @@ export default function LeadsDetailsTab({
     if (min !== null && max !== null) return `${formatMoney(min)} - ${formatMoney(max)}`;
     if (min !== null) return formatMoney(min);
     if (max !== null) return formatMoney(max);
+    const slugTry =
+      formatLeadIntakeSlug(property?.budget) ||
+      formatLeadIntakeSlug(property?.price) ||
+      formatLeadIntakeSlug(conversionProperty?.budget) ||
+      formatLeadIntakeSlug(conversionProperty?.price) ||
+      formatLeadIntakeSlug(leadData?.budget) ||
+      formatLeadIntakeSlug(leadData?.price);
+    if (slugTry) return slugTry;
     const single =
       toFiniteNumber(conversionProperty?.budget) ??
       toFiniteNumber(conversionProperty?.price) ??
@@ -114,10 +127,12 @@ export default function LeadsDetailsTab({
 
   const appointmentStatus = leadData.appointment_status || "—";
 
+  const displayField = (v) => formatLeadIntakeSlug(v) || readable(v);
+
   const KeyValue = ({ label, value }) => (
     <div className="rounded-md border border-border/60 bg-background-light/50 px-3 py-2">
       <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
-      <div className="text-xs font-normal text-text-heading mt-0.5 break-words">{readable(value)}</div>
+      <div className="text-xs font-normal text-text-heading mt-0.5 break-words">{displayField(value)}</div>
     </div>
   );
 
@@ -170,37 +185,102 @@ export default function LeadsDetailsTab({
             </div>
           ) : null}
 
-          <div className="rounded-md border border-border bg-white p-4 space-y-3">
-            <div className="text-sm font-semibold text-text-heading">Property</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-              <KeyValue label="Intent" value={leadData.intent} />
-              <KeyValue label="Location" value={property.location} />
-              <KeyValue label="Budget" value={budgetDisplay} />
-              <KeyValue label="Timeline" value={property.timeline} />
-              <KeyValue label="Type" value={property.property_type} />
-              <KeyValue label="Bedrooms" value={property.bedrooms} />
-              <KeyValue label="Bathrooms" value={property.bathrooms} />
-              <KeyValue label="Parking required" value={property.parking_required} />
-              <KeyValue label="Backyard needed" value={property.backyard_needed} />
-              <KeyValue label="Must-have features" value={property.must_have_features} />
-            </div>
-          </div>
+          {isLawyerLead ? (
+            <>
+              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-text-heading">Property & timing</div>
+                <p className="text-[11px] text-text-muted leading-snug">
+                  From the chat intake — use with the legal qualification below.
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <KeyValue label="Location / area" value={property.location} />
+                  <KeyValue label="Property address" value={property.address} />
+                  <KeyValue
+                    label="Budget (reference)"
+                    value={budgetDisplay !== "—" ? budgetDisplay : readable(property.budget)}
+                  />
+                  <KeyValue label="Closing timeline" value={qualification.closing_timeline} />
+                  <KeyValue label="Lead type" value={leadData.lead_type} />
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-text-heading">Legal intake</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <KeyValue label="Transaction stage" value={qualification.transaction_stage} />
+                  <KeyValue label="Transaction type" value={qualification.transaction_type} />
+                  <KeyValue label="Property value" value={qualification.property_value} />
+                  <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
+                  <KeyValue label="Realtor involved" value={qualification.realtor_involved} />
+                  <KeyValue label="First-time buyer" value={qualification.first_time_buyer} />
+                  <KeyValue label="Legal services" value={qualification.legal_services_needed} />
+                </div>
+              </div>
+            </>
+          ) : isMortgageBrokerLead ? (
+            <>
+              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-text-heading">Property & goals</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <KeyValue label="Location / area" value={property.location} />
+                  <KeyValue label="Address" value={property.address} />
+                  <KeyValue label="Budget" value={budgetDisplay} />
+                  <KeyValue label="Timeline" value={property.timeline} />
+                  <KeyValue label="Lead type" value={leadData.lead_type} />
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-text-heading">Mortgage qualification</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <KeyValue label="Mortgage timeline" value={qualification.mortgage_timeline} />
+                  <KeyValue label="Pre-approval" value={qualification.pre_approval_status} />
+                  <KeyValue label="Credit range" value={qualification.credit_score_range} />
+                  <KeyValue label="Employment" value={qualification.employment_status} />
+                  <KeyValue label="Household income" value={qualification.household_income} />
+                  <KeyValue label="Down payment" value={qualification.down_payment_readiness} />
+                  <KeyValue label="Purchase purpose" value={qualification.purchase_purpose} />
+                  <KeyValue label="Urgency" value={qualification.urgency_signal} />
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-text-heading">Property</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  {hideBuyerSellerIntent ? null : <KeyValue label="Intent" value={leadData.intent} />}
+                  <KeyValue label="Location" value={property.location} />
+                  <KeyValue label="Budget" value={budgetDisplay} />
+                  <KeyValue label="Timeline" value={property.timeline} />
+                  <KeyValue label="Type" value={property.property_type} />
+                  <KeyValue label="Bedrooms" value={property.bedrooms} />
+                  <KeyValue label="Bathrooms" value={property.bathrooms} />
+                  <KeyValue label="Parking required" value={property.parking_required} />
+                  <KeyValue label="Backyard needed" value={property.backyard_needed} />
+                  <KeyValue label="Must-have features" value={property.must_have_features} />
+                </div>
+              </div>
+
+              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className="text-sm font-semibold text-text-heading">Qualification</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+                  <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
+                  <KeyValue label="Realtor status" value={qualification.realtor_status} />
+                  <KeyValue label="Motivation" value={qualification.motivation_reason} />
+                  <KeyValue label="Viewing readiness" value={qualification.viewing_readiness} />
+                  <KeyValue label="Living situation" value={qualification.living_situation} />
+                  <KeyValue label="Urgency readiness" value={qualification.urgency_readiness} />
+                  <KeyValue label="Lead type" value={leadData.lead_type} />
+                </div>
+              </div>
+            </>
+          )}
 
           <div className="rounded-md border border-border bg-white p-4 space-y-3">
-            <div className="text-sm font-semibold text-text-heading">Qualification</div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-              <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
-              <KeyValue label="Realtor status" value={qualification.realtor_status} />
-              <KeyValue label="Motivation" value={qualification.motivation_reason} />
-              <KeyValue label="Viewing readiness" value={qualification.viewing_readiness} />
-              <KeyValue label="Living situation" value={qualification.living_situation} />
-              <KeyValue label="Urgency readiness" value={qualification.urgency_readiness} />
-              <KeyValue label="Lead type" value={leadData.lead_type} />
+            <div className="text-sm font-semibold text-text-heading">
+              {isLawyerLead || isMortgageBrokerLead ? "Booking & follow-up" : "Conversion & trust"}
             </div>
-          </div>
-
-          <div className="rounded-md border border-border bg-white p-4 space-y-3">
-            <div className="text-sm font-semibold text-text-heading">Conversion & trust</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               <KeyValue label="Appointment status" value={appointmentStatus} />
               <KeyValue label="Primary outcome" value={conversion?.outcome?.primary_outcome} />

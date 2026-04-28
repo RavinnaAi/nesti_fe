@@ -5,24 +5,35 @@ export function SkeletonBlock({ className = "" }) {
   return <div className={`rounded-md bg-primary/10 animate-pulse ${className}`} />;
 }
 
-export function LeadsPageTableSkeleton({ rows = 8 }) {
+export function LeadsPageTableSkeleton({
+  rows = 8,
+  showPropertyMatchesColumn = true,
+  showAgentLeadColumns = true,
+}) {
+  const headers = [
+    ...(showAgentLeadColumns ? ["Type"] : []),
+    "Name",
+    "Email",
+    "Status",
+    "Consult",
+    ...(showAgentLeadColumns ? ["Intent"] : []),
+    "Location",
+    ...(showPropertyMatchesColumn ? ["Matches"] : []),
+    "Score",
+    "Grade",
+  ];
+  const minClass = (() => {
+    if (showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[1060px]";
+    if (showAgentLeadColumns && !showPropertyMatchesColumn) return "min-w-[980px]";
+    if (!showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[940px]";
+    return "min-w-[860px]";
+  })();
   return (
     <div className="overflow-x-auto" aria-hidden>
-      <table className="w-full min-w-[1060px] table-auto">
+      <table className={`w-full table-auto ${minClass}`}>
         <thead className="bg-primary/[0.04] border-b border-border">
           <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
-            {[
-              "Type",
-              "Name",
-              "Email",
-              "Status",
-              "Consult",
-              "Intent",
-              "Location",
-              "Matches",
-              "Score",
-              "Grade",
-            ].map((h) => (
+            {headers.map((h) => (
               <th key={h} className="px-3 py-2">
                 {h}
               </th>
@@ -32,9 +43,11 @@ export function LeadsPageTableSkeleton({ rows = 8 }) {
         <tbody>
           {Array.from({ length: rows }).map((_, i) => (
             <tr key={i} className="border-b border-border/70">
-              <td className="px-3 py-2.5">
-                <SkeletonBlock className="h-3.5 w-32 max-w-full" />
-              </td>
+              {showAgentLeadColumns ? (
+                <td className="px-3 py-2.5">
+                  <SkeletonBlock className="h-3.5 w-32 max-w-full" />
+                </td>
+              ) : null}
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-28 max-w-full" />
               </td>
@@ -47,15 +60,19 @@ export function LeadsPageTableSkeleton({ rows = 8 }) {
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-16" />
               </td>
-              <td className="px-3 py-2.5">
-                <SkeletonBlock className="h-3.5 w-14" />
-              </td>
+              {showAgentLeadColumns ? (
+                <td className="px-3 py-2.5">
+                  <SkeletonBlock className="h-3.5 w-14" />
+                </td>
+              ) : null}
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-28" />
               </td>
-              <td className="px-3 py-2.5">
-                <SkeletonBlock className="h-3.5 w-8" />
-              </td>
+              {showPropertyMatchesColumn ? (
+                <td className="px-3 py-2.5">
+                  <SkeletonBlock className="h-3.5 w-8" />
+                </td>
+              ) : null}
               <td className="px-3 py-2.5">
                 <SkeletonBlock className="h-3.5 w-8" />
               </td>
@@ -295,12 +312,15 @@ export function AnalyticsFunnelBlockSkeleton() {
 export function ProfilePageContentSkeleton() {
   return (
     <div className="mx-auto max-w-3xl space-y-4 py-2" aria-hidden>
-      {/* Hero */}
-      <div className="flex items-center gap-4 rounded-2xl bg-primary/10 p-5 animate-pulse sm:p-7">
-        <SkeletonBlock className="h-16 w-16 shrink-0 rounded-xl sm:h-[4.5rem] sm:w-[4.5rem]" />
-        <div className="flex-1 space-y-2.5">
-          <SkeletonBlock className="h-5 w-40 max-w-full" />
-          <SkeletonBlock className="h-3.5 w-64 max-w-full" />
+      {/* Hero — cover strip + white footer (matches Dashboard / Personal info) */}
+      <div className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm">
+        <SkeletonBlock className="h-28 w-full rounded-none sm:h-32 md:h-36" />
+        <div className="flex items-end gap-4 px-5 pb-5 sm:px-7 sm:pb-6">
+          <SkeletonBlock className="-mt-8 h-[4.5rem] w-[4.5rem] shrink-0 rounded-xl border-2 border-white sm:-mt-10 sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl" />
+          <div className="min-w-0 flex-1 space-y-2 pb-0.5">
+            <SkeletonBlock className="h-5 w-44 max-w-full" />
+            <SkeletonBlock className="h-3.5 w-full max-w-md" />
+          </div>
         </div>
       </div>
 

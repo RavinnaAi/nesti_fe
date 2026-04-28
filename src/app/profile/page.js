@@ -121,9 +121,17 @@ function ProfilePageContent() {
     return fromPersonal || resolvedBusiness?.fullName || resolvedBusiness?.professionalType || "";
   }, [resolvedPersonal, resolvedBusiness]);
 
-  const heroStyle = resolvedPersonal?.coverImage
-    ? { backgroundImage: `url(${resolvedPersonal.coverImage})`, backgroundSize: "cover", backgroundPosition: "center" }
-    : {};
+  const roleBadgeText = useMemo(() => {
+    const raw = String(
+      resolvedBusiness?.professionalType || resolvedPersonal?.role || ""
+    ).trim();
+    if (!raw) return "";
+    return raw.replace(/_/g, " ").toUpperCase();
+  }, [resolvedBusiness?.professionalType, resolvedPersonal?.role]);
+
+  const hasCover = Boolean(resolvedPersonal?.coverImage);
+  const profilePhotoUrl =
+    resolvedPersonal?.profileImage || apiProfile?.professionalProfile?.profile_image || "";
 
   if (!isMounted) {
     return (
@@ -159,68 +167,82 @@ function ProfilePageContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
       <div className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
-        {/* ── Hero ── */}
+        {/* ── Hero — same two-part card as Dashboard / Personal information ── */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
-          className={`relative overflow-hidden rounded-2xl border shadow-xl ${
-            resolvedPersonal?.coverImage
-              ? "border-white/10 text-white ring-1 ring-white/10 shadow-black/20"
-              : "border-primary/20 text-white ring-1 ring-white/15 shadow-primary/25"
-          }`}
-          style={heroStyle}
+          className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm"
         >
-          {!resolvedPersonal?.coverImage ? (
-            <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark/95 to-emerald-700/90" aria-hidden />
-          ) : null}
-          {resolvedPersonal?.coverImage ? (
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/75 via-black/55 to-black/35" aria-hidden />
-          ) : null}
+          <div className="relative aspect-[16/5] w-full min-h-[10rem] sm:min-h-[11rem] md:min-h-[12rem]">
+            {hasCover ? (
+              <>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={resolvedPersonal?.coverImage}
+                  alt=""
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+                <div
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"
+                  aria-hidden
+                />
+              </>
+            ) : (
+              <div
+                className="absolute inset-0 bg-gradient-to-br from-primary via-primary-dark/95 to-emerald-700/90"
+                aria-hidden
+              />
+            )}
+            {!hasCover ? (
+              <>
+                <div
+                  className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl motion-safe:animate-[pulse_5s_ease-in-out_infinite]"
+                  aria-hidden
+                />
+                <div
+                  className="pointer-events-none absolute -bottom-20 left-1/4 h-36 w-36 rounded-full bg-emerald-400/25 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite_1s]"
+                  aria-hidden
+                />
+              </>
+            ) : null}
+          </div>
 
-          <div className="relative z-10 p-5 sm:p-7">
-            <div className="flex items-start gap-4">
-              {/* Avatar */}
-              <div className="relative shrink-0">
-                <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border-2 border-white/20 bg-white text-xl font-bold text-primary-dark shadow-lg sm:h-[4.5rem] sm:w-[4.5rem]">
-                  {resolvedPersonal?.profileImage || apiProfile?.professionalProfile?.profile_image ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={resolvedPersonal?.profileImage || apiProfile?.professionalProfile?.profile_image}
-                      alt={displayFullName || "Profile photo"}
-                      className="h-full w-full object-cover"
-                    />
-                  ) : (
-                    (displayFullName || "N").slice(0, 1).toUpperCase()
-                  )}
-                </div>
-                <span className="absolute -bottom-1 -right-1 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
-                  Active
-                </span>
-              </div>
-
-              {/* Name + role + bio */}
-              <div className="min-w-0 flex-1 pt-0.5">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">
-                    {displayFullName || "Your Profile"}
-                  </h1>
-                  {resolvedBusiness?.professionalType ? (
-                    <span className="rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white backdrop-blur-sm">
-                      {resolvedBusiness.professionalType}
-                    </span>
-                  ) : null}
-                </div>
-
-                {/* Bio right under the name in hero */}
-                {bio ? (
-                  <p className="mt-2 max-w-xl text-sm leading-relaxed text-white/75">
-                    {bio}
-                  </p>
+          <div className="relative flex items-end gap-4 px-5 pb-5 sm:gap-5 sm:px-7 sm:pb-6">
+            <div className="relative z-[1] -mt-8 shrink-0 sm:-mt-10">
+              <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 text-xl font-bold text-primary-dark shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
+                {profilePhotoUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={profilePhotoUrl}
+                    alt={displayFullName || "Profile photo"}
+                    className="h-full w-full object-cover object-center"
+                  />
                 ) : (
-                  <p className="mt-1.5 text-sm text-white/50 italic">No bio added yet.</p>
+                  <span className="select-none">{(displayFullName || "N").slice(0, 1).toUpperCase()}</span>
                 )}
               </div>
+              <span className="absolute -bottom-1 -right-1 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
+                Active
+              </span>
+            </div>
+
+            <div className="min-w-0 flex-1 pb-0.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-base font-semibold tracking-tight text-text-heading sm:text-lg">
+                  {displayFullName || "Your Profile"}
+                </h1>
+                {roleBadgeText ? (
+                  <span className="rounded-full border border-border/80 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-heading">
+                    {roleBadgeText}
+                  </span>
+                ) : null}
+              </div>
+              {bio ? (
+                <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-text-muted">{bio}</p>
+              ) : (
+                <p className="mt-1.5 text-sm text-text-muted/80 italic">No bio added yet.</p>
+              )}
             </div>
           </div>
         </motion.div>

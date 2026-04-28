@@ -108,6 +108,26 @@ export async function sendChatMessage({
   return json;
 }
 
+/** Optional lead score (same as node-backend `POST /api/chat/score-preview`). Fails soft — returns null. */
+export async function postChatScorePreview({ formContact, professionalType }) {
+  try {
+    const response = await fetch(apiUrl("/api/chat/score-preview"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        formContact: formContact || undefined,
+        professionalType: professionalType || undefined,
+      }),
+      cache: "no-store",
+    });
+    const json = await parseJson(response);
+    if (!response.ok || !json?.success) return null;
+    return json;
+  } catch (_err) {
+    return null;
+  }
+}
+
 export async function fetchChatPropertyMatches({
   sessionId,
   embedToken,

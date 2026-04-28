@@ -20,6 +20,7 @@ import {
   CALENDLY_OAUTH_MESSAGE_SOURCE,
   CALENDLY_OAUTH_WINDOW_NAME,
 } from "@/lib/calendlyOAuthPopup";
+import { useProfileSetupRedirect } from "@/hooks/useProfileSetupRedirect";
 
 function LoadingShell() {
   return (
@@ -47,6 +48,8 @@ export default function AppChrome({ children }) {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useProfileSetupRedirect(isMounted);
 
   useEffect(() => {
     if (!token || typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
@@ -110,7 +113,7 @@ export default function AppChrome({ children }) {
     if (!isMounted) return "";
     const p = personalInfo?.profileImage;
     if (typeof p === "string" && p.trim()) return p.trim();
-    return user?.img_url || "";
+    return user?.profile_image || user?.img_url || "";
   }, [isMounted, personalInfo, user]);
 
   const avatarInitials = useMemo(() => {

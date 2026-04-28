@@ -1,12 +1,17 @@
 "use client";
 
 import { getStatusDisplay } from "@/lib/leadPipelineConfig";
+import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
 export default function LeadsProfileTab({
   selectedConversation,
   lead,
 }) {
   const leadData = lead && typeof lead === "object" ? lead : {};
+  const profRole = leadData.professional_type;
+  const hideBuyerSellerIntent = profRole === "lawyer" || profRole === "mortgage_broker";
+  const isLawyerLead = profRole === "lawyer";
+  const isMortgageBrokerLead = profRole === "mortgage_broker";
   const contact = leadData.contact || {};
   const property = leadData.property || {};
   const qualification = leadData.qualification || {};
@@ -60,6 +65,14 @@ export default function LeadsProfileTab({
     if (min !== null && max !== null) return `${formatMoney(min)} - ${formatMoney(max)}`;
     if (min !== null) return formatMoney(min);
     if (max !== null) return formatMoney(max);
+    const slugTry =
+      formatLeadIntakeSlug(property?.budget) ||
+      formatLeadIntakeSlug(property?.price) ||
+      formatLeadIntakeSlug(conversionProperty?.budget) ||
+      formatLeadIntakeSlug(conversionProperty?.price) ||
+      formatLeadIntakeSlug(leadData?.budget) ||
+      formatLeadIntakeSlug(leadData?.price);
+    if (slugTry) return slugTry;
     const single =
       toFiniteNumber(conversionProperty?.budget) ??
       toFiniteNumber(conversionProperty?.price) ??
@@ -84,9 +97,9 @@ export default function LeadsProfileTab({
       <div className="text-[10px] uppercase tracking-wide text-text-muted">{label}</div>
       <div
         className={`text-xs font-normal text-text-heading mt-0.5 ${noWrap ? "truncate whitespace-nowrap" : "break-words"}`}
-        title={noWrap ? readable(value) : undefined}
+        title={noWrap ? formatLeadIntakeSlug(value) || readable(value) : undefined}
       >
-        {readable(value)}
+        {formatLeadIntakeSlug(value) || readable(value)}
       </div>
     </div>
   );
@@ -114,13 +127,20 @@ export default function LeadsProfileTab({
                 <KeyValue label="Best time to contact" value={contact.best_time_to_contact} />
               </div>
               <div className="lg:col-span-2">
-                <KeyValue label="Location" value={property.location} />
+                <KeyValue label={isLawyerLead ? "Property / area" : "Location"} value={property.location} />
               </div>
+              {isLawyerLead ? (
+                <div className="lg:col-span-2">
+                  <KeyValue label="Property address" value={property.address} />
+                </div>
+              ) : null}
             </div>
           </div>
 
           <div className="rounded-md border border-border bg-white p-4 space-y-3">
-            <div className="text-sm font-semibold text-text-heading">Lead context</div>
+            <div className="text-sm font-semibold text-text-heading">
+              {isLawyerLead ? "Matter summary" : isMortgageBrokerLead ? "Financing summary" : "Lead context"}
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               <div className="rounded-md border border-border/60 bg-background-light/50 px-3 py-2">
                 <div className="text-[10px] uppercase tracking-wide text-text-muted">Pipeline stage</div>
@@ -135,14 +155,38 @@ export default function LeadsProfileTab({
                   })()}
                 </div>
               </div>
-              <KeyValue label="Intent" value={leadData.intent} />
+              {hideBuyerSellerIntent ? null : <KeyValue label="Intent" value={leadData.intent} />}
               <KeyValue label="Lead type" value={leadData.lead_type} />
               <KeyValue label="Budget" value={budgetDisplay} />
-              <KeyValue label="Timeline" value={property.timeline} />
-              <KeyValue label="Property type" value={property.property_type} />
-              <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
-              <KeyValue label="Realtor status" value={qualification.realtor_status} />
-              <KeyValue label="Motivation" value={qualification.motivation_reason} />
+              <KeyValue
+                label={isLawyerLead ? "Closing timeline" : "Timeline"}
+                value={isLawyerLead ? qualification.closing_timeline : property.timeline}
+              />
+              {isLawyerLead ? (
+                <>
+                  <KeyValue label="Transaction stage" value={qualification.transaction_stage} />
+                  <KeyValue label="Transaction type" value={qualification.transaction_type} />
+                  <KeyValue label="Property value" value={qualification.property_value} />
+                  <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
+                  <KeyValue label="Realtor involved" value={qualification.realtor_involved} />
+                  <KeyValue label="First-time buyer" value={qualification.first_time_buyer} />
+                  <KeyValue label="Legal services" value={qualification.legal_services_needed} />
+                </>
+              ) : isMortgageBrokerLead ? (
+                <>
+                  <KeyValue label="Mortgage timeline" value={qualification.mortgage_timeline} />
+                  <KeyValue label="Pre-approval" value={qualification.pre_approval_status} />
+                  <KeyValue label="Purchase purpose" value={qualification.purchase_purpose} />
+                  <KeyValue label="Urgency" value={qualification.urgency_signal} />
+                </>
+              ) : (
+                <>
+                  <KeyValue label="Property type" value={property.property_type} />
+                  <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
+                  <KeyValue label="Realtor status" value={qualification.realtor_status} />
+                  <KeyValue label="Motivation" value={qualification.motivation_reason} />
+                </>
+              )}
             </div>
           </div>
         </>

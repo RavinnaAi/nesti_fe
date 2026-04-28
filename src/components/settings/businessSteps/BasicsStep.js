@@ -1,6 +1,6 @@
 "use client";
 
-import { User, Mail, Phone, Globe2, MapPin } from "lucide-react";
+import { User, Mail, Phone, Globe2, MapPin, Building2 } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 
@@ -14,9 +14,10 @@ export default function BasicsStep({
   return (
     <div className="space-y-4">
       <p className="text-[11px] leading-relaxed text-text-muted">
-        Professional type, name, and phone come from your account and cannot be changed here. Update{" "}
-        <span className="font-medium text-text-body">website</span> and{" "}
-        <span className="font-medium text-text-body">location</span> below; they save automatically.
+        Professional type, name, and phone come from your account and cannot be changed here. Your{" "}
+        <span className="font-medium text-text-body">company</span>,{" "}
+        <span className="font-medium text-text-body">website</span>, and{" "}
+        <span className="font-medium text-text-body">location</span> save automatically as you type.
       </p>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
         <SelectDropdown
@@ -48,6 +49,18 @@ export default function BasicsStep({
           required
           disabled
           className="!bg-gray-100 !cursor-not-allowed"
+        />
+        <FormField
+          label="Company / brokerage name"
+          name="companyName"
+          value={form.companyName}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("companyName")}
+          onBlur={() => setFocusedField("")}
+          placeholder="Your team or brokerage"
+          icon={Building2}
+          focusedField={focusedField}
+          required
         />
         <FormField
           label="Email"

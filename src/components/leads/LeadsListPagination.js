@@ -1,0 +1,45 @@
+"use client";
+
+export default function LeadsListPagination({
+  leadsQuery,
+  leadsPagination,
+  onPrev,
+  onNext,
+}) {
+  return (
+    <div className="rounded-md border border-border bg-white p-3 shadow-sm flex items-center justify-between gap-3">
+      <div className="flex items-center gap-2 text-xs text-text-muted">
+        {leadsQuery.isFetching && !leadsQuery.isLoading ? (
+          <span
+            className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+            aria-hidden
+          />
+        ) : null}
+        <span>
+          Page {leadsPagination.current} of {leadsPagination.totalPages}
+          {Number.isFinite(leadsPagination.total) && leadsPagination.total > 0
+            ? ` · ${leadsPagination.total} total leads`
+            : ""}
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!leadsPagination.hasPrev || leadsQuery.isFetching}
+          onClick={onPrev}
+          className="h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={!leadsPagination.hasNext || leadsQuery.isFetching}
+          onClick={onNext}
+          className="h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          Next
+        </button>
+      </div>
+    </div>
+  );
+}

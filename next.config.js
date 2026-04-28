@@ -43,6 +43,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "img.logo.dev",
       },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
     ],
     // Optimize images
     formats: ["image/avif", "image/webp"],

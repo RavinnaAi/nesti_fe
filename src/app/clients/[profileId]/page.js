@@ -510,7 +510,7 @@ export default function ClientProfileLeadsPage() {
                             className="hover:bg-primary/[0.06] cursor-pointer"
                           >
                             <td className="px-2 py-1.5 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
-                              {humanize(lead.intent)}
+                              {lead.intent && lead.intent !== "unspecified" ? humanize(lead.intent) : "—"}
                             </td>
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-heading sm:text-[11px]">
                               {humanize(rowPropertyType)}
