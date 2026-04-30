@@ -4,18 +4,34 @@ import Link from "next/link";
 import { User } from "lucide-react";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
 import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
+import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
 const theadRow = "border-b border-border bg-background-lighter/90";
 const th =
-  "whitespace-nowrap px-3 py-2.5 text-left text-[10px] font-medium uppercase tracking-wider text-text-muted sm:px-4 sm:text-[11px]";
-const td = "px-3 py-2.5 align-middle text-sm text-text-body sm:px-4";
-const tdStrong = "px-3 py-2.5 align-middle text-sm font-medium text-text-heading sm:px-4";
-const tdMuted = "px-3 py-2.5 align-middle text-sm text-text-muted sm:px-4";
+  "whitespace-nowrap px-2 py-1.5 text-left text-[9px] font-semibold uppercase tracking-wide text-text-muted sm:px-2.5 sm:text-[10px]";
+const td = "px-2 py-1.5 align-middle text-[11px] text-text-body sm:px-2.5 sm:text-xs";
+const tdStrong = "px-2 py-1.5 align-middle text-[11px] font-semibold text-text-heading sm:px-2.5 sm:text-xs";
+const tdMuted = "px-2 py-1.5 align-middle text-[11px] text-text-muted sm:px-2.5 sm:text-xs";
 const trRow = "border-b border-border/50 transition-colors last:border-b-0 hover:bg-primary/[0.04]";
 
 function humanize(value) {
   if (value == null || value === "") return "—";
   return String(value).replace(/_/g, " ");
+}
+
+function formatLawyerValue(value) {
+  if (value == null || value === "") return "—";
+  const token = String(value).trim().toLowerCase();
+  const tokenMap = {
+    "1m_plus": "$1M+",
+    "700k_1m": "$700K-$1M",
+    "400k_700k": "$400K-$700K",
+    "under_400k": "Under $400K",
+  };
+  if (tokenMap[token]) return tokenMap[token];
+  const slug = formatLeadIntakeSlug(value);
+  if (slug) return slug;
+  return humanize(value);
 }
 
 function profileDisplayName(profile) {
@@ -50,7 +66,7 @@ function TopLeadsTableSkeleton() {
             <th className={th}>Intent</th>
             <th className={th}>Grade</th>
             <th className={`${th} tabular-nums`}>Score</th>
-            <th className={th}>Location</th>
+            <th className={th}>Address</th>
           </tr>
         </thead>
         <tbody>
@@ -79,7 +95,7 @@ function TopProfilesTableSkeleton() {
             <th className={th}>Client</th>
             <th className={th}>Email</th>
             <th className={th}>Phone</th>
-            <th className={th}>Location</th>
+            <th className={th}>Address</th>
             <th className={`${th} text-right`}>Budget</th>
             <th className={`${th} text-center tabular-nums`}>Leads</th>
           </tr>
@@ -108,12 +124,14 @@ export default function DashboardTopTables({
   leadsError,
   profilesError,
   onSelectLead,
+  professionalType = "agent",
 }) {
+  const isLawyer = String(professionalType || "").toLowerCase() === "lawyer";
   return (
     <div className="flex flex-col gap-4 md:gap-6">
-      <section className="min-w-0 rounded-xl border border-border bg-white p-3 sm:p-4 shadow-sm">
-        <h2 className="text-sm font-bold text-text-heading">Top 5 leads</h2>
-        <p className="mt-0.5 mb-3 text-xs leading-relaxed text-text-muted">
+      <section className="min-w-0 rounded-xl border border-border bg-white p-2.5 sm:p-3 shadow-sm">
+        <h2 className="text-[13px] font-semibold text-text-heading">Top 5 leads</h2>
+        <p className="mt-0.5 mb-2.5 text-[11px] leading-snug text-text-muted">
           Highest lead score in your workspace (same list as charts).
         </p>
         {leadsLoading ? (
@@ -127,13 +145,15 @@ export default function DashboardTopTables({
             <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
               <thead>
                 <tr className={theadRow}>
-                  <th className={th}>Type</th>
+                  <th className={th}>{isLawyer ? "Stage" : "Type"}</th>
                   <th className={th}>Name</th>
                   <th className={th}>Email</th>
-                  <th className={th}>Intent</th>
+                  <th className={th}>{isLawyer ? "Transaction" : "Intent"}</th>
+                  {isLawyer ? <th className={th}>Closing</th> : null}
+                  {isLawyer ? <th className={th}>Value</th> : null}
                   <th className={th}>Grade</th>
                   <th className={`${th} tabular-nums`}>Score</th>
-                  <th className={th}>Location</th>
+                  <th className={th}>Address</th>
                 </tr>
               </thead>
               <tbody>
@@ -143,30 +163,37 @@ export default function DashboardTopTables({
                       <button
                         type="button"
                         onClick={() => onSelectLead?.(row.id)}
-                        className="max-w-[160px] truncate text-left text-sm font-medium capitalize text-text-heading transition hover:text-primary"
-                        title={String(row.propertyType || "")}
+                        className="max-w-[132px] truncate text-left text-[11px] font-semibold capitalize text-text-heading transition hover:text-primary sm:text-xs"
+                        title={String(isLawyer ? row.transactionStage : row.propertyType || "")}
                       >
-                        {row.propertyType || "—"}
+                        {isLawyer ? humanize(row.transactionStage) : row.propertyType || "—"}
                       </button>
                     </td>
                     <td className={tdStrong}>
-                      <span className="line-clamp-2">{row.name || "—"}</span>
+                      <span className="block max-w-[120px] truncate whitespace-nowrap" title={row.name || ""}>
+                        {row.name || "—"}
+                      </span>
                     </td>
                     <td className={td}>
                       {row.email ? (
-                        <span className="block max-w-[160px] truncate text-text-body" title={row.email}>
+                        <span className="block max-w-[140px] truncate text-text-body" title={row.email}>
                           {row.email}
                         </span>
                       ) : (
                         <span className="text-text-muted">—</span>
                       )}
                     </td>
-                    <td className={td}>{humanize(row.intent)}</td>
-                    <td className={td}>{row.grade ? String(row.grade).toUpperCase() : "—"}</td>
+                    <td className={td}>{humanize(isLawyer ? row.transactionType : row.intent)}</td>
+                    {isLawyer ? <td className={td}>{humanize(row.closingTimeline)}</td> : null}
+                    {isLawyer ? <td className={td}>{formatLawyerValue(row.propertyValue)}</td> : null}
+                    <td className={`${td} font-semibold`}>{row.grade ? String(row.grade).toUpperCase() : "—"}</td>
                     <td className={`${tdStrong} tabular-nums`}>{row.scoreLabel}</td>
                     <td className={td}>
-                      <span className="line-clamp-1 max-w-[120px]" title={row.location || ""}>
-                        {row.location || "—"}
+                      <span
+                        className="line-clamp-1 max-w-[110px]"
+                        title={row.location || row.address || row.property?.location || row.property?.address || ""}
+                      >
+                        {row.location || row.address || row.property?.location || row.property?.address || "—"}
                       </span>
                     </td>
                   </tr>
@@ -177,9 +204,9 @@ export default function DashboardTopTables({
         )}
       </section>
 
-      <section className="min-w-0 rounded-xl border border-border bg-white p-3 sm:p-4 shadow-sm">
-        <h2 className="text-sm font-bold text-text-heading">Top 5 client profiles</h2>
-        <p className="mt-0.5 mb-3 text-xs leading-relaxed text-text-muted">
+      <section className="min-w-0 rounded-xl border border-border bg-white p-2.5 sm:p-3 shadow-sm">
+        <h2 className="text-[13px] font-semibold text-text-heading">Top 5 client profiles</h2>
+        <p className="mt-0.5 mb-2.5 text-[11px] leading-snug text-text-muted">
           Profiles with the most linked leads (from your client list).
         </p>
         {profilesLoading ? (
@@ -196,7 +223,7 @@ export default function DashboardTopTables({
                   <th className={th}>Client</th>
                   <th className={th}>Email</th>
                   <th className={th}>Phone</th>
-                  <th className={th}>Location</th>
+                  <th className={th}>Address</th>
                   <th className={`${th} text-right`}>Budget</th>
                   <th className={`${th} text-center tabular-nums`}>Leads</th>
                 </tr>
@@ -216,22 +243,22 @@ export default function DashboardTopTables({
                         {pid ? (
                           <Link
                             href={`/clients/${encodeURIComponent(pid)}`}
-                            className="inline-flex min-w-0 items-center gap-2.5 font-medium text-text-heading transition hover:text-primary"
+                            className="inline-flex min-w-0 items-center gap-2 font-medium text-text-heading transition hover:text-primary"
                           >
-                            <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/[0.08] text-primary-dark ring-1 ring-primary/10">
-                              <User size={14} strokeWidth={2.2} />
+                            <span className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/[0.08] text-primary-dark ring-1 ring-primary/10">
+                              <User size={13} strokeWidth={2.2} />
                             </span>
-                            <span className="truncate capitalize">{displayName}</span>
+                            <span className="max-w-[140px] truncate capitalize text-[11px] sm:text-xs">{displayName}</span>
                           </Link>
                         ) : (
-                          <span className="truncate capitalize font-medium">{displayName}</span>
+                          <span className="truncate capitalize text-[11px] font-medium sm:text-xs">{displayName}</span>
                         )}
                       </td>
                       <td className={td}>
                         {email ? (
                           <a
                             href={`mailto:${encodeURIComponent(email)}`}
-                            className="block max-w-[140px] truncate text-text-body transition hover:text-primary"
+                            className="block max-w-[120px] truncate text-text-body transition hover:text-primary"
                             title={email}
                           >
                             {email}
@@ -242,8 +269,11 @@ export default function DashboardTopTables({
                       </td>
                       <td className={td}>{phone || <span className="text-text-muted">—</span>}</td>
                       <td className={td}>
-                        <span className="line-clamp-1 max-w-[120px]" title={humanize(p.location)}>
-                          {humanize(p.location)}
+                        <span
+                          className="line-clamp-1 max-w-[120px]"
+                          title={humanize(p.location || p.address)}
+                        >
+                          {humanize(p.location || p.address)}
                         </span>
                       </td>
                       <td className={`${td} text-right`}>

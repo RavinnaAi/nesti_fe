@@ -16,9 +16,9 @@ import {
   fetchNurtureLogs,
 } from "@/lib/chatClient";
 import { fetchLeads, fetchLeadProfiles } from "@/lib/leadsClient";
+import { fetchCalendarBookings } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { formatLeadLocationLine, getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
-import NewLeadPopup from "@/components/leads/NewLeadPopup";
 import LeadDetailsModal from "@/components/dashboard/LeadDetailsModal";
 import DashboardAnalyticsPanels from "@/components/dashboard/DashboardAnalyticsPanels";
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
@@ -120,14 +120,22 @@ export default function DashboardPage() {
 
   const [isMounted, setIsMounted] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
-  const [newLeadToNotify, setNewLeadToNotify] = useState(null);
-  const [shownLeadIds, setShownLeadIds] = useState(new Set());
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
   const [avatarBroken, setAvatarBroken] = useState(false);
+  const [secondaryQueriesReady, setSecondaryQueriesReady] = useState(false);
 
   useEffect(() => {
     setAvatarBroken(false);
   }, [profileImageUrl]);
+
+  useEffect(() => {
+    if (!token) {
+      setSecondaryQueriesReady(false);
+      return;
+    }
+    const timer = setTimeout(() => setSecondaryQueriesReady(true), 180);
+    return () => clearTimeout(timer);
+  }, [token]);
 
   const leadsQuery = useQuery({
     queryKey: ["dashboard-leads", token],
@@ -145,38 +153,60 @@ export default function DashboardPage() {
 
   const analyticsFunnelQuery = useQuery({
     queryKey: ["dashboard-analytics-funnel", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && secondaryQueriesReady,
     queryFn: () => fetchChatAnalyticsFunnel({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const analyticsTimeseriesQuery = useQuery({
     queryKey: ["dashboard-analytics-timeseries", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && secondaryQueriesReady,
     queryFn: () => fetchChatAnalyticsTimeseries({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const nurtureLogsChartQuery = useQuery({
     queryKey: ["dashboard-nurture-logs-chart", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && secondaryQueriesReady,
     queryFn: () => fetchNurtureLogs({ token, page: 1, limit: 100 }),
     staleTime: 60_000,
   });
 
   const leadTrendsQuery = useQuery({
     queryKey: ["dashboard-analytics-lead-trends", token, windowDays, userRole],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && secondaryQueriesReady,
     queryFn: () => fetchChatAnalyticsLeadTrends({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const profilesTopQuery = useQuery({
     queryKey: ["dashboard-top-profiles", token],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && secondaryQueriesReady,
     queryFn: () => fetchLeadProfiles({ token, page: 1, limit: 50 }),
     staleTime: 60_000,
   });
+
+  const calendarBookingsQuery = useQuery({
+    queryKey: ["calendar-bookings", token],
+    enabled: Boolean(token),
+    queryFn: () => fetchCalendarBookings({ token }),
+    staleTime: 60_000,
+  });
+
+  const kpiSummary = useMemo(() => {
+    const summary = analyticsSummaryQuery.data?.summary;
+    if (!summary) return summary;
+    const calendarBooked = Array.isArray(calendarBookingsQuery.data?.bookings)
+      ? calendarBookingsQuery.data.bookings.length
+      : 0;
+    return {
+      ...summary,
+      totals: {
+        ...(summary.totals || {}),
+        appointments_booked: calendarBooked,
+      },
+    };
+  }, [analyticsSummaryQuery.data?.summary, calendarBookingsQuery.data?.bookings]);
 
   const refreshAll = () => {
     leadsQuery.refetch();
@@ -186,6 +216,7 @@ export default function DashboardPage() {
     nurtureLogsChartQuery.refetch();
     profilesTopQuery.refetch();
     leadTrendsQuery.refetch();
+    calendarBookingsQuery.refetch();
     queryClient.invalidateQueries({ queryKey: ["calendar-bookings", token] });
   };
 
@@ -196,37 +227,12 @@ export default function DashboardPage() {
     analyticsTimeseriesQuery.isFetching ||
     nurtureLogsChartQuery.isFetching ||
     profilesTopQuery.isFetching ||
-    leadTrendsQuery.isFetching;
+    leadTrendsQuery.isFetching ||
+    calendarBookingsQuery.isFetching;
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
-
-  // Detection logic for new leads (0-5 minutes)
-  useEffect(() => {
-    if (!leadsQuery.data?.leads) return;
-    const list = Array.isArray(leadsQuery.data.leads) ? leadsQuery.data.leads : [];
-
-    const now = new Date();
-    const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
-
-    const freshLead = list.find((lead) => {
-      const raw = lead?.created_at || lead?.createdAt;
-      if (!raw) return false;
-      const createdAt = new Date(raw);
-      if (Number.isNaN(createdAt.getTime())) return false;
-      const leadId = lead.id || lead._id;
-      return createdAt > fiveMinutesAgo && !shownLeadIds.has(leadId);
-    });
-
-    if (freshLead) {
-      const shaped = leadApiRowToConversationShape(freshLead);
-      if (shaped) {
-        setNewLeadToNotify(shaped);
-        setShownLeadIds((prev) => new Set(prev).add(shaped.id || shaped.conversation_id));
-      }
-    }
-  }, [leadsQuery.data, shownLeadIds]);
 
   const conversations = useMemo(() => {
     const raw = leadsQuery.data?.leads;
@@ -259,8 +265,15 @@ export default function DashboardPage() {
         const meta = getLeadMeta(c);
         const score = Number(meta.leadScore);
         const id = String(c?.id || c?.conversation_id || c?.conversationId || "").trim();
-        const location = formatLeadLocationLine(c);
+        const location =
+          formatLeadLocationLine(c) ||
+          c?.property?.address ||
+          c?.address ||
+          c?.conversion?.property?.address ||
+          "—";
         const propertyType = getLeadPropertyTypeDisplay(c);
+        const qualification = c?.qualification || {};
+        const lawyerQual = qualification?.lawyer || {};
         const intent = String(meta.intent || "").trim() || "—";
         const grade = meta.leadGrade || "";
         const sortScore = Number.isFinite(score) && !Number.isNaN(score) ? score : -1;
@@ -270,6 +283,10 @@ export default function DashboardPage() {
           email: meta.email || "",
           propertyType,
           intent,
+          transactionStage: qualification?.transaction_stage || lawyerQual?.transaction_stage || "",
+          transactionType: qualification?.transaction_type || lawyerQual?.transaction_type || "",
+          closingTimeline: qualification?.closing_timeline || lawyerQual?.closing_timeline || "",
+          propertyValue: qualification?.property_value || lawyerQual?.property_value || "",
           grade,
           scoreLabel: sortScore >= 0 ? String(score) : "—",
           location: location || "—",
@@ -512,7 +529,7 @@ export default function DashboardPage() {
         </div>
 
         <DashboardKpiStrip
-          summary={analyticsSummaryQuery.data?.summary}
+          summary={kpiSummary}
           isLoading={analyticsSummaryQuery.isLoading}
         />
 
@@ -546,6 +563,7 @@ export default function DashboardPage() {
           leadsError={leadsQuery.isError}
           profilesError={profilesTopQuery.isError}
           onSelectLead={(id) => setSelectedLeadId(String(id))}
+          professionalType={String(businessInfo?.professionalType || userRole || "").trim().toLowerCase()}
         />
 
       </div>
@@ -557,18 +575,6 @@ export default function DashboardPage() {
               ...getLeadMeta(selectedLead)
             }}
             onClose={() => setSelectedLeadId(null)}
-          />
-        )}
-        {newLeadToNotify && (
-          <NewLeadPopup
-            lead={{
-              ...newLeadToNotify,
-              ...(newLeadToNotify ? getLeadMeta(newLeadToNotify) : {})
-            }}
-            onClose={() => setNewLeadToNotify(null)}
-            onView={(id) => {
-              setSelectedLeadId(id);
-            }}
           />
         )}
       </AnimatePresence>

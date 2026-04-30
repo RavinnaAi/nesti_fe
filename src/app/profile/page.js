@@ -260,6 +260,8 @@ function ProfilePageContent() {
               displayFullName={displayFullName}
               personalInfo={resolvedPersonal || {}}
               businessInfo={resolvedBusiness || {}}
+              compact
+              professionalLineLayout
             />
           </section>
 

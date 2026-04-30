@@ -35,13 +35,20 @@ export default function NotificationsPage() {
     queryFn: () => fetchNotifications({ token, limit: PAGE_SIZE, offset, unreadOnly }),
     enabled: Boolean(token),
     placeholderData: (prev) => prev,
+    staleTime: 30_000,
+    gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const unreadTotalQuery = useQuery({
     queryKey: ["notifications", "unread-count", token],
     queryFn: () => fetchNotificationsUnreadCount({ token }),
     enabled: Boolean(token),
-    staleTime: 15_000,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const items = listQuery.data?.items ?? [];

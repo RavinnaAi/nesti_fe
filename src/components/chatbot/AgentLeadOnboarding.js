@@ -104,6 +104,22 @@ const BEST_TIME_OPTIONS = [
   { value: "anytime", label: "Anytime" },
 ];
 
+const BUDGET_OPTIONS = [
+  { value: "", label: "Select…" },
+  { value: "under_400k", label: "Under $400k" },
+  { value: "400k_700k", label: "$400k–$700k" },
+  { value: "700k_1m", label: "$700k–$1M" },
+  { value: "1m_plus", label: "$1M+" },
+];
+
+function RequiredLabel({ children }) {
+  return (
+    <label className={labelCls}>
+      {children} <span className="text-red-500">*</span>
+    </label>
+  );
+}
+
 function IntentBadge({ isBuy }) {
   return (
     <span
@@ -254,7 +270,7 @@ export default function AgentLeadOnboarding({
         <div className={sectionCls}>Contact</div>
         <div className="col-span-2 space-y-2.5">
           <div className={fieldStackCls}>
-            <label className={labelCls}>Full name *</label>
+            <RequiredLabel>Full name</RequiredLabel>
             <input
               className={inputCls}
               value={draft.name}
@@ -265,7 +281,7 @@ export default function AgentLeadOnboarding({
           </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Phone *</label>
+              <RequiredLabel>Phone</RequiredLabel>
               <input
                 type="tel"
                 inputMode="numeric"
@@ -278,7 +294,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Email *</label>
+              <RequiredLabel>Email</RequiredLabel>
               <input
                 type="email"
                 className={inputCls}
@@ -302,7 +318,7 @@ export default function AgentLeadOnboarding({
         <>
           <div className={sectionCls}>Property requirements</div>
           <div className="col-span-2 flex flex-col gap-1">
-            <label className={labelCls}>Where are you looking?</label>
+            <RequiredLabel>Where are you looking?</RequiredLabel>
             <input
               className={inputCls}
               value={draft.location}
@@ -312,16 +328,17 @@ export default function AgentLeadOnboarding({
           </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Budget</label>
-              <input
-                className={inputCls}
+              <RequiredLabel>Budget</RequiredLabel>
+              <ChatSelect
+                triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.budget}
-                onChange={(e) => onFieldChange("budget", e.target.value)}
-                placeholder="e.g. $400K – $600K"
+                onChange={(v) => onFieldChange("budget", v)}
+                placeholder="Select…"
+                options={BUDGET_OPTIONS}
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Property type</label>
+              <RequiredLabel>Property type</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.property_type}
@@ -331,7 +348,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Bedrooms</label>
+              <RequiredLabel>Bedrooms</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.beds}
@@ -341,7 +358,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Bathrooms</label>
+              <RequiredLabel>Bathrooms</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.baths}
@@ -352,7 +369,7 @@ export default function AgentLeadOnboarding({
             </div>
           </div>
           <div className="col-span-2 flex flex-col gap-1">
-            <label className={labelCls}>Must-have features</label>
+            <RequiredLabel>Must-have features</RequiredLabel>
             <input
               className={inputCls}
               value={draft.must_have_features}
@@ -362,7 +379,7 @@ export default function AgentLeadOnboarding({
           </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Parking required?</label>
+              <RequiredLabel>Parking required?</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.parking_required}
@@ -372,7 +389,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Backyard needed?</label>
+              <RequiredLabel>Backyard needed?</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.backyard_needed}
@@ -382,7 +399,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={`${fieldStackCls} sm:col-span-2`}>
-              <label className={labelCls}>School district important?</label>
+              <RequiredLabel>School district important?</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.school_district_important}
@@ -397,7 +414,7 @@ export default function AgentLeadOnboarding({
         <>
           <div className={sectionCls}>Property details</div>
           <div className="col-span-2 flex flex-col gap-1">
-            <label className={labelCls}>Property address</label>
+            <RequiredLabel>Property address</RequiredLabel>
             <input
               className={inputCls}
               value={draft.address}
@@ -407,7 +424,7 @@ export default function AgentLeadOnboarding({
           </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Expected price</label>
+              <RequiredLabel>Expected price</RequiredLabel>
               <input
                 className={inputCls}
                 value={draft.price}
@@ -416,7 +433,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Property type</label>
+              <RequiredLabel>Property type</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.property_type}
@@ -426,7 +443,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Bedrooms</label>
+              <RequiredLabel>Bedrooms</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.beds}
@@ -436,7 +453,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Bathrooms</label>
+              <RequiredLabel>Bathrooms</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.baths}
@@ -447,7 +464,7 @@ export default function AgentLeadOnboarding({
             </div>
           </div>
           <div className="col-span-2 flex flex-col gap-1">
-            <label className={labelCls}>Key features</label>
+            <RequiredLabel>Key features</RequiredLabel>
             <input
               className={inputCls}
               value={draft.must_have_features}
@@ -457,7 +474,7 @@ export default function AgentLeadOnboarding({
           </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Parking?</label>
+              <RequiredLabel>Parking?</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.parking_required}
@@ -467,7 +484,7 @@ export default function AgentLeadOnboarding({
               />
             </div>
             <div className={fieldStackCls}>
-              <label className={labelCls}>Backyard?</label>
+              <RequiredLabel>Backyard?</RequiredLabel>
               <ChatSelect
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.backyard_needed}
@@ -490,7 +507,7 @@ export default function AgentLeadOnboarding({
         <div className={sectionCls}>Qualification</div>
         <div className={pairGridCls}>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Timeline</label>
+            <RequiredLabel>Timeline</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.timeline}
@@ -500,7 +517,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Mortgage status</label>
+            <RequiredLabel>Mortgage status</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.mortgage_status}
@@ -510,7 +527,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Working with a realtor?</label>
+            <RequiredLabel>Working with a realtor?</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.realtor_status}
@@ -520,7 +537,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={fieldStackCls}>
-            <label className={labelCls}>What&apos;s driving your move?</label>
+            <RequiredLabel>What&apos;s driving your move?</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.motivation_reason}
@@ -530,7 +547,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Ready to view properties?</label>
+            <RequiredLabel>Ready to view properties?</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.viewing_readiness}
@@ -540,7 +557,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Current living situation</label>
+            <RequiredLabel>Current living situation</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.living_situation}
@@ -550,7 +567,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={`${fieldStackCls} sm:col-span-2`}>
-            <label className={labelCls}>Ready to make an offer?</label>
+            <RequiredLabel>Ready to make an offer?</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.urgency_readiness}
@@ -572,7 +589,7 @@ export default function AgentLeadOnboarding({
         <div className={sectionCls}>Contact preferences</div>
         <div className={pairGridCls}>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Preferred contact method</label>
+            <RequiredLabel>Preferred contact method</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.preferred_contact_method}
@@ -582,7 +599,7 @@ export default function AgentLeadOnboarding({
             />
           </div>
           <div className={fieldStackCls}>
-            <label className={labelCls}>Best time to contact</label>
+            <RequiredLabel>Best time to contact</RequiredLabel>
             <ChatSelect
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.best_time_to_contact}

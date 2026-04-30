@@ -19,13 +19,34 @@ function formatMoney(n, currencyCode) {
   }).format(n);
 }
 
+function budgetTokenDisplay(value) {
+  const token = String(value || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, "_");
+  const map = {
+    under_400k: { kind: "single", text: "Under $400K" },
+    "400k_700k": { kind: "range", low: "$400K", high: "$700K" },
+    "700k_1m": { kind: "range", low: "$700K", high: "$1M" },
+    "1m_plus": { kind: "single", text: "$1M+" },
+  };
+  return map[token] || null;
+}
+
 /**
  * Structured budget for layout (ranges render with a clear separator).
  * `null` = no numeric budget.
  */
 export function getBudgetDisplay(profile) {
-  const bp = profile?.budget_profile;
-  if (bp) {
+  const p = profile?.property || {};
+  const bp = profile?.budget_profile || {};
+  const raw = p.budget ?? p.expected_price;
+  const tokenShown =
+    budgetTokenDisplay(raw) ||
+    budgetTokenDisplay(bp.latest_budget_text);
+  if (tokenShown) return tokenShown;
+
+  if (bp && typeof bp === "object") {
     const min = toFiniteMoneyNumber(bp.min_budget);
     const max = toFiniteMoneyNumber(bp.max_budget);
     const cur = String(bp.currency || "USD").toUpperCase();
@@ -45,8 +66,6 @@ export function getBudgetDisplay(profile) {
     }
   }
 
-  const p = profile?.property || {};
-  const raw = p.budget ?? p.expected_price;
   const single = toFiniteMoneyNumber(raw);
   if (single != null) {
     return { kind: "single", text: formatMoney(single, "USD") };

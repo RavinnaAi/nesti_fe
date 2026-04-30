@@ -74,7 +74,11 @@ export default function LeadsListTable({
                 const location =
                   conversation?.location ||
                   conversation?.city ||
+                  conversation?.address ||
                   conversation?.property?.location ||
+                  conversation?.property?.address ||
+                  conversation?.conversion?.property?.location ||
+                  conversation?.conversion?.property?.address ||
                   "—";
                 const isActive = selectedLeadId && String(selectedLeadId) === id;
                 const pipeStatus = conversation?.status;

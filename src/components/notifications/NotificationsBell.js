@@ -51,14 +51,21 @@ export default function NotificationsBell() {
     queryKey: ["notifications", "unread-count", token],
     queryFn: () => fetchNotificationsUnreadCount({ token }),
     enabled: Boolean(token),
-    staleTime: 15_000,
+    staleTime: 60_000,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    refetchOnReconnect: false,
   });
 
   const listQuery = useQuery({
     queryKey: ["notifications", "list", token, "preview"],
     queryFn: () => fetchNotifications({ token, limit: 12, offset: 0 }),
     enabled: Boolean(token) && open,
-    staleTime: 10_000,
+    staleTime: 30_000,
+    gcTime: 1000 * 60 * 10,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const markAllMutation = useMutation({

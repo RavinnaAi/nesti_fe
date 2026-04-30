@@ -85,9 +85,8 @@ function LeadWorkspacePageContent() {
       : "Back to leads";
 
   const [referralForm, setReferralForm] = useState({
-    target_vertical: "realtor",
+    professional_role: "",
     target_user_id: "",
-    status: "new",
     notes: "",
   });
   const [activeReferralId, setActiveReferralId] = useState("");
@@ -275,13 +274,19 @@ function LeadWorkspacePageContent() {
       createReferral({
         token,
         payload: {
-          ...referralForm,
+          target_vertical: referralForm.professional_role,
+          target_user_id: referralForm.target_user_id,
           conversation_id: actionConversationId || undefined,
+          notes: referralForm.notes || "",
         },
       }),
     onSuccess: () => {
       toast.success("Referral created");
-      setReferralForm((prev) => ({ ...prev, notes: "" }));
+      setReferralForm({
+        professional_role: "",
+        target_user_id: "",
+        notes: "",
+      });
       queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
     },
     onError: (err) => toast.error(err?.message || "Failed to create referral"),
@@ -473,6 +478,7 @@ function LeadWorkspacePageContent() {
           </div>
         ) : (
           <LeadsWorkspacePanels
+            token={token}
             activeTab={activeTab}
             onActiveTabChange={selectTab}
             roleFilteredTabs={roleFilteredTabs}

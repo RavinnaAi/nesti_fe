@@ -364,11 +364,17 @@ export default function ChatWidget({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (resolvedRole === "lawyer") {
+      const { sessionId: nextSid } = resetChatIdentity();
+      setSessionId(nextSid);
+      setVisitorIdState("");
+      return;
+    }
     const sid = getOrCreateSessionId();
     setSessionId((prev) => (String(prev || "").trim() ? prev : sid));
     const vid = getVisitorId();
     if (vid) setVisitorIdState(vid);
-  }, []);
+  }, [resolvedRole]);
 
   useEffect(() => {
     if (useAgentLeadForm && leadFlowStep !== "chat") return;
@@ -529,6 +535,55 @@ export default function ChatWidget({
       setFormValidationError("Please add your name, phone, and email to continue.");
       return;
     }
+    const requiredFields =
+      chosenIntent === "buy"
+        ? [
+            "location",
+            "budget",
+            "property_type",
+            "beds",
+            "baths",
+            "must_have_features",
+            "parking_required",
+            "backyard_needed",
+            "school_district_important",
+            "timeline",
+            "mortgage_status",
+            "realtor_status",
+            "motivation_reason",
+            "viewing_readiness",
+            "living_situation",
+            "urgency_readiness",
+            "preferred_contact_method",
+            "best_time_to_contact",
+          ]
+        : [
+            "address",
+            "price",
+            "property_type",
+            "beds",
+            "baths",
+            "must_have_features",
+            "parking_required",
+            "backyard_needed",
+            "timeline",
+            "mortgage_status",
+            "realtor_status",
+            "motivation_reason",
+            "viewing_readiness",
+            "living_situation",
+            "urgency_readiness",
+            "preferred_contact_method",
+            "best_time_to_contact",
+          ];
+    const missing = requiredFields.filter((key) => {
+      const value = leadDraft?.[key];
+      return value == null || String(value).trim() === "";
+    });
+    if (missing.length) {
+      setFormValidationError("Please complete all onboarding fields to start chat.");
+      return;
+    }
     setFormValidationError("");
 
     const formData = buildAgentFormData(chosenIntent, leadDraft);
@@ -581,6 +636,29 @@ export default function ChatWidget({
     if (!name || !phone || !email) {
       setFormValidationError("Please add your name, phone, and email to continue.");
       return;
+    }
+    if (resolvedRole === "lawyer") {
+      const requiredLawyerFields = [
+        "address",
+        "transaction_stage",
+        "closing_timeline",
+        "transaction_type",
+        "property_value",
+        "mortgage_status",
+        "realtor_involved",
+        "first_time_buyer",
+        "legal_services_needed",
+        "preferred_contact_method",
+        "best_time_to_contact",
+      ];
+      const missing = requiredLawyerFields.filter((key) => {
+        const value = rolePreflightDraft?.[key];
+        return value == null || String(value).trim() === "";
+      });
+      if (missing.length) {
+        setFormValidationError("Please complete all lawyer intake fields to continue.");
+        return;
+      }
     }
     setFormValidationError("");
 
@@ -718,6 +796,11 @@ export default function ChatWidget({
 
   const onboardingGoForward = useCallback(() => {
     setFormValidationError("");
+    const missingAgentFields = (fields) =>
+      fields.filter((key) => {
+        const value = leadDraft?.[key];
+        return value == null || String(value).trim() === "";
+      });
     if (leadFlowStep === "intent") {
       if (!chosenIntent) {
         setFormValidationError("Please select whether you are buying or selling.");
@@ -738,11 +821,58 @@ export default function ChatWidget({
       return;
     }
     if (leadFlowStep === "property") {
+      const requiredFields =
+        chosenIntent === "buy"
+          ? [
+              "location",
+              "budget",
+              "property_type",
+              "beds",
+              "baths",
+              "must_have_features",
+              "parking_required",
+              "backyard_needed",
+              "school_district_important",
+            ]
+          : [
+              "address",
+              "price",
+              "property_type",
+              "beds",
+              "baths",
+              "must_have_features",
+              "parking_required",
+              "backyard_needed",
+            ];
+      if (missingAgentFields(requiredFields).length) {
+        setFormValidationError("Please complete all property details before continuing.");
+        return;
+      }
       setLeadFlowStep("qualify");
       return;
     }
     if (leadFlowStep === "qualify") {
+      if (
+        missingAgentFields([
+          "timeline",
+          "mortgage_status",
+          "realtor_status",
+          "motivation_reason",
+          "viewing_readiness",
+          "living_situation",
+          "urgency_readiness",
+        ]).length
+      ) {
+        setFormValidationError("Please complete all qualification details before continuing.");
+        return;
+      }
       setLeadFlowStep("reach");
+      return;
+    }
+    if (leadFlowStep === "reach") {
+      if (missingAgentFields(["preferred_contact_method", "best_time_to_contact"]).length) {
+        setFormValidationError("Please complete all contact preference fields.");
+      }
     }
   }, [leadFlowStep, chosenIntent, leadDraft]);
 
@@ -750,7 +880,7 @@ export default function ChatWidget({
   const showConversationProgress =
     useAgentLeadForm && leadFlowStep === "chat" && Boolean(leadFormContact);
   const showRoleChatProgress =
-    useRolePreflight && leadFlowStep === "chat" && Boolean(leadFormContact);
+    useRolePreflight && resolvedRole !== "lawyer" && leadFlowStep === "chat" && Boolean(leadFormContact);
 
   const headerSubtitle =
     useAgentLeadForm && leadFlowStep !== "chat"

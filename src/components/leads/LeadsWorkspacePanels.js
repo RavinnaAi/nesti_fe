@@ -62,6 +62,7 @@ export default function LeadsWorkspacePanels({
   nurtureLogsLoading,
   deleteLeadMutation,
   onDeleteClick,
+  token,
 }) {
   const conversationMeta = extractMeta(selectedConversation);
   const resolvedPipelineHint =
@@ -172,6 +173,7 @@ export default function LeadsWorkspacePanels({
 
       {activeTab === "others" ? (
         <LeadsActionsTab
+          token={token}
           referralForm={referralForm}
           setReferralForm={setReferralForm}
           createReferralMutation={createReferralMutation}

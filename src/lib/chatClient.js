@@ -6,7 +6,14 @@ const AUTH_STORAGE_KEY = "nesti_auth_state";
 const getStoredAuthToken = () => {
   if (typeof window === "undefined") return "";
   try {
-    const stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
+    let stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    if (!stored) {
+      stored = sessionStorage.getItem(AUTH_STORAGE_KEY);
+      if (stored) {
+        localStorage.setItem(AUTH_STORAGE_KEY, stored);
+        sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      }
+    }
     if (!stored) return "";
     const parsed = JSON.parse(stored);
     return parsed?.token || "";

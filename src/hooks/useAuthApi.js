@@ -54,7 +54,7 @@ export function useVerifyEmail() {
       }),
     onSuccess: async (data) => {
       if (data?.token) {
-        // 1. Store the session token in Redux + sessionStorage
+        // 1. Store the session token in Redux + localStorage (shared across tabs)
         dispatch(loginSuccess({ user: null, token: data.token }));
 
         // 2. Immediately fetch the profile so the Header has real user data

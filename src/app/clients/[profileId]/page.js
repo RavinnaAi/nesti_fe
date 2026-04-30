@@ -9,6 +9,7 @@ import { ArrowLeft, ExternalLink, Mail, User } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchLeadProfileById, fetchLeadsByProfileId } from "@/lib/leadsClient";
+import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 import {
   fetchNurtureLogs,
   postNurtureDraft,
@@ -16,7 +17,7 @@ import {
   sendNurtureEmail,
 } from "@/lib/chatClient";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
-import { NurtureConsultationStatusChip } from "@/components/clients/AppointmentStatusChip";
+import { AppointmentStatusChip } from "@/components/clients/AppointmentStatusChip";
 import { ClientProfileCardSkeleton, ProfileLeadsTableSkeleton } from "@/components/ui/ContentSkeletons";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 
@@ -32,13 +33,27 @@ const normalizeList = (data) => {
 
 function humanize(value) {
   if (value == null || value === "") return "—";
+  const slug = formatLeadIntakeSlug(value);
+  if (slug) return slug;
   return String(value).replace(/_/g, " ");
 }
 
 function formatBudgetValue(value) {
   if (value == null || value === "") return "N/A";
-  const num = Number(String(value).replace(/[$,\s]/g, ""));
-  if (!Number.isFinite(num)) return String(value);
+  const raw = String(value).trim();
+  const token = raw.toLowerCase().replace(/\s+/g, "_");
+  const tokenMap = {
+    under_400k: "Under $400K",
+    "400k_700k": "$400K-$700K",
+    "700k_1m": "$700K-$1M",
+    "1m_plus": "$1M+",
+  };
+  if (tokenMap[token]) return tokenMap[token];
+  if (/[a-z]/i.test(raw) && !/^\$?\d[\d,]*(\.\d+)?$/.test(raw)) {
+    return humanize(raw);
+  }
+  const num = Number(raw.replace(/[$,\s]/g, ""));
+  if (!Number.isFinite(num)) return raw;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
     currency: "USD",
@@ -95,6 +110,12 @@ export default function ClientProfileLeadsPage() {
   });
 
   const profile = profileQuery.data?.lead_profile;
+  const profileProfessionalType = String(
+    profile?.professional_type || profile?.ownership?.professional_type || "",
+  )
+    .trim()
+    .toLowerCase();
+  const isLawyerProfile = profileProfessionalType === "lawyer";
   const leads = useMemo(() => {
     const raw = leadsQuery.data?.leads;
     return Array.isArray(raw) ? raw : [];
@@ -104,8 +125,7 @@ export default function ClientProfileLeadsPage() {
   const currentPage = Number(pagination.page || page || 1);
   const totalPages = Number(pagination.total_pages || 1);
   const total = Number(pagination.total || leads.length || 0);
-  const refLeadCount = Array.isArray(profile?.lead_refs) ? profile.lead_refs.length : 0;
-  const linkedCountLabel = leadsQuery.data?.pagination != null ? total : refLeadCount;
+  const linkedCountLabel = total;
   const hasPrev = Boolean(pagination.has_prev_page || currentPage > 1);
   const hasNext = Boolean(pagination.has_next_page || currentPage < totalPages);
 
@@ -321,21 +341,33 @@ export default function ClientProfileLeadsPage() {
                 <table className="w-full border-collapse">
                   <tbody>
                     <tr className="border-b border-border/50">
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Intent</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Transaction stage" : "Intent"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.intent)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.transaction_stage
+                            : profile?.intent,
+                        )}
                       </td>
                       <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Location</th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
                         {humanize(profile?.property?.location)}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Timeline</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Closing timeline" : "Timeline"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.property?.timeline)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.closing_timeline
+                            : profile?.property?.timeline,
+                        )}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Nurture consult</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Appointment</th>
                       <td className="px-2 py-1 align-middle sm:text-[11px]">
-                        <NurtureConsultationStatusChip booked={profile?.nurture_consultation_booked} />
+                        <AppointmentStatusChip status={profile?.appointment_status || "not_booked"} />
                       </td>
                     </tr>
                     <tr className="border-b border-border/50">
@@ -347,9 +379,15 @@ export default function ClientProfileLeadsPage() {
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
                         {humanize(profile?.property?.address)}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Type</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Transaction type" : "Type"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.property?.property_type)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.transaction_type
+                            : profile?.property?.property_type,
+                        )}
                       </td>
                       <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Preferred</th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
@@ -361,27 +399,57 @@ export default function ClientProfileLeadsPage() {
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
                         {humanize(profile?.contact?.best_time_to_contact)}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Mortgage</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Property value" : "Mortgage"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.qualification?.mortgage_status)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.property_value
+                            : profile?.qualification?.mortgage_status,
+                        )}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Realtor</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Legal services" : "Realtor"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.qualification?.realtor_status)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.legal_services_needed
+                            : profile?.qualification?.realtor_status,
+                        )}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Viewing</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "First-time buyer" : "Viewing"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.qualification?.viewing_readiness)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.first_time_buyer
+                            : profile?.qualification?.viewing_readiness,
+                        )}
                       </td>
                     </tr>
                     <tr>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Motivation</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Realtor involved" : "Motivation"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.qualification?.motivation_reason)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.realtor_involved
+                            : profile?.qualification?.motivation_reason,
+                        )}
                       </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Urgency</th>
+                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                        {isLawyerProfile ? "Mortgage status" : "Urgency"}
+                      </th>
                       <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.qualification?.urgency_readiness)}
+                        {humanize(
+                          isLawyerProfile
+                            ? profile?.qualification?.mortgage_status
+                            : profile?.qualification?.urgency_readiness,
+                        )}
                       </td>
                       <td className="px-2 py-1" colSpan={4} />
                     </tr>
@@ -469,27 +537,40 @@ export default function ClientProfileLeadsPage() {
                   <table className="w-full border-collapse text-left text-sm">
                     <thead>
                       <tr className="border-b border-border text-[10px] font-semibold capitalize tracking-wide text-text-muted">
-                        <th className="px-2 py-1.5">Intent</th>
-                        <th className="px-2 py-1.5">Type</th>
+                        <th className="px-2 py-1.5">
+                          {isLawyerProfile ? "Stage" : "Intent"}
+                        </th>
+                        <th className="px-2 py-1.5">
+                          {isLawyerProfile ? "Transaction" : "Type"}
+                        </th>
                         <th className="px-2 py-1.5">Location</th>
-                        <th className="px-2 py-1.5">Timeline</th>
-                        <th className="px-2 py-1.5 pr-3 text-right">Budget</th>
+                        <th className="px-2 py-1.5">
+                          {isLawyerProfile ? "Closing" : "Timeline"}
+                        </th>
+                        <th className="px-2 py-1.5 pr-3 text-right">
+                          {isLawyerProfile ? "Value" : "Budget"}
+                        </th>
                         <th className="px-2 py-1.5 pl-3">Grade</th>
                         <th className="px-2 py-1.5 text-center">Score</th>
                         <th className="px-2 py-1.5">Preferred</th>
                         <th className="px-2 py-1.5">Best time</th>
-                        <th className="px-2 py-1.5">Nurture</th>
+                        <th className="px-2 py-1.5">Appointment</th>
                         <th className="px-2 py-1.5 text-right">Open</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
                       {leads.map((lead) => {
                         const prop = lead.property || {};
+                        const qual = lead.qualification || {};
                         const conversionProp = lead.conversion?.property || {};
                         const rowPropertyType =
                           conversionProp.property_type || conversionProp.type || prop.property_type || prop.type;
                         const rowLocation = conversionProp.location || conversionProp.area || prop.location;
                         const rowTimeline = conversionProp.timeline || prop.timeline;
+                        const rowTransactionStage = qual.transaction_stage;
+                        const rowTransactionType = qual.transaction_type;
+                        const rowClosingTimeline = qual.closing_timeline || rowTimeline;
+                        const rowPropertyValue = qual.property_value;
                         const rowBudget =
                           conversionProp.budget ||
                           conversionProp.property_budget ||
@@ -510,19 +591,25 @@ export default function ClientProfileLeadsPage() {
                             className="hover:bg-primary/[0.06] cursor-pointer"
                           >
                             <td className="px-2 py-1.5 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
-                              {lead.intent && lead.intent !== "unspecified" ? humanize(lead.intent) : "—"}
+                              {isLawyerProfile
+                                ? humanize(rowTransactionStage)
+                                : lead.intent && lead.intent !== "unspecified"
+                                  ? humanize(lead.intent)
+                                  : "—"}
                             </td>
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-heading sm:text-[11px]">
-                              {humanize(rowPropertyType)}
+                              {isLawyerProfile ? humanize(rowTransactionType) : humanize(rowPropertyType)}
                             </td>
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
                               {humanize(rowLocation)}
                             </td>
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
-                              {humanize(rowTimeline)}
+                              {isLawyerProfile ? humanize(rowClosingTimeline) : humanize(rowTimeline)}
                             </td>
                             <td className="px-2 py-1.5 pr-3 text-right text-[10px] font-medium tabular-nums text-text-heading sm:text-[11px]">
-                              {formatBudgetValue(rowBudget)}
+                              {isLawyerProfile
+                                ? humanize(rowPropertyValue)
+                                : formatBudgetValue(rowBudget)}
                             </td>
                             <td className="px-2 py-1.5 pl-3 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
                               {humanize(lead.grade)}
@@ -537,7 +624,7 @@ export default function ClientProfileLeadsPage() {
                               {humanize(lead?.contact?.best_time_to_contact)}
                             </td>
                             <td className="px-2 py-1.5 align-middle sm:text-[11px]">
-                              <NurtureConsultationStatusChip booked={profile?.nurture_consultation_booked} />
+                              <AppointmentStatusChip status={lead?.appointment_status || "not_booked"} />
                             </td>
                             <td className="px-2 py-1.5 text-right">
                               <Link

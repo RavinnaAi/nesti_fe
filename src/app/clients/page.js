@@ -7,7 +7,7 @@ import { ChevronDown, ChevronLeft, ChevronRight, User, Users } from "lucide-reac
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
-import { NurtureConsultationStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
+import { AppointmentStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
 import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
 
@@ -220,11 +220,11 @@ export default function ClientsPage() {
                     <th className={`${th} !pr-px`}>Client</th>
                     <th className={`${th} !px-px`}>Email</th>
                     <th className={`${th} !pl-px`}>Phone</th>
-                    <th className={th}>Location</th>
+                    <th className={th}>Address</th>
                     <th className={th}>Timeline</th>
                     <th className={`${th} pr-2`}>Mortgage</th>
                     <th className={`${th} pl-0 pr-4 text-right sm:pr-5`}>Budget</th>
-                    <th className={`${th} pl-1`}>Nurture</th>
+                    <th className={`${th} pl-1`}>Appointment</th>
                     <th className={`${th} text-center tabular-nums`}>Leads</th>
                   </tr>
                 </thead>
@@ -283,8 +283,8 @@ export default function ClientsPage() {
                           {phone ? <span title={phone}>{phone}</span> : <span className="text-text-muted">—</span>}
                         </td>
                         <td className={tdMuted}>
-                          <span className="line-clamp-2 max-w-[120px]" title={humanize(p.location)}>
-                            {humanize(p.location)}
+                          <span className="line-clamp-2 max-w-[120px]" title={humanize(p.address || p.location)}>
+                            {humanize(p.address || p.location)}
                           </span>
                         </td>
                         <td className={tdMuted}>
@@ -310,7 +310,7 @@ export default function ClientsPage() {
                           )}
                         </td>
                         <td className={`${tdMuted} pl-1 align-middle sm:pl-2`}>
-                          <NurtureConsultationStatusChip booked={profile.nurture_consultation_booked} />
+                          <AppointmentStatusChip status={profile?.appointment_status || "not_booked"} />
                         </td>
                         <td className={`${td} text-center align-middle tabular-nums`}>
                           <div className="flex justify-center">

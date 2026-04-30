@@ -29,10 +29,45 @@ function formatTimeShort(t) {
   return t.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-function formatIntentLabel(intent) {
-  const s = String(intent || "").trim();
-  if (!s) return null;
+function humanizeToken(value) {
+  const s = String(value || "").trim();
+  if (!s) return "—";
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function detailFieldsForBooking(booking) {
+  const lawyerQ = booking?.qualification?.lawyer || {};
+  const mortgageQ = booking?.qualification?.mortgage_broker || {};
+  const inferredType = (() => {
+    const explicit = String(booking?.professional_type || "").trim().toLowerCase();
+    if (explicit) return explicit;
+    if (lawyerQ && Object.keys(lawyerQ).length) return "lawyer";
+    if (mortgageQ && Object.keys(mortgageQ).length) return "mortgage_broker";
+    return "";
+  })();
+  if (inferredType === "lawyer") {
+    return [
+      { label: "Transaction stage", value: humanizeToken(lawyerQ.transaction_stage) },
+      { label: "Closing timeline", value: humanizeToken(lawyerQ.closing_timeline) },
+      { label: "Transaction type", value: humanizeToken(lawyerQ.transaction_type) },
+      { label: "Legal services", value: humanizeToken(lawyerQ.legal_services_needed) },
+    ];
+  }
+  if (inferredType === "mortgage_broker") {
+    return [
+      { label: "Mortgage timeline", value: humanizeToken(mortgageQ.mortgage_timeline) },
+      { label: "Pre-approval", value: humanizeToken(mortgageQ.pre_approval_status) },
+      { label: "Credit range", value: humanizeToken(mortgageQ.credit_score_range) },
+    ];
+  }
+  const propertyType =
+    booking?.property_type != null && String(booking.property_type).trim()
+      ? String(booking.property_type).trim()
+      : "—";
+  const intentLabel = humanizeToken(booking?.intent);
+  const rows = [{ label: "Property type", value: propertyType }];
+  if (intentLabel !== "—") rows.push({ label: "Intent", value: intentLabel });
+  return rows;
 }
 
 /** Stable key when the same lead has multiple calendar rows (nurture logs / workspace docs). */
@@ -83,11 +118,7 @@ function BookingDetailModal({ booking, onClose, token, onCanceled }) {
     ? t.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })
     : "No time recorded";
   const leadName = booking.contact?.full_name || booking.contact?.email || "—";
-  const propertyType =
-    booking.property_type != null && String(booking.property_type).trim()
-      ? String(booking.property_type).trim()
-      : "—";
-  const intentLabel = formatIntentLabel(booking.intent);
+  const detailRows = detailFieldsForBooking(booking);
   const canCancel =
     Boolean(token) &&
     booking.cancelable_via_calendly === true &&
@@ -196,18 +227,14 @@ function BookingDetailModal({ booking, onClose, token, onCanceled }) {
               <p className="mt-0.5 text-xs text-text-muted">{booking.contact.email}</p>
             ) : null}
           </div>
-          <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-              Property type
-            </p>
-            <p className="mt-0.5 text-text-body">{propertyType}</p>
-          </div>
-          {intentLabel ? (
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Intent</p>
-              <p className="mt-0.5 text-text-body">{intentLabel}</p>
+          {detailRows.map((row) => (
+            <div key={row.label}>
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                {row.label}
+              </p>
+              <p className="mt-0.5 text-text-body">{row.value}</p>
             </div>
-          ) : null}
+          ))}
           {canCancel ? (
             <div className="border-t border-border pt-4">
               <button

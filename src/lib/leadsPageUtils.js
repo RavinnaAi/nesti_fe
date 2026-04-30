@@ -75,6 +75,15 @@ export function formatLeadIntakeSlug(value) {
 
   if (!isMoneyBand) return "";
 
+  if (/^\d+(?:\.\d+)?m_plus$/i.test(s)) {
+    const n = Number(String(s).split("_")[0].replace(/m/i, ""));
+    if (Number.isFinite(n)) return `$${n}M+`;
+  }
+  if (/^under_\d+(?:\.\d+)?k$/i.test(s)) {
+    const n = String(s).split("_")[1].toUpperCase();
+    return `Under $${n}`;
+  }
+
   const formatMoneySegment = (seg) => {
     const t = String(seg).toLowerCase().trim();
     const m = t.match(/^(\d+(?:\.\d+)?)(k|m)?$/);
@@ -161,6 +170,11 @@ export function matchesSearch(conversation, term) {
     conversation?.visitorPhone,
     conversation?.city,
     conversation?.location,
+    conversation?.address,
+    conversation?.property?.location,
+    conversation?.property?.address,
+    conversation?.conversion?.property?.location,
+    conversation?.conversion?.property?.address,
     conversation?.conversion?.property?.property_type,
     conversation?.conversion?.property?.type,
     conversation?.property?.property_type,

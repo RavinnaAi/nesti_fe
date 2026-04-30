@@ -177,6 +177,14 @@ function Field({ label, children, className = "" }) {
   );
 }
 
+function RequiredLabel({ text }) {
+  return (
+    <>
+      {text} <span className="text-red-500">*</span>
+    </>
+  );
+}
+
 const PREFLIGHT_STEPS_COUNT = 3;
 
 export default function RolePreflightLeadForm({
@@ -214,8 +222,39 @@ export default function RolePreflightLeadForm({
   const handleNext = () => {
     setStepError("");
     if (preflightStepIndex === 0) {
-      if (!draft.name?.trim() || !draft.phone?.trim() || !draft.email?.trim()) {
+      if (isLawyer) {
+        if (!draft.name?.trim() || !draft.phone?.trim() || !draft.email?.trim() || !draft.address?.trim()) {
+          setStepError("Please complete all contact fields to continue.");
+          return;
+        }
+      } else if (!draft.name?.trim() || !draft.phone?.trim() || !draft.email?.trim()) {
         setStepError("Please add your name, phone, and email to continue.");
+        return;
+      }
+    }
+    if (isLawyer && preflightStepIndex === 1) {
+      const requiredCaseFields = [
+        "transaction_stage",
+        "closing_timeline",
+        "transaction_type",
+        "property_value",
+        "mortgage_status",
+        "realtor_involved",
+        "first_time_buyer",
+        "legal_services_needed",
+      ];
+      const missing = requiredCaseFields.filter((key) => {
+        const value = draft?.[key];
+        return value == null || String(value).trim() === "";
+      });
+      if (missing.length) {
+        setStepError("Please complete all case details to continue.");
+        return;
+      }
+    }
+    if (isLawyer && preflightStepIndex === 2) {
+      if (!draft.preferred_contact_method?.trim() || !draft.best_time_to_contact?.trim()) {
+        setStepError("Please complete all contact preferences to continue.");
         return;
       }
     }
@@ -237,7 +276,7 @@ export default function RolePreflightLeadForm({
   const lawyerStep0 = (
     <div className={pairGridCls}>
       <div className={sectionCls}>Contact information</div>
-      <Field label="Full name *">
+      <Field label={<RequiredLabel text="Full name" />}>
         <input
           type="text"
           className={inputCls}
@@ -247,7 +286,7 @@ export default function RolePreflightLeadForm({
           autoComplete="name"
         />
       </Field>
-      <Field label="Phone *">
+      <Field label={<RequiredLabel text="Phone" />}>
         <input
           type="tel"
           className={inputCls}
@@ -257,7 +296,7 @@ export default function RolePreflightLeadForm({
           autoComplete="tel"
         />
       </Field>
-      <Field label="Email *" className="sm:col-span-2">
+      <Field label={<RequiredLabel text="Email" />} className="sm:col-span-2">
         <input
           type="email"
           className={inputCls}
@@ -267,7 +306,7 @@ export default function RolePreflightLeadForm({
           autoComplete="email"
         />
       </Field>
-      <Field label="Property address / location" className="sm:col-span-2">
+      <Field label={<RequiredLabel text="Property address / location" />} className="sm:col-span-2">
         <input
           type="text"
           className={inputCls}
@@ -282,7 +321,7 @@ export default function RolePreflightLeadForm({
   const lawyerStep1 = (
     <div className={pairGridCls}>
       <div className={sectionCls}>Transaction details</div>
-      <Field label="What stage are you in?">
+      <Field label={<RequiredLabel text="What stage are you in?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -292,7 +331,7 @@ export default function RolePreflightLeadForm({
           options={LAWYER_TRANSACTION_STAGE}
         />
       </Field>
-      <Field label="Expected closing date?">
+      <Field label={<RequiredLabel text="Expected closing date?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -302,7 +341,7 @@ export default function RolePreflightLeadForm({
           options={LAWYER_CLOSING}
         />
       </Field>
-      <Field label="Transaction type">
+      <Field label={<RequiredLabel text="Transaction type" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -312,7 +351,7 @@ export default function RolePreflightLeadForm({
           options={LAWYER_TX_TYPE}
         />
       </Field>
-      <Field label="Approximate property price">
+      <Field label={<RequiredLabel text="Approximate property price" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -322,7 +361,7 @@ export default function RolePreflightLeadForm({
           options={LAWYER_PROPERTY_VALUE}
         />
       </Field>
-      <Field label="Mortgage approved?">
+      <Field label={<RequiredLabel text="Mortgage approved?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -332,7 +371,7 @@ export default function RolePreflightLeadForm({
           options={LAWYER_MORTGAGE}
         />
       </Field>
-      <Field label="Working with a realtor?">
+      <Field label={<RequiredLabel text="Working with a realtor?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -342,7 +381,7 @@ export default function RolePreflightLeadForm({
           options={YES_NO}
         />
       </Field>
-      <Field label="First home purchase?">
+      <Field label={<RequiredLabel text="First home purchase?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -352,7 +391,7 @@ export default function RolePreflightLeadForm({
           options={YES_NO}
         />
       </Field>
-      <Field label="Legal services needed">
+      <Field label={<RequiredLabel text="Legal services needed" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -368,7 +407,7 @@ export default function RolePreflightLeadForm({
   const lawyerStep2 = (
     <div className={pairGridCls}>
       <div className={sectionCls}>Contact preferences</div>
-      <Field label="Preferred contact method">
+      <Field label={<RequiredLabel text="Preferred contact method" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -378,7 +417,7 @@ export default function RolePreflightLeadForm({
           options={LAWYER_CONTACT_METHOD}
         />
       </Field>
-      <Field label="Best time to contact">
+      <Field label={<RequiredLabel text="Best time to contact" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}

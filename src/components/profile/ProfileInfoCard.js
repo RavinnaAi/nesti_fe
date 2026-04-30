@@ -72,22 +72,22 @@ export const InfoCard = ({ children, delay = 0 }) => (
   </motion.div>
 );
 
-export const InfoGrid = ({ items, className = "" }) => (
-  <div className={`grid grid-cols-2 gap-2 ${className}`.trim()}>
+export const InfoGrid = ({ items, className = "", compact = false, columns = 2 }) => (
+  <div className={`grid ${columns === 3 ? "grid-cols-3" : "grid-cols-2"} ${compact ? "gap-1.5" : "gap-2"} ${className}`.trim()}>
     {items.map(({ label, value, icon: Icon, colSpan }) => (
       <div
         key={label}
-        className={`flex items-center gap-2.5 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2.5 transition hover:border-slate-200 hover:bg-white ${
-          colSpan === 2 ? "col-span-2" : ""
+        className={`flex items-center ${compact ? "gap-2 rounded-lg px-2.5 py-2" : "gap-2.5 rounded-xl px-3 py-2.5"} border border-slate-100 bg-slate-50 transition hover:border-slate-200 hover:bg-white ${
+          colSpan === 3 ? "col-span-3" : colSpan === 2 ? "col-span-2" : ""
         }`}
       >
         {Icon ? (
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm">
-            <Icon size={14} strokeWidth={2} />
+          <div className={`flex shrink-0 items-center justify-center rounded-lg bg-white text-slate-400 shadow-sm ${compact ? "h-6 w-6" : "h-7 w-7"}`}>
+            <Icon size={compact ? 12 : 14} strokeWidth={2} />
           </div>
         ) : null}
         <div className="min-w-0 flex-1">
-          <p className="text-[9px] font-bold uppercase tracking-[0.1em] text-slate-400">{label}</p>
+          <p className={`${compact ? "text-[8px]" : "text-[9px]"} font-bold uppercase tracking-[0.1em] text-slate-400`}>{label}</p>
           <FieldValue label={label} value={value} />
         </div>
       </div>

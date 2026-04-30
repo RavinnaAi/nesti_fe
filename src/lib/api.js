@@ -131,6 +131,8 @@ export const API_ENDPOINTS = {
   professionals: {
     profile: withBaseUrl("/api/professionals"),
     me: withBaseUrl("/api/professionals/me"),
+    list: withBaseUrl("/api/professionals/list"),
+    detail: withBaseUrl((id) => `/api/professionals/${id}`),
     icp: withBaseUrl("/api/professionals/icp"),
     uploadImage: withBaseUrl("/api/professionals/upload-image"),
   },
