@@ -249,10 +249,16 @@ export async function fetchConversationMessages({ token, conversationId }) {
   });
 }
 
-export async function fetchReferrals({ token }) {
+export async function fetchReferrals({ token, direction, page, limit } = {}) {
   const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (direction) params.set("direction", String(direction));
+  if (page != null && page !== "") params.set("page", String(page));
+  if (limit != null && limit !== "") params.set("limit", String(limit));
+  const qs = params.toString();
+  const url = qs ? `${API_ENDPOINTS.referrals.list}?${qs}` : API_ENDPOINTS.referrals.list;
   return apiClient({
-    url: API_ENDPOINTS.chat.referrals,
+    url,
     method: "GET",
     token: authToken,
   });
@@ -261,7 +267,7 @@ export async function fetchReferrals({ token }) {
 export async function createReferral({ token, payload }) {
   const authToken = token || getStoredAuthToken();
   return apiClient({
-    url: API_ENDPOINTS.chat.referrals,
+    url: API_ENDPOINTS.referrals.list,
     method: "POST",
     data: payload,
     token: authToken,
@@ -271,9 +277,27 @@ export async function createReferral({ token, payload }) {
 export async function updateReferral({ token, id, payload }) {
   const authToken = token || getStoredAuthToken();
   return apiClient({
-    url: API_ENDPOINTS.chat.referral(id),
+    url: API_ENDPOINTS.referrals.detail(id),
     method: "PATCH",
     data: payload,
+    token: authToken,
+  });
+}
+
+export async function fetchReferralLeadDetails({ token, id }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.referrals.lead(id),
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function processReferralRequest({ token, id }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.referrals.process(id),
+    method: "POST",
     token: authToken,
   });
 }

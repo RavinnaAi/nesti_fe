@@ -51,7 +51,23 @@ export function sanitizeInternalReturnPath(raw) {
  */
 export function formatLeadIntakeSlug(value) {
   if (value == null || value === "") return "";
-  const s = String(value).trim();
+  let s = String(value).trim().replace(/\s+/g, " ");
+  if (!s) return "";
+
+  // "under 400 k" / "under 400k" -> under_400k
+  const underK = s.match(/^under\s+(\d+(?:\.\d+)?)\s*k$/i);
+  if (underK) s = `under_${underK[1]}k`;
+
+  // Space-separated money bands (stored as free text): "700k 1m", "1.2M 2M"
+  if (!s.includes("_")) {
+    const kk = s.match(/^(\d+(?:\.\d+)?)\s*k\s+(\d+(?:\.\d+)?)\s*k$/i);
+    const km = s.match(/^(\d+(?:\.\d+)?)\s*k\s+(\d+(?:\.\d+)?)\s*m$/i);
+    const mm = s.match(/^(\d+(?:\.\d+)?)\s*m\s+(\d+(?:\.\d+)?)\s*m$/i);
+    if (kk) s = `${kk[1]}k_${kk[2]}k`;
+    else if (km) s = `${km[1]}k_${km[2]}m`;
+    else if (mm) s = `${mm[1]}m_${mm[2]}m`;
+  }
+
   if (!s.includes("_")) return "";
 
   const segments = s.split("_").filter(Boolean);

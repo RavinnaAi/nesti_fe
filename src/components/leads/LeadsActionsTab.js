@@ -100,8 +100,18 @@ export default function LeadsActionsTab({
     [professionals, selectedProfessionalId]
   );
 
+  const hasActiveOutboundReferral = useMemo(
+    () =>
+      conversationReferrals.some((r) => {
+        const s = String(r?.status || "").trim().toLowerCase();
+        return s === "pending" || s === "accepted";
+      }),
+    [conversationReferrals]
+  );
+
   const canSubmitReferral =
     Boolean(selectedLeadId && actionConversationId && String(referralForm?.target_user_id || "").trim()) &&
+    !hasActiveOutboundReferral &&
     !createReferralMutation.isPending;
 
   return (
@@ -240,6 +250,13 @@ export default function LeadsActionsTab({
             rows={2}
             className="w-full resize-y rounded-md border border-border bg-white px-2 py-1 text-[11px] placeholder:text-text-muted"
           />
+
+          {hasActiveOutboundReferral ? (
+            <p className="text-[11px] leading-snug text-amber-800">
+              This lead already has an open referral (pending or accepted). Update its status below or wait until it is
+              rejected or completed before sending another.
+            </p>
+          ) : null}
 
           <button
             type="button"

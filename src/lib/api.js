@@ -71,6 +71,12 @@ export const API_ENDPOINTS = {
     remove: withBaseUrl((id) => `/api/embed/${id}`),
     resolve: withBaseUrl((token) => `/api/embed/resolve/${token}`),
   },
+  referrals: {
+    list: withBaseUrl("/api/referrals"),
+    detail: withBaseUrl((id) => `/api/referrals/${id}`),
+    lead: withBaseUrl((id) => `/api/referrals/${id}/lead`),
+    process: withBaseUrl((id) => `/api/referrals/${id}/process`),
+  },
   leads: {
     list: withBaseUrl("/api/leads"),
     profiles: withBaseUrl("/api/leads/profiles"),
@@ -89,8 +95,6 @@ export const API_ENDPOINTS = {
     clearSession: (sessionId) => withBaseUrl(`/api/chat/clear/${sessionId}`),
     conversations: withBaseUrl("/api/chat/conversations"),
     conversationMessages: withBaseUrl((id) => `/api/chat/conversations/${id}/messages`),
-    referrals: withBaseUrl("/api/chat/referrals"),
-    referral: withBaseUrl((id) => `/api/chat/referrals/${id}`),
     nurtureDraft: withBaseUrl("/api/chat/nurture/draft"),
     nurtureRefine: withBaseUrl("/api/chat/nurture/refine"),
     nurtureSend: withBaseUrl("/api/chat/nurture/send"),
