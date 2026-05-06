@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { Archive, ListFilter, Sprout, Zap } from "lucide-react";
+import { Archive, Handshake, ListFilter, Sprout, Zap } from "lucide-react";
 import {
   DEFAULT_VISIBLE_PIPELINE_KEYS,
   PIPELINE_SETTINGS_EVENT,
@@ -15,11 +15,14 @@ const PIPELINE_SIDEBAR_ICONS = {
   active: Zap,
   closed: Archive,
   nurturing: Sprout,
+  referrals: Handshake,
 };
 
-function buildLeadsHref(searchParams, { kind, value }) {
+function buildPipelineSidebarHref(searchParams, item) {
+  const { kind, value } = item;
   const p = new URLSearchParams(searchParams?.toString() || "");
   p.delete("lead");
+  p.delete("referral");
   p.set("page", "1");
   p.delete("status");
   p.delete("pipeline");
@@ -85,7 +88,7 @@ export default function LeadsPipelineSidebarNav({
     variant === "settings" ? (
       <div className="space-y-0.5">
         {items.map((item) => {
-          const href = buildLeadsHref(searchParams, item);
+          const href = buildPipelineSidebarHref(searchParams, item);
           const active = isItemActive(searchParams, item);
           const Icon = PIPELINE_SIDEBAR_ICONS[item.key] || ListFilter;
           return (
@@ -122,20 +125,31 @@ export default function LeadsPipelineSidebarNav({
         }`}
       >
         {items.map((item) => {
-          const href = buildLeadsHref(searchParams, item);
+          const href = buildPipelineSidebarHref(searchParams, item);
           const active = isItemActive(searchParams, item);
+          const Icon = PIPELINE_SIDEBAR_ICONS[item.key] || ListFilter;
           return (
             <Link
               key={item.key}
               href={href}
               onClick={() => onNavigate?.()}
-              className={`flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
+              className={`flex items-center gap-2 rounded-md px-2.5 py-1.5 text-xs font-medium transition ${
                 active
                   ? "bg-primary/12 text-primary-dark"
                   : "text-text-body hover:bg-primary/5 hover:text-text-heading"
               }`}
               aria-current={active ? "page" : undefined}
             >
+              <span
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-md ${
+                  active
+                    ? "bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm ring-1 ring-white/30"
+                    : "bg-gradient-to-br from-background-lighter to-white text-text-muted ring-1 ring-border/50"
+                }`}
+                aria-hidden
+              >
+                <Icon size={12} strokeWidth={2} />
+              </span>
               <span className="truncate">{item.label}</span>
             </Link>
           );

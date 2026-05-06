@@ -73,7 +73,7 @@ export default function DashboardKpiStrip({ summary, isLoading }) {
         const cohort = totals.leads_in_window_for_conversion ?? 0;
         const helperText =
           dealsMeta && !isLoading
-            ? `Closed won · ${formatPercent(rates.closed_won_from_created ?? 0)} win rate · ${formatInt(cohort)} leads in cohort`
+            ? `Moved to closed-won in window · ${formatPercent(rates.closed_won_from_created ?? 0)} cohort win rate · ${formatInt(cohort)} leads in cohort`
             : helper;
         return (
           <div

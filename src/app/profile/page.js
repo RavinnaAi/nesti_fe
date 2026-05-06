@@ -7,7 +7,7 @@ import { useAppSelector } from "@/store";
 import { motion } from "framer-motion";
 import PersonalCard from "@/components/profile/PersonalCard";
 import BusinessCard from "@/components/profile/BusinessCard";
-import { usePublicProfile } from "@/hooks/useAuthApi";
+import { useProfileQuery, usePublicProfile } from "@/hooks/useAuthApi";
 import { ProfilePageContentSkeleton } from "@/components/ui/ContentSkeletons";
 
 function SectionHeader({ icon: Icon, title }) {
@@ -27,7 +27,9 @@ function ProfilePageContent() {
   const searchParams = useSearchParams();
   const emailParam = searchParams.get("email");
   const normalizedEmail = emailParam?.toLowerCase().trim() || "";
+  const token = useAppSelector((state) => state.auth.token);
   const publicProfileQuery = usePublicProfile(normalizedEmail || undefined);
+  const ownProfileQuery = useProfileQuery();
 
   const { personalInfo, businessInfo } = useAppSelector((state) => state.profile);
 
@@ -35,7 +37,7 @@ function ProfilePageContent() {
     setIsMounted(true);
   }, []);
 
-  const apiProfile = publicProfileQuery.data;
+  const apiProfile = normalizedEmail ? publicProfileQuery.data : ownProfileQuery.data;
   const apiUser =
     apiProfile?.user || apiProfile?.data?.user || apiProfile?.data || null;
   const apiProfessional =
@@ -147,6 +149,15 @@ function ProfilePageContent() {
       <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 p-6">
         <ProfilePageContentSkeleton />
         <p className="mt-4 text-center text-xs font-medium text-primary">Loading profile…</p>
+      </div>
+    );
+  }
+
+  if (!normalizedEmail && token && ownProfileQuery.isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 p-6">
+        <ProfilePageContentSkeleton />
+        <p className="mt-4 text-center text-xs font-medium text-primary">Loading your profile…</p>
       </div>
     );
   }

@@ -1,14 +1,16 @@
 import { LEAD_WORKSPACE_TAB_IDS, normalizeLeadWorkspaceTabId } from "@/lib/leadWorkspaceTabsMeta";
 
-/** Build `/leads?page=&status=&pipeline=` for list + pagination. */
-export function buildLeadsListHref({ page = 1, status = "", pipeline = "" } = {}) {
+/** Build `/leads?page=&status=&pipeline=&referral=` for list + pagination. */
+export function buildLeadsListHref({ page = 1, status = "", pipeline = "", referral = "" } = {}) {
   const p = new URLSearchParams();
   const pg = Math.max(1, Number(page) || 1);
   if (pg > 1) p.set("page", String(pg));
   const st = String(status || "").trim();
   const pl = String(pipeline || "").trim();
+  const ref = String(referral || "").trim();
   if (st) p.set("status", st);
   if (pl) p.set("pipeline", pl);
+  if (ref) p.set("referral", ref);
   const q = p.toString();
   return q ? `/leads?${q}` : "/leads";
 }
@@ -19,7 +21,7 @@ export function buildLeadsListHref({ page = 1, status = "", pipeline = "" } = {}
  */
 export function buildLeadWorkspaceHref(
   leadId,
-  { page = 1, status = "", pipeline = "", tab = "lead_profile" } = {}
+  { page = 1, status = "", pipeline = "", referral = "", tab = "lead_profile" } = {}
 ) {
   const id = encodeURIComponent(String(leadId || "").trim());
   if (!id) return "/leads";
@@ -27,8 +29,10 @@ export function buildLeadWorkspaceHref(
   p.set("page", String(Math.max(1, Number(page) || 1)));
   const st = String(status || "").trim();
   const pl = String(pipeline || "").trim();
+  const ref = String(referral || "").trim();
   if (st) p.set("status", st);
   if (pl) p.set("pipeline", pl);
+  if (ref) p.set("referral", ref);
   const t = normalizeLeadWorkspaceTabId(String(tab || "").trim());
   if (t && LEAD_WORKSPACE_TAB_IDS.has(t)) p.set("tab", t);
   return `/leads/${id}?${p.toString()}`;

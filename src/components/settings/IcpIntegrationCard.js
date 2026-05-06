@@ -39,7 +39,28 @@ const LAWYER_OPTIONS = {
 };
 
 function toArray(value) {
-  return Array.isArray(value) ? value : [];
+  if (Array.isArray(value)) return value.filter((v) => String(v || "").trim() !== "");
+  if (typeof value === "string") {
+    const raw = value.trim();
+    if (!raw) return [];
+    // Support legacy payloads saved as JSON string arrays.
+    if (raw.startsWith("[") && raw.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          return parsed.filter((v) => String(v || "").trim() !== "");
+        }
+      } catch {
+        // fall through to comma parsing
+      }
+    }
+    // Support legacy comma-separated strings.
+    return raw
+      .split(",")
+      .map((v) => v.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function parseAreaInput(value) {
@@ -47,6 +68,18 @@ function parseAreaInput(value) {
     .split(",")
     .map((v) => v.trim())
     .filter(Boolean);
+}
+
+function pickIdealClientProfile(data) {
+  return (
+    data?.ideal_client_profile ||
+    data?.icp_profile ||
+    data?.profile ||
+    data?.data?.ideal_client_profile ||
+    data?.data?.icp_profile ||
+    data?.data?.profile ||
+    null
+  );
 }
 
 function normalizeRole(input) {
@@ -124,7 +157,7 @@ export default function IcpIntegrationCard() {
   });
 
   useEffect(() => {
-    const icp = icpQuery.data?.ideal_client_profile;
+    const icp = pickIdealClientProfile(icpQuery.data);
     if (!icp) return;
     setForm((prev) => ({
       ...prev,
@@ -217,6 +250,11 @@ export default function IcpIntegrationCard() {
 
       {icpQuery.isLoading ? (
         <div className="text-xs text-text-muted">Loading ICP settings...</div>
+      ) : null}
+      {icpQuery.isError ? (
+        <div className="text-xs text-red-600">
+          {icpQuery.error?.message || "Failed to load ICP settings."}
+        </div>
       ) : null}
 
       {unsupportedRole ? (

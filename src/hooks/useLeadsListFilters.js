@@ -9,6 +9,7 @@ export function useLeadsListFilters() {
   const searchParams = useSearchParams();
   const status = String(searchParams.get("status") || "").trim();
   const pipeline = String(searchParams.get("pipeline") || "").trim();
+  const referral = String(searchParams.get("referral") || "").trim();
   const page = useMemo(() => {
     const n = Number(searchParams.get("page") || "1");
     return Number.isFinite(n) && n > 0 ? n : 1;
@@ -19,7 +20,7 @@ export function useLeadsListFilters() {
     [status, pipeline]
   );
 
-  const listContext = useMemo(() => ({ page, status, pipeline }), [page, status, pipeline]);
+  const listContext = useMemo(() => ({ page, status, pipeline, referral }), [page, status, pipeline, referral]);
 
   const toLeadWorkspace = (leadId, options = {}) =>
     buildLeadWorkspaceHref(leadId, {
@@ -32,6 +33,7 @@ export function useLeadsListFilters() {
   return {
     status,
     pipeline,
+    referral,
     page,
     filterLabel,
     hasPipelineFilter: Boolean(filterLabel),

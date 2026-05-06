@@ -91,7 +91,7 @@ export default function Header() {
   const handleLogout = () => {
     dispatch(logoutAndClearAll());
     setIsProfileOpen(false);
-    router.push("/log-in");
+    router.replace("/");
   };
 
   return (

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   Briefcase,
   Clock,
@@ -259,35 +258,59 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
   const renderSubContent = () => {
     switch (activeSubTab) {
       case "basics":
-        return <BasicsStep {...sharedProps} />;
+        return (
+          <div className="w-full min-w-0">
+            <BasicsStep {...sharedProps} />
+          </div>
+        );
       case "experience":
-        return <ExperienceStep {...sharedProps} />;
+        return (
+          <div className="w-full min-w-0">
+            <ExperienceStep {...sharedProps} />
+          </div>
+        );
       case "style":
-        return <StyleMetricsStep {...sharedProps} />;
+        return (
+          <div className="w-full min-w-0">
+            <StyleMetricsStep {...sharedProps} />
+          </div>
+        );
       case "audience":
-        return <PreferencesStep {...sharedProps} mode="audience" />;
+        return (
+          <div className="w-full min-w-0">
+            <PreferencesStep {...sharedProps} mode="audience" />
+          </div>
+        );
       case "story":
-        return <PreferencesStep {...sharedProps} mode="testimonial" />;
+        return (
+          <div className="w-full min-w-0">
+            <PreferencesStep {...sharedProps} mode="testimonial" />
+          </div>
+        );
       default:
-        return <BasicsStep {...sharedProps} />;
+        return (
+          <div className="w-full min-w-0">
+            <BasicsStep {...sharedProps} />
+          </div>
+        );
     }
   };
 
   return (
-    <div className="space-y-5">
+    <div className="w-full min-w-0 space-y-4" style={{ width: "100%" }}>
       {/* ── Header + step badge ── */}
       <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold text-text-heading">Business Information</h2>
-          <p className="text-sm text-text-muted mt-0.5">Keep your professional details up to date.</p>
+          <h2 className="text-base font-bold text-text-heading">Business Information</h2>
+          <p className="mt-0.5 text-xs text-text-muted">Keep your professional details up to date.</p>
         </div>
-        <span className="inline-flex items-center self-start rounded-md bg-primary/10 px-2.5 py-1 text-[11px] font-semibold text-primary-dark">
+        <span className="inline-flex items-center self-start rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary-dark">
           Step {currentIdx + 1} / {SUB_TABS.length}
         </span>
       </div>
 
       {/* ── Progress bar ── */}
-      <div className="flex items-center gap-0.5">
+      <div className="grid w-full min-w-0 grid-cols-5 gap-0.5" style={{ width: "100%" }}>
         {SUB_TABS.map((tab, idx) => {
           const isPast = idx < currentIdx;
           const isCurrent = idx === currentIdx;
@@ -296,7 +319,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
               key={tab.id}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
-              className="flex-1 group"
+              className="group w-full"
               aria-label={tab.label}
             >
               <div
@@ -314,7 +337,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
       </div>
 
       {/* ── Sub-tabs row ── */}
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex w-full min-w-0 flex-wrap gap-1.5">
         {SUB_TABS.map((tab, idx) => {
           const Icon = tab.icon;
           const isActive = activeSubTab === tab.id;
@@ -324,7 +347,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
               key={tab.id}
               type="button"
               onClick={() => setActiveSubTab(tab.id)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-semibold transition-all ${
+              className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold transition-all ${
                 isActive
                   ? "bg-primary text-white shadow-sm"
                   : isPast
@@ -344,28 +367,20 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
       </div>
 
       {/* ── Content area (fixed min-height for consistency) ── */}
-      <div className="min-h-[360px]">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={activeSubTab}
-            initial={{ opacity: 0, x: 12 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -12 }}
-            transition={{ duration: 0.15 }}
-          >
-            {renderSubContent()}
-          </motion.div>
-        </AnimatePresence>
+      <div className="min-h-[280px] w-full min-w-0 max-w-none" style={{ width: "100%" }}>
+        <div className="block w-full min-w-0 max-w-none" style={{ width: "100%" }}>
+          {renderSubContent()}
+        </div>
       </div>
 
       {/* ── Footer navigation ── */}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3.5">
         <div>
           {currentIdx > 0 ? (
             <button
               type="button"
               onClick={goBack}
-              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3.5 py-1.5 text-xs font-semibold text-text-heading hover:border-primary hover:text-primary transition"
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[11px] font-semibold text-text-heading transition hover:border-primary hover:text-primary"
             >
               <ChevronLeft size={14} />
               Back
@@ -380,7 +395,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
             <button
               type="button"
               onClick={goNext}
-              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-4 py-1.5 text-xs font-semibold text-white shadow-sm hover:brightness-95 transition"
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95"
             >
               Next
               <ChevronRight size={14} />
@@ -390,7 +405,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
               loading={loading}
               onClick={handleSubmit}
               type="button"
-              className="!w-auto !h-auto px-5 py-1.5 rounded-md bg-primary text-white text-xs font-semibold shadow-sm hover:brightness-95 transition"
+              className="!h-auto !w-auto rounded-md bg-primary px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95"
             >
               Save changes
             </SubmitButton>

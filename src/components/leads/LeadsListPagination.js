@@ -5,9 +5,10 @@ export default function LeadsListPagination({
   leadsPagination,
   onPrev,
   onNext,
+  resourceLabel = "leads",
 }) {
   return (
-    <div className="rounded-md border border-border bg-white p-3 shadow-sm flex items-center justify-between gap-3">
+    <div className="flex items-center justify-between gap-3 rounded-xl border border-border/50 bg-transparent p-3 shadow-none">
       <div className="flex items-center gap-2 text-xs text-text-muted">
         {leadsQuery.isFetching && !leadsQuery.isLoading ? (
           <span
@@ -18,7 +19,7 @@ export default function LeadsListPagination({
         <span>
           Page {leadsPagination.current} of {leadsPagination.totalPages}
           {Number.isFinite(leadsPagination.total) && leadsPagination.total > 0
-            ? ` · ${leadsPagination.total} total leads`
+            ? ` · ${leadsPagination.total} total ${resourceLabel}`
             : ""}
         </span>
       </div>

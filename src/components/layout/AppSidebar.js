@@ -118,12 +118,19 @@ function isPrimaryNavActive(pathname, href, searchParams) {
   return true;
 }
 
+/** Referrals → Inbound/Outbound pills: highlight only on the list route `/referrals`, not on `/referrals/[id]` (detail shares `?direction=`). */
+function isReferralsInboxDirectionActive(pathname, href, searchParams) {
+  if (pathname !== "/referrals") return false;
+  return isPrimaryNavActive(pathname, href, searchParams);
+}
+
 export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const pathname = usePathname() || "";
   const searchParams = useSearchParams();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const shouldPrefetch = process.env.NODE_ENV === "production";
   const personalInfo = useAppSelector((state) => state.profile.personalInfo);
   const menuRef = useRef(null);
 
@@ -147,12 +154,19 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const isReferralsRoute = pathname === "/referrals" || pathname.startsWith("/referrals/");
 
   useEffect(() => {
+    // In dev, aggressive prefetch can trigger on-demand route compilation storms
+    // and make navigation feel slower. Keep eager prefetch for production only.
+    if (process.env.NODE_ENV !== "production") return;
     const hrefs = [
-      ...PRIMARY_ITEMS.map((item) => item.href),
-      ...REFERRAL_DIRECTION_ITEMS.map((item) => item.href),
+      "/dashboard",
+      "/leads",
+      "/referrals?direction=inbound",
+      "/clients",
+      "/professionals?role=agent",
+      "/analytics",
+      "/nurture-logs",
       "/calendar",
-      ...PROFESSIONAL_ROLE_ITEMS.map((item) => item.href),
-      ...SETTINGS_ITEMS.map((item) => `/settings?tab=${item.tab}`),
+      "/settings",
     ];
     hrefs.forEach((href) => {
       try {
@@ -222,7 +236,18 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const handleLogout = () => {
     dispatch(logoutAndClearAll());
     onCloseMobile?.();
-    router.push("/log-in");
+    router.replace("/");
+  };
+
+  const navigateFast = (href) => {
+    if (shouldPrefetch) {
+      try {
+        router.prefetch(href);
+      } catch {
+        // best-effort
+      }
+    }
+    router.push(href);
   };
 
   /** Submenu + Pipeline “selected” chrome only on /leads — never while on Calendar or other routes. */
@@ -260,7 +285,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
         />
         <div className="flex items-center justify-between gap-2">
           <Link
-            href="/dashboard"
+            href="/"
             className="group flex min-w-0 items-center gap-2 rounded-lg py-0.5 transition hover:bg-white/70"
             onClick={() => onCloseMobile?.()}
           >
@@ -317,7 +342,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                           : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
                     }`}
                     aria-current={active || leadsHere ? "page" : undefined}
-                    onMouseEnter={() => router.prefetch(item.href)}
+                    onMouseEnter={() => {
+                      if (!shouldPrefetch) return;
+                      router.prefetch(item.href);
+                    }}
                   >
                     {(active || leadsHere) && (
                       <span
@@ -344,7 +372,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                           setReferralsOpen(false);
                           if (!isLeadsArea) {
                             setPipelineNavOpen(true);
-                            router.push("/leads");
+                            navigateFast("/leads");
                             onCloseMobile?.();
                             return;
                           }
@@ -432,7 +460,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                         setProfessionalsOpen(false);
                         if (!isReferralsRoute) {
                           setReferralsOpen(true);
-                          router.push("/referrals?direction=inbound");
+                          navigateFast("/referrals?direction=inbound");
                           onCloseMobile?.();
                           return;
                         }
@@ -470,14 +498,17 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                         >
                           <div className="ml-2 mt-0.5 space-y-0.5 rounded-lg border border-border/60 bg-white/80 py-1.5 pl-2 pr-1">
                             {REFERRAL_DIRECTION_ITEMS.map((refItem) => {
-                              const active = isPrimaryNavActive(pathname, refItem.href, searchParams);
+                              const active = isReferralsInboxDirectionActive(pathname, refItem.href, searchParams);
                               const Icon = refItem.icon;
                               return (
                                 <Link
                                   key={refItem.id}
                                   href={refItem.href}
                                   onClick={() => onCloseMobile?.()}
-                                  onMouseEnter={() => router.prefetch(refItem.href)}
+                                  onMouseEnter={() => {
+                                    if (!shouldPrefetch) return;
+                                    router.prefetch(refItem.href);
+                                  }}
                                   className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-snug transition ${
                                     active
                                       ? "bg-primary/12 text-primary-dark ring-1 ring-primary/12"
@@ -506,7 +537,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                         setReferralsOpen(false);
                         if (!isProfessionalsRoute) {
                           setProfessionalsOpen(true);
-                          router.push("/professionals?role=agent");
+                          navigateFast("/professionals?role=agent");
                           onCloseMobile?.();
                           return;
                         }
@@ -551,7 +582,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                                   key={proItem.id}
                                   href={proItem.href}
                                   onClick={() => onCloseMobile?.()}
-                                  onMouseEnter={() => router.prefetch(proItem.href)}
+                                  onMouseEnter={() => {
+                                    if (!shouldPrefetch) return;
+                                    router.prefetch(proItem.href);
+                                  }}
                                   className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-snug transition ${
                                     active
                                       ? "bg-primary/12 text-primary-dark ring-1 ring-primary/12"
@@ -630,7 +664,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                             setReferralsOpen(false);
                             onCloseMobile?.();
                           }}
-                          onMouseEnter={() => router.prefetch(`/settings?tab=${item.tab}`)}
+                          onMouseEnter={() => {
+                            if (!shouldPrefetch) return;
+                            router.prefetch(`/settings?tab=${item.tab}`);
+                          }}
                           className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-snug transition ${
                             tabActive
                               ? "bg-primary/12 text-primary-dark ring-1 ring-primary/12"

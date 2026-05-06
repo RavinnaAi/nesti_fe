@@ -38,7 +38,7 @@ export default function StyleMetricsStep({
   handleSelectChange,
 }) {
   return (
-    <div className="space-y-5">
+    <div className="w-full space-y-5">
       {/* Option groups in 2-col grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
         <OptionRow

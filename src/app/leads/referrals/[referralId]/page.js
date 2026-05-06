@@ -9,26 +9,26 @@ import { useAppSelector } from "@/store";
 import { resolveAuthUserId } from "@/lib/resolveAuthUserId";
 import ReferralLeadWorkspace from "@/components/referrals/ReferralLeadWorkspace";
 
-export default function ReferralLeadPage() {
+/**
+ * Accepted referral from Leads → Pipeline → Referrals (not under `/referrals` inbox).
+ * Back returns to the pipeline referrals list on `/leads`.
+ */
+export default function LeadsPipelineReferralDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const referralId = String(params?.referralId || "").trim();
-  const direction = String(searchParams.get("direction") || "inbound").toLowerCase();
-  const dirParam = direction === "outbound" ? "outbound" : "inbound";
-  const fromPipeline = String(searchParams.get("from") || "").trim().toLowerCase() === "pipeline";
-  const listPageRaw = Number.parseInt(String(searchParams.get("list_page") || "1"), 10);
-  const listPage = Number.isFinite(listPageRaw) && listPageRaw > 0 ? listPageRaw : 1;
+  const pageRaw = Number.parseInt(String(searchParams.get("page") || "1"), 10);
+  const listPage = Number.isFinite(pageRaw) && pageRaw > 0 ? pageRaw : 1;
 
   const { isAuthenticated, profile } = useAuthGuard();
   const token = useAppSelector((s) => s.auth.token);
   const me = useAppSelector((s) => s.auth.user);
   const meId = useMemo(() => resolveAuthUserId(profile, me), [profile, me]);
 
-  const backHref = fromPipeline
-    ? listPage > 1
+  const backHref =
+    listPage > 1
       ? `/leads?pipeline=referrals&page=${listPage}`
-      : "/leads?pipeline=referrals"
-    : `/referrals?direction=${encodeURIComponent(dirParam)}`;
+      : "/leads?pipeline=referrals";
 
   if (!isAuthenticated) return null;
 
@@ -38,17 +38,15 @@ export default function ReferralLeadPage() {
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Link
             href={backHref}
-            aria-label={fromPipeline ? "Back to pipeline referrals" : "Back to referrals list"}
+            aria-label="Back to pipeline referrals"
             className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-white text-text-heading hover:bg-background-light"
           >
             <ArrowLeft size={18} />
           </Link>
           <div>
-            <h1 className="text-xl font-bold text-text-heading">Referral details</h1>
+            <h1 className="text-xl font-bold text-text-heading">Referral (pipeline)</h1>
             <p className="text-sm text-text-muted">
-              {fromPipeline
-                ? "Opened from Leads → Pipeline → Referrals. Use the arrow above to return to that list."
-                : "Full workspace for this referral (handoff notes, snapshot, actions)."}
+              Accepted referral from Leads → Pipeline → Referrals. Use the arrow above to return to that list.
             </p>
           </div>
         </div>
@@ -62,7 +60,7 @@ export default function ReferralLeadPage() {
             meId={meId}
             fromPipelineReferrals
             listPage={listPage}
-            referralDirection={dirParam}
+            referralDirection="inbound"
           />
         )}
       </div>

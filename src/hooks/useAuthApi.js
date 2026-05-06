@@ -52,25 +52,25 @@ export function useVerifyEmail() {
         token: verificationToken,
         rawToken: true,
       }),
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       if (data?.token) {
         // 1. Store the session token in Redux + localStorage (shared across tabs)
         dispatch(loginSuccess({ user: null, token: data.token }));
 
-        // 2. Immediately fetch the profile so the Header has real user data
-        //    before navigation happens (avoids "U" initial and RSC error)
-        try {
-          const profileData = await apiClient({
-            url: API_ENDPOINTS.auth.profile,
-            method: "GET",
-            token: data.token,
+        // 2. Warm profile in background; do not block navigation on this request.
+        apiClient({
+          url: API_ENDPOINTS.auth.profile,
+          method: "GET",
+          token: data.token,
+        })
+          .then((profileData) => {
+            if (profileData?.user) {
+              dispatch(updateProfile(profileData.user));
+            }
+          })
+          .catch(() => {
+            // non-fatal; useAuthGuard/useProfileQuery will retry
           });
-          if (profileData?.user) {
-            dispatch(updateProfile(profileData.user));
-          }
-        } catch {
-          // profile fetch failing is non-fatal; useAuthGuard will retry
-        }
 
         queryClient.invalidateQueries({ queryKey: ["profile"] });
       }
@@ -98,24 +98,25 @@ export function useLogin() {
           password: payload.password,
         },
       }),
-    onSuccess: async (data) => {
+    onSuccess: (data) => {
       const token = data.token || null;
       dispatch(loginSuccess({ user: null, token }));
 
-      // Fetch profile immediately so Header shows real name before navigation
+      // Warm profile in background; do not block navigation on this request.
       if (token) {
-        try {
-          const profileData = await apiClient({
-            url: API_ENDPOINTS.auth.profile,
-            method: "GET",
-            token,
+        apiClient({
+          url: API_ENDPOINTS.auth.profile,
+          method: "GET",
+          token,
+        })
+          .then((profileData) => {
+            if (profileData?.user) {
+              dispatch(updateProfile(profileData.user));
+            }
+          })
+          .catch(() => {
+            // non-fatal; useAuthGuard/useProfileQuery will retry
           });
-          if (profileData?.user) {
-            dispatch(updateProfile(profileData.user));
-          }
-        } catch {
-          // non-fatal; useAuthGuard will retry
-        }
       }
 
       toast.success(data?.message || "Logged in successfully!");
@@ -236,6 +237,9 @@ export function useProfileQuery() {
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+    refetchOnMount: false,
     queryFn: () =>
       apiClient({
         url: API_ENDPOINTS.auth.profile,

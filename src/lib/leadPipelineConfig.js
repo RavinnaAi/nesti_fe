@@ -63,8 +63,9 @@ export function readVisiblePipelineKeys() {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) return DEFAULT_VISIBLE_PIPELINE_KEYS;
     const allowed = new Set(PIPELINE_SIDEBAR_ITEMS.map((i) => i.key));
-    const filtered = parsed.filter((k) => allowed.has(k));
-    return filtered.length ? filtered : DEFAULT_VISIBLE_PIPELINE_KEYS;
+    let filtered = parsed.filter((k) => allowed.has(k));
+    if (!filtered.length) return DEFAULT_VISIBLE_PIPELINE_KEYS;
+    return filtered;
   } catch {
     return DEFAULT_VISIBLE_PIPELINE_KEYS;
   }
@@ -91,4 +92,53 @@ const STATUS_DISPLAY_MAP = {
 
 export function getStatusDisplay(status) {
   return STATUS_DISPLAY_MAP[status] || { label: status?.replace(/_/g, " ") || "—", color: "bg-gray-50 text-gray-600 border-gray-200" };
+}
+
+/** Maps `match_status` → chip tone for accepted-referrals table (border/bg classes applied in UI). */
+const INBOUND_PIPELINE_TONE_BY_STATUS = {
+  nurturing: "nurturing",
+  consult_booked: "automation",
+  showing_booked: "automation",
+  converted: "won",
+  closed_lost: "lost",
+};
+
+const INBOUND_REFERRAL_CHIP_CLASS = {
+  accepted: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  won: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  nurturing: "border-amber-200 bg-amber-50 text-amber-950",
+  lost: "border-slate-200 bg-slate-100 text-slate-800",
+  automation: "border-violet-200 bg-violet-50 text-violet-900",
+  other: "border-border bg-background-light text-text-heading",
+};
+
+/**
+ * Leads → Pipeline → Accepted referrals: `viewer_match_status` from recipient lead.
+ * Handoff default `new` → label **Accepted**; any other `match_status` uses `getStatusDisplay` + tone map.
+ */
+export function getInboundAcceptedReferralRowStatus(matchStatus, context = {}) {
+  const s = String(matchStatus || "").trim().toLowerCase();
+  if (!s || s === "new") {
+    return { label: "Accepted", tone: "accepted" };
+  }
+  // If the recipient LeadMatch was already "nurturing" at the exact moment
+  // the referral got accepted, keep showing "Accepted" until a later pipeline edit.
+  if (s === "nurturing") {
+    const referralUpdatedAtMs = Date.parse(String(context?.referralUpdatedAt || ""));
+    const viewerMatchUpdatedAtMs = Date.parse(String(context?.viewerMatchUpdatedAt || ""));
+    if (
+      Number.isFinite(referralUpdatedAtMs) &&
+      Number.isFinite(viewerMatchUpdatedAtMs) &&
+      viewerMatchUpdatedAtMs <= referralUpdatedAtMs + 5000
+    ) {
+      return { label: "Accepted", tone: "accepted" };
+    }
+  }
+  const { label } = getStatusDisplay(s);
+  const tone = INBOUND_PIPELINE_TONE_BY_STATUS[s] || "other";
+  return { label, tone };
+}
+
+export function inboundReferralPipelineChipClass(tone) {
+  return INBOUND_REFERRAL_CHIP_CLASS[tone] || INBOUND_REFERRAL_CHIP_CLASS.other;
 }

@@ -16,6 +16,8 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useProfileQuery } from "@/hooks/useAuthApi";
 import { toast } from "react-toastify";
 import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
+import { useAppDispatch } from "@/store";
+import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
 import {
   CALENDLY_INTEGRATION_TOAST_ID,
   CALENDLY_OAUTH_BROADCAST_CHANNEL,
@@ -52,6 +54,7 @@ function SettingsPageFallback() {
 
 function SettingsPageContent() {
   const { isAuthenticated } = useAuthGuard();
+  const dispatch = useAppDispatch();
   const profileQuery = useProfileQuery();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -180,6 +183,79 @@ function SettingsPageContent() {
     }
   }, [searchParams, router]);
 
+  // Keep settings forms in sync with `/auth/profile`.
+  // PersonalInfo/BusinessInformation read from `state.profile.*` (profileSlice),
+  // so we must hydrate the slice from the profile query response.
+  useEffect(() => {
+    if (!profileQuery?.isSuccess) return;
+    const apiUser = profileQuery.data?.user || {};
+    const apiProfessional = profileQuery.data?.professionalProfile || {};
+
+    // Personal basics are always based on `user`; business fields come from `professionalProfile`.
+    const firstName = apiUser?.first_name || "";
+    const lastName = apiUser?.last_name || "";
+    const fullName = String(apiProfessional?.full_name || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .trim();
+
+    dispatch(
+      setPersonalInfo({
+        firstName,
+        lastName,
+        email: apiUser?.email || "",
+        role: apiUser?.role || apiProfessional?.professional_type || "",
+        phone: apiProfessional?.phone || apiUser?.phone || "",
+        calendlyUrl: apiProfessional?.calendly_link || "",
+        location: apiProfessional?.location || "",
+        profileImage: apiUser?.profile_image || "",
+        coverImage: apiUser?.cover_image || "",
+        fullName:
+          fullName ||
+          [firstName, lastName].filter(Boolean).join(" ").trim(),
+      })
+    );
+
+    dispatch(
+      setBusinessInfo({
+        professionalType: apiProfessional?.professional_type || apiUser?.role || "",
+        companyName: apiProfessional?.company_name || "",
+        website: apiProfessional?.website || "",
+        phone: apiProfessional?.phone || apiUser?.phone || "",
+        email: apiProfessional?.email || apiUser?.email || "",
+        experience: apiProfessional?.experience || "",
+        licenseNumber: apiProfessional?.license_number || "",
+        socialMedia: apiProfessional?.social_media || "",
+        transactionVolume: apiProfessional?.transaction_volume || "",
+        avgSalePrice: apiProfessional?.avg_sale_price || "",
+        responseTime: apiProfessional?.response_time || "",
+        availability: apiProfessional?.availability || "",
+        supportLevel: apiProfessional?.support_level || "",
+        negotiationStyle: apiProfessional?.negotiation_style || "",
+        salesApproach: apiProfessional?.sales_approach || "",
+        energyStyle: apiProfessional?.energy_style || "",
+        personalityTag: apiProfessional?.personality_tag || "",
+        awards: apiProfessional?.awards || "",
+        testimonial: apiProfessional?.bio || "",
+        targetNeighborhoods: apiProfessional?.target_neighborhoods || "",
+        fullName:
+          fullName ||
+          [firstName, lastName].filter(Boolean).join(" ").trim(),
+        location: apiProfessional?.location || "",
+        specializations: Array.isArray(apiProfessional?.specializations)
+          ? apiProfessional.specializations
+          : [],
+        communicationChannels: Array.isArray(apiProfessional?.communication_channels)
+          ? apiProfessional.communication_channels
+          : [],
+        preferredClients: Array.isArray(apiProfessional?.preferred_clients)
+          ? apiProfessional.preferred_clients
+          : [],
+        calendlyLink: apiProfessional?.calendly_link || "",
+      })
+    );
+  }, [profileQuery?.isSuccess, profileQuery?.data, dispatch]);
+
   const goToBusinessTab = useCallback(() => {
     setActiveTab("business");
     const next = new URLSearchParams(searchParams.toString());
@@ -247,7 +323,7 @@ function SettingsPageContent() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 pb-6 pt-8 sm:pt-9">
+    <div className="mx-auto w-full max-w-6xl px-4 pb-6 pt-8 sm:pt-9">
       {setupIncomplete ? (
         <div
           className="mb-4 rounded-xl border border-amber-200/90 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-sm"
@@ -273,7 +349,7 @@ function SettingsPageContent() {
           </ul>
         </div>
       ) : null}
-      <div className="rounded-xl border border-border bg-white shadow-sm">
+      <div className="w-full rounded-xl border border-border bg-white shadow-sm" style={{ width: "100%" }}>
         <AnimatePresence mode="wait">
           <motion.div
             key={activeTab}
@@ -281,7 +357,8 @@ function SettingsPageContent() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -6 }}
             transition={{ duration: 0.18 }}
-            className="p-6"
+            className="w-full min-w-0 p-5 sm:p-5"
+            style={{ width: "100%" }}
           >
             {tabContent}
           </motion.div>

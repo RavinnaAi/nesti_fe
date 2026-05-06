@@ -22,14 +22,6 @@ import {
 } from "@/lib/calendlyOAuthPopup";
 import { useProfileSetupRedirect } from "@/hooks/useProfileSetupRedirect";
 
-function LoadingShell() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-    </div>
-  );
-}
-
 export default function AppChrome({ children }) {
   const pathname = usePathname() || "";
   const router = useRouter();
@@ -94,6 +86,60 @@ export default function AppChrome({ children }) {
     [pathname]
   );
 
+  useEffect(() => {
+    if (!isMounted || !token || isPublicAuthPage) return;
+    const isProd = process.env.NODE_ENV === "production";
+    const hrefs = isProd
+      ? [
+          "/dashboard",
+          "/leads",
+          "/referrals?direction=inbound",
+          "/clients",
+          "/professionals?role=agent",
+          "/analytics",
+          "/nurture-logs",
+          "/settings",
+          "/calendar",
+          "/checkout",
+        ]
+      : [
+          // Dev-only warmup for known slow tabs: compile these in background.
+          "/professionals?role=agent",
+          "/analytics",
+          "/nurture-logs",
+          "/checkout",
+        ];
+
+    const prefetchAll = () => {
+      hrefs.forEach((href, idx) => {
+        const run = () => {
+          try {
+            router.prefetch(href);
+          } catch {
+            // best-effort prefetch
+          }
+        };
+        if (!isProd) {
+          // Stagger in dev to avoid compile storms.
+          setTimeout(run, 500 + idx * 900);
+          return;
+        }
+        try {
+          run();
+        } catch {
+          // best-effort prefetch
+        }
+      });
+    };
+
+    if (typeof window !== "undefined" && "requestIdleCallback" in window) {
+      const id = window.requestIdleCallback(prefetchAll, { timeout: 1500 });
+      return () => window.cancelIdleCallback(id);
+    }
+    const timer = setTimeout(prefetchAll, 0);
+    return () => clearTimeout(timer);
+  }, [isMounted, token, isPublicAuthPage, router]);
+
   const displayName = useMemo(() => {
     if (!isMounted) return "";
     const fromBusiness = businessInfo?.fullName?.trim();
@@ -128,8 +174,15 @@ export default function AppChrome({ children }) {
 
   const handleLogout = useCallback(() => {
     dispatch(logoutAndClearAll());
-    router.push("/log-in");
+    router.replace("/");
   }, [dispatch, router]);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    if (token) return;
+    if (isPublicAuthPage || isChatbotEmbed || isCalendlyCallback) return;
+    router.replace("/");
+  }, [isMounted, token, isPublicAuthPage, isChatbotEmbed, isCalendlyCallback, router]);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -159,22 +212,19 @@ export default function AppChrome({ children }) {
     return <>{children}</>;
   }
 
-  // ── Not yet mounted: render a neutral shell that matches server output exactly ──
+  // ── Not yet mounted: render public shell (no blocking spinner) ──
   if (!isMounted) {
-    if (isPublicAuthPage) {
-      return (
-        <>
-          <BackgroundElements variant="default" />
-          <Header />
-          <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-            {children}
-          </main>
-          <Footer />
-          <CustomToastContainer />
-        </>
-      );
-    }
-    return <LoadingShell />;
+    return (
+      <>
+        <BackgroundElements variant="default" />
+        <Header />
+        <main className="relative z-10 flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+          {children}
+        </main>
+        <Footer />
+        <CustomToastContainer />
+      </>
+    );
   }
 
   // ── Mounted: pick layout based on auth state ──
@@ -182,12 +232,12 @@ export default function AppChrome({ children }) {
     return (
       <>
         <BackgroundElements variant="default" />
-        <div className="relative z-10 flex min-h-0 flex-1">
+        <div className="relative z-10 flex min-h-screen w-full flex-1">
           <AppSidebar
             isMobileOpen={isSidebarMobileOpen}
             onCloseMobile={() => setIsSidebarMobileOpen(false)}
           />
-          <div className="min-h-0 flex-1 flex flex-col lg:pl-60">
+          <div className="flex min-h-screen w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60">
             <header className="relative z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur sm:px-6">
               <div className="flex items-center gap-3 min-w-0">
                 <button
@@ -284,7 +334,7 @@ export default function AppChrome({ children }) {
                 </div>
               </div>
             </header>
-            <main className="relative z-0 min-h-0 flex-1 overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <main className="relative z-0 flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
               {children}
             </main>
           </div>

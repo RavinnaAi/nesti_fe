@@ -11,6 +11,7 @@ import {
   postNurtureRefine,
   processReferralRequest,
   sendNurtureEmail,
+  updateReferral,
 } from "@/lib/chatClient";
 import { toast } from "react-toastify";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
@@ -197,20 +198,32 @@ function DetailRow({ label, value, mode = "raw" }) {
   return <InfoRow label={label} value={text} />;
 }
 
-function DetailFieldsSection({ title, children }) {
+function DetailFieldsSection({ title, children, maxCols }) {
   const nodes = Children.toArray(children).filter(Boolean);
   if (!nodes.length) return null;
+  const gridClass =
+    maxCols === 2
+      ? "grid grid-cols-2 gap-1.5"
+      : "grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4";
   return (
     <div className="space-y-1.5 border-t border-border/45 pt-3 first:border-t-0 first:pt-0">
       <div className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">{title}</div>
-      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">{nodes}</div>
+      <div className={gridClass}>{nodes}</div>
     </div>
   );
 }
 
-export default function ReferralLeadWorkspace({ token, referralId, meId }) {
+export default function ReferralLeadWorkspace({
+  token,
+  referralId,
+  meId,
+  fromPipelineReferrals = false,
+  listPage = 1,
+  referralDirection = "inbound",
+}) {
   const queryClient = useQueryClient();
   const [detailTab, setDetailTab] = useState("details");
+  const [processModalOpen, setProcessModalOpen] = useState(false);
   const [nurtureForm, setNurtureForm] = useState({
     to_email: "",
     subject: "",
@@ -259,10 +272,22 @@ export default function ReferralLeadWorkspace({ token, referralId, meId }) {
     mutationFn: () => processReferralRequest({ token, id: referralId }),
     onSuccess: (data) => {
       toast.success(data?.message || "Referral processed.");
+      setProcessModalOpen(false);
       queryClient.invalidateQueries({ queryKey: ["referral-lead-details", token, referralId] });
       queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
     },
     onError: (err) => toast.error(err?.message || "Failed to process referral"),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: () => updateReferral({ token, id: referralId, payload: { status: "rejected" } }),
+    onSuccess: () => {
+      toast.success("Referral rejected.");
+      setProcessModalOpen(false);
+      queryClient.invalidateQueries({ queryKey: ["referral-lead-details", token, referralId] });
+      queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
+    },
+    onError: (err) => toast.error(err?.message || "Could not reject referral"),
   });
 
   const patchLeadMutation = useMutation({
@@ -350,7 +375,14 @@ export default function ReferralLeadWorkspace({ token, referralId, meId }) {
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
 
-  const isTarget = String(detailQuery.data?.referral?.target_user_id || "").trim() === String(meId || "").trim();
+  const referralForTargetCheck = detailQuery.data?.referral || {};
+  const normalizedTargetUserId = String(
+    referralForTargetCheck.target_user_id || referralForTargetCheck.target_professional?.id || ""
+  ).trim();
+  const normalizedViewerId = String(meId || "").trim();
+  const isTarget =
+    Boolean(normalizedTargetUserId && normalizedViewerId) &&
+    normalizedTargetUserId === normalizedViewerId;
   const sourceRole = String(context?.source_role || "").toLowerCase();
 
   if (detailQuery.isLoading) {
@@ -383,12 +415,220 @@ export default function ReferralLeadWorkspace({ token, referralId, meId }) {
   const prop = lead.property && typeof lead.property === "object" ? lead.property : {};
   const agentQual = lead.qualification && typeof lead.qualification === "object" ? lead.qualification : {};
 
+  const referralRecord = detailQuery.data?.referral || {};
+  const referralStatusRaw = String(referralRecord.status || "").trim().toLowerCase();
+  const referralAccepted = referralStatusRaw === "accepted";
+  const referralRejected = referralStatusRaw === "rejected";
+  const referralCompleted = referralStatusRaw === "completed";
+  const referralPending = referralStatusRaw === "pending" || referralStatusRaw === "";
+  const referrerNotesDisplay = String(referralRecord.notes ?? "").trim();
+  const dirQ = referralDirection === "outbound" ? "outbound" : "inbound";
+  const pipelineListPage = Math.max(1, Number(listPage) || 1);
+  const pipelineWorkspaceHref =
+    referralId &&
+    (dirQ === "outbound"
+      ? `/referrals/${encodeURIComponent(referralId)}?direction=outbound&from=pipeline`
+      : `/leads/referrals/${encodeURIComponent(referralId)}${
+          pipelineListPage > 1 ? `?page=${encodeURIComponent(String(pipelineListPage))}` : ""
+        }`);
+
+  const leadDetailsCard = (
+    <div className="rounded-lg border border-border/70 bg-white px-3 py-3 text-xs">
+      <div className="mb-2 text-[13px] font-semibold tracking-tight text-text-heading">Lead details</div>
+
+      <DetailFieldsSection title="Overview">
+        <DetailRow label="Intent" value={lead.intent} mode="intent" />
+        <DetailRow label="Lead type" value={lead.lead_type} mode="humanize" />
+        <DetailRow label="Score" value={lead.score} />
+        <DetailRow label="Grade" value={lead.grade} />
+        <DetailRow label="Pipeline status" value={lead.status} mode="humanize" />
+        <DetailRow label="Qualified" value={lead.is_qualified} />
+        <DetailRow label="Appointment" value={lead.appointment_status} mode="humanize" />
+      </DetailFieldsSection>
+
+      <DetailFieldsSection title="Contact" maxCols={2}>
+        <DetailRow label="Name" value={contact.full_name} />
+        <DetailRow label="Email" value={contact.email} />
+        <DetailRow label="Phone" value={contact.phone} />
+        <DetailRow label="Preferred contact" value={contact.preferred_contact_method} mode="humanize" />
+        <DetailRow label="Best time to contact" value={contact.best_time_to_contact} mode="humanize" />
+        {contact.canonical_email &&
+        String(contact.canonical_email).trim().toLowerCase() !==
+          String(contact.email || "").trim().toLowerCase() ? (
+          <DetailRow label="Canonical email" value={contact.canonical_email} />
+        ) : null}
+        {(() => {
+          const ph = String(contact.phone || "").replace(/\D/g, "");
+          const cph = String(contact.canonical_phone || "").replace(/\D/g, "");
+          return ph && cph && ph !== cph ? (
+            <DetailRow label="Canonical phone" value={contact.canonical_phone} />
+          ) : null;
+        })()}
+      </DetailFieldsSection>
+
+      {sourceRole === "agent" ? (
+        <>
+          <DetailFieldsSection title="Property preferences">
+            <DetailRow label="Location" value={prop.location} mode="humanize" />
+            <DetailRow label="Budget" value={prop.budget} mode="intake" />
+            <DetailRow label="Timeline" value={prop.timeline} mode="intake" />
+            <DetailRow label="Property type" value={prop.property_type} mode="humanize" />
+            <DetailRow label="Bedrooms" value={prop.bedrooms} />
+            <DetailRow label="Bathrooms" value={prop.bathrooms} />
+            <DetailRow label="Must-have features" value={prop.must_have_features} />
+            <DetailRow label="Parking required" value={prop.parking_required} mode="humanize" />
+            <DetailRow label="Backyard needed" value={prop.backyard_needed} mode="humanize" />
+            <DetailRow label="School district important" value={prop.school_district_important} mode="humanize" />
+          </DetailFieldsSection>
+
+          <DetailFieldsSection title="Buyer qualification">
+            <DetailRow label="Mortgage status" value={agentQual.mortgage_status} mode="humanize" />
+            <DetailRow label="Realtor status" value={agentQual.realtor_status} mode="humanize" />
+            <DetailRow label="Motivation" value={agentQual.motivation_reason} mode="humanize" />
+            <DetailRow label="Viewing readiness" value={agentQual.viewing_readiness} mode="humanize" />
+            <DetailRow label="Living situation" value={agentQual.living_situation} mode="humanize" />
+            <DetailRow label="Urgency / readiness" value={agentQual.urgency_readiness} mode="humanize" />
+          </DetailFieldsSection>
+        </>
+      ) : null}
+
+      {sourceRole === "lawyer" ? (
+        <>
+          <DetailFieldsSection title="Property & location">
+            <DetailRow label="Location / area" value={prop.location} mode="humanize" />
+            <DetailRow label="Budget / value band" value={prop.budget} mode="intake" />
+            <DetailRow label="Timeline" value={prop.timeline} mode="intake" />
+          </DetailFieldsSection>
+
+          <DetailFieldsSection title="Legal intake">
+            <DetailRow label="Transaction stage" value={lawyerQual.transaction_stage} mode="humanize" />
+            <DetailRow label="Closing timeline" value={lawyerQual.closing_timeline} mode="humanize" />
+            <DetailRow label="Transaction type" value={lawyerQual.transaction_type} mode="humanize" />
+            <DetailRow label="Property value" value={lawyerQual.property_value} mode="intake" />
+            <DetailRow label="Mortgage status" value={lawyerQual.mortgage_status} mode="humanize" />
+            <DetailRow label="Realtor involved" value={lawyerQual.realtor_involved} mode="humanize" />
+            <DetailRow label="First-time buyer" value={lawyerQual.first_time_buyer} mode="humanize" />
+            <DetailRow label="Legal services needed" value={lawyerQual.legal_services_needed} />
+          </DetailFieldsSection>
+        </>
+      ) : null}
+
+      {sourceRole === "mortgage_broker" ? (
+        <>
+          <DetailFieldsSection title="Property & financing context">
+            <DetailRow label="Location / area" value={prop.location} mode="humanize" />
+            <DetailRow label="Budget" value={prop.budget} mode="intake" />
+            <DetailRow label="Purchase timeline" value={prop.timeline} mode="intake" />
+          </DetailFieldsSection>
+
+          <DetailFieldsSection title="Mortgage qualification">
+            <DetailRow label="Mortgage timeline" value={mortgageQual.mortgage_timeline} mode="humanize" />
+            <DetailRow label="Pre-approval" value={mortgageQual.pre_approval_status} mode="humanize" />
+            <DetailRow label="Credit score range" value={mortgageQual.credit_score_range} mode="humanize" />
+            <DetailRow label="Employment status" value={mortgageQual.employment_status} mode="humanize" />
+            <DetailRow label="Household income" value={mortgageQual.household_income} mode="humanize" />
+            <DetailRow
+              label="Down payment readiness"
+              value={mortgageQual.down_payment_readiness}
+              mode="humanize"
+            />
+            <DetailRow label="Purchase purpose" value={mortgageQual.purchase_purpose} mode="humanize" />
+            <DetailRow label="Urgency signal" value={mortgageQual.urgency_signal} mode="humanize" />
+          </DetailFieldsSection>
+        </>
+      ) : null}
+    </div>
+  );
+
+  const actionsPanel = (
+    <div className="rounded-md border border-border bg-white p-4">
+      <p className="mb-3 text-xs text-text-muted">Recommended next steps from your role and lead context.</p>
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button
+          type="button"
+          onClick={() => detailQuery.refetch()}
+          disabled={detailQuery.isFetching}
+          className="rounded border border-border bg-white px-3 py-2 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-50"
+        >
+          {detailQuery.isFetching ? "Refreshing…" : "Refresh lead snapshot"}
+        </button>
+      </div>
+      <LeadsAiActionsTab
+        selectedConversation={{ id: activeConversationId || "referral-conversation" }}
+        lead={lead}
+      />
+    </div>
+  );
+
+  const nurturePanel = (
+    <LeadsNurtureTab
+      nurtureForm={nurtureForm}
+      setNurtureForm={setNurtureForm}
+      nurtureMutation={nurtureMutation}
+      nurtureDraftMutation={nurtureDraftMutation}
+      nurtureRefineMutation={nurtureRefineMutation}
+      selectedLeadId={activeLeadMatchId}
+      actionConversationId={activeConversationId}
+      nurtureLogs={Array.isArray(nurtureLogsQuery.data?.items) ? nurtureLogsQuery.data.items : []}
+      nurtureLogsLoading={nurtureLogsQuery.isLoading}
+    />
+  );
+
+  const notesPanel = (
+    <LeadPipelineNotesPanel
+      lead={fullLead || {}}
+      onPatchLead={(payload) => patchLeadMutation.mutateAsync(payload)}
+      patchLeadPending={patchLeadMutation.isPending}
+    />
+  );
+
+  const toolkitTabStrip = (
+    <div className="inline-flex rounded-lg border border-border bg-background-light/40 p-1">
+      {[
+        { id: "details", label: "Details" },
+        { id: "actions", label: "Actions" },
+        { id: "nurture", label: "Nurture Email" },
+        { id: "notes", label: "Notes" },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => setDetailTab(tab.id)}
+          className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
+            detailTab === tab.id ? "bg-white text-primary shadow-sm" : "text-text-muted hover:text-text-heading"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  const statusChipClass =
+    referralAccepted
+      ? "border-emerald-200 bg-emerald-50 text-emerald-900"
+      : referralRejected
+        ? "border-red-200 bg-red-50 text-red-900"
+        : referralCompleted
+          ? "border-slate-200 bg-slate-100 text-slate-800"
+          : referralPending
+            ? "border-amber-200 bg-amber-50 text-amber-950"
+            : "border-border bg-background-light text-text-heading";
+  const statusChipLabel = referralStatusRaw ? referralStatusRaw.replace(/_/g, " ") : "pending";
+
   return (
     <section className="space-y-4 rounded-xl border border-border/80 bg-white p-5 shadow-sm ring-1 ring-black/[0.02] sm:p-6">
       <div className="space-y-4 border-b border-border/60 pb-5">
         <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
           <div className="min-w-0 flex-1">
-            <h2 className="text-xl font-semibold tracking-tight text-text-heading">Referred lead</h2>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-xl font-semibold tracking-tight text-text-heading">Referred lead</h2>
+              <span
+                className={`inline-flex rounded-md border px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${statusChipClass}`}
+              >
+                {statusChipLabel}
+              </span>
+            </div>
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 rounded-lg border border-border/70 bg-background-light/60 px-2.5 py-1 text-[11px] font-medium text-text-heading shadow-sm">
                 <span className="text-[10px] uppercase tracking-wide text-text-muted">Source</span>
@@ -400,202 +640,160 @@ export default function ReferralLeadWorkspace({ token, referralId, meId }) {
                 {roleLabel(context?.target_role)}
               </span>
             </div>
-            {isTarget ? (
-              <button
-                type="button"
-                onClick={() => processMutation.mutate()}
-                disabled={
-                  processMutation.isPending ||
-                  String(detailQuery.data?.referral?.status || "").toLowerCase() === "accepted"
-                }
-                className="mt-3 rounded-lg border border-primary/25 bg-gradient-to-b from-primary/12 to-primary/8 px-3.5 py-2 text-xs font-semibold text-primary-dark shadow-sm transition hover:border-primary/35 hover:from-primary/14 disabled:opacity-50"
-              >
-                {String(detailQuery.data?.referral?.status || "").toLowerCase() === "accepted"
-                  ? "Processed"
-                  : processMutation.isPending
-                    ? "Processing…"
-                    : "Process referral"}
-              </button>
-            ) : null}
           </div>
           <ReferrerHeaderCompact professional={context?.source_professional} />
         </div>
       </div>
 
-      <div className="inline-flex rounded-lg border border-border bg-background-light/40 p-1">
-        {[
-          { id: "details", label: "Details" },
-          { id: "actions", label: "Actions" },
-          { id: "nurture", label: "Nurture Email" },
-          { id: "notes", label: "Notes" },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            type="button"
-            onClick={() => setDetailTab(tab.id)}
-            className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-              detailTab === tab.id
-                ? "bg-white text-primary shadow-sm"
-                : "text-text-muted hover:text-text-heading"
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {detailTab === "details" ? (
-        <div className="rounded-lg border border-border/70 bg-white px-3 py-3 text-xs">
-          <div className="mb-2 text-[13px] font-semibold tracking-tight text-text-heading">
-            Lead details
-          </div>
-
-          <DetailFieldsSection title="Overview">
-            <DetailRow label="Intent" value={lead.intent} mode="intent" />
-            <DetailRow label="Lead type" value={lead.lead_type} mode="humanize" />
-            <DetailRow label="Score" value={lead.score} />
-            <DetailRow label="Grade" value={lead.grade} />
-            <DetailRow label="Pipeline status" value={lead.status} mode="humanize" />
-            <DetailRow label="Qualified" value={lead.is_qualified} />
-            <DetailRow label="Appointment" value={lead.appointment_status} mode="humanize" />
-          </DetailFieldsSection>
-
-          <DetailFieldsSection title="Contact">
-            <DetailRow label="Name" value={contact.full_name} />
-            <DetailRow label="Email" value={contact.email} />
-            <DetailRow label="Phone" value={contact.phone} />
-            <DetailRow label="Preferred contact" value={contact.preferred_contact_method} mode="humanize" />
-            <DetailRow label="Best time to contact" value={contact.best_time_to_contact} mode="humanize" />
-            {contact.canonical_email &&
-            String(contact.canonical_email).trim().toLowerCase() !==
-              String(contact.email || "").trim().toLowerCase() ? (
-              <DetailRow label="Canonical email" value={contact.canonical_email} />
+      {referralPending ? (
+        <div className="rounded-lg border border-amber-200/90 bg-gradient-to-r from-amber-50/90 to-white px-4 py-3 shadow-sm">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="min-w-0">
+              <p className="text-[11px] font-bold uppercase tracking-wide text-amber-900/90">Action needed</p>
+              <p className="mt-1 text-sm leading-snug text-text-body">
+                {isTarget
+                  ? "Review the referrer’s notes, then accept (adds the lead to your workspace) or reject."
+                  : "Only the assigned recipient can accept or reject this referral."}
+              </p>
+            </div>
+            {isTarget ? (
+              <button
+                type="button"
+                onClick={() => setProcessModalOpen(true)}
+                disabled={processMutation.isPending || rejectMutation.isPending}
+                className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-primary-dark disabled:opacity-50"
+              >
+                Review and process
+              </button>
             ) : null}
-            {(() => {
-              const ph = String(contact.phone || "").replace(/\D/g, "");
-              const cph = String(contact.canonical_phone || "").replace(/\D/g, "");
-              return ph && cph && ph !== cph ? (
-                <DetailRow label="Canonical phone" value={contact.canonical_phone} />
-              ) : null;
-            })()}
-          </DetailFieldsSection>
-
-          {sourceRole === "agent" ? (
-            <>
-              <DetailFieldsSection title="Property preferences">
-                <DetailRow label="Location" value={prop.location} mode="humanize" />
-                <DetailRow label="Budget" value={prop.budget} mode="intake" />
-                <DetailRow label="Timeline" value={prop.timeline} mode="intake" />
-                <DetailRow label="Property type" value={prop.property_type} mode="humanize" />
-                <DetailRow label="Bedrooms" value={prop.bedrooms} />
-                <DetailRow label="Bathrooms" value={prop.bathrooms} />
-                <DetailRow label="Must-have features" value={prop.must_have_features} />
-                <DetailRow label="Parking required" value={prop.parking_required} mode="humanize" />
-                <DetailRow label="Backyard needed" value={prop.backyard_needed} mode="humanize" />
-                <DetailRow label="School district important" value={prop.school_district_important} mode="humanize" />
-              </DetailFieldsSection>
-
-              <DetailFieldsSection title="Buyer qualification">
-                <DetailRow label="Mortgage status" value={agentQual.mortgage_status} mode="humanize" />
-                <DetailRow label="Realtor status" value={agentQual.realtor_status} mode="humanize" />
-                <DetailRow label="Motivation" value={agentQual.motivation_reason} mode="humanize" />
-                <DetailRow label="Viewing readiness" value={agentQual.viewing_readiness} mode="humanize" />
-                <DetailRow label="Living situation" value={agentQual.living_situation} mode="humanize" />
-                <DetailRow label="Urgency / readiness" value={agentQual.urgency_readiness} mode="humanize" />
-              </DetailFieldsSection>
-            </>
-          ) : null}
-
-          {sourceRole === "lawyer" ? (
-            <>
-              <DetailFieldsSection title="Property & location">
-                <DetailRow label="Location / area" value={prop.location} mode="humanize" />
-                <DetailRow label="Budget / value band" value={prop.budget} mode="intake" />
-                <DetailRow label="Timeline" value={prop.timeline} mode="intake" />
-              </DetailFieldsSection>
-
-              <DetailFieldsSection title="Legal intake">
-                <DetailRow label="Transaction stage" value={lawyerQual.transaction_stage} mode="humanize" />
-                <DetailRow label="Closing timeline" value={lawyerQual.closing_timeline} mode="humanize" />
-                <DetailRow label="Transaction type" value={lawyerQual.transaction_type} mode="humanize" />
-                <DetailRow label="Property value" value={lawyerQual.property_value} mode="intake" />
-                <DetailRow label="Mortgage status" value={lawyerQual.mortgage_status} mode="humanize" />
-                <DetailRow label="Realtor involved" value={lawyerQual.realtor_involved} mode="humanize" />
-                <DetailRow label="First-time buyer" value={lawyerQual.first_time_buyer} mode="humanize" />
-                <DetailRow label="Legal services needed" value={lawyerQual.legal_services_needed} />
-              </DetailFieldsSection>
-            </>
-          ) : null}
-
-          {sourceRole === "mortgage_broker" ? (
-            <>
-              <DetailFieldsSection title="Property & financing context">
-                <DetailRow label="Location / area" value={prop.location} mode="humanize" />
-                <DetailRow label="Budget" value={prop.budget} mode="intake" />
-                <DetailRow label="Purchase timeline" value={prop.timeline} mode="intake" />
-              </DetailFieldsSection>
-
-              <DetailFieldsSection title="Mortgage qualification">
-                <DetailRow label="Mortgage timeline" value={mortgageQual.mortgage_timeline} mode="humanize" />
-                <DetailRow label="Pre-approval" value={mortgageQual.pre_approval_status} mode="humanize" />
-                <DetailRow label="Credit score range" value={mortgageQual.credit_score_range} mode="humanize" />
-                <DetailRow label="Employment status" value={mortgageQual.employment_status} mode="humanize" />
-                <DetailRow label="Household income" value={mortgageQual.household_income} mode="humanize" />
-                <DetailRow
-                  label="Down payment readiness"
-                  value={mortgageQual.down_payment_readiness}
-                  mode="humanize"
-                />
-                <DetailRow label="Purchase purpose" value={mortgageQual.purchase_purpose} mode="humanize" />
-                <DetailRow label="Urgency signal" value={mortgageQual.urgency_signal} mode="humanize" />
-              </DetailFieldsSection>
-            </>
-          ) : null}
-        </div>
-      ) : null}
-
-      {detailTab === "actions" ? (
-        <div className="rounded-md border border-border bg-white p-4">
-          <p className="text-xs text-text-muted mb-3">
-            Recommended next steps from your role and lead context.
-          </p>
-          <div className="flex flex-wrap items-center gap-2 mb-4">
-            <button
-              type="button"
-              onClick={() => detailQuery.refetch()}
-              disabled={detailQuery.isFetching}
-              className="rounded border border-border bg-white px-3 py-2 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-50"
-            >
-              {detailQuery.isFetching ? "Refreshing…" : "Refresh lead snapshot"}
-            </button>
           </div>
-          <LeadsAiActionsTab
-            selectedConversation={{ id: activeConversationId || "referral-conversation" }}
-            lead={lead}
-          />
         </div>
       ) : null}
 
-      {detailTab === "nurture" ? (
-        <LeadsNurtureTab
-          nurtureForm={nurtureForm}
-          setNurtureForm={setNurtureForm}
-          nurtureMutation={nurtureMutation}
-          nurtureDraftMutation={nurtureDraftMutation}
-          nurtureRefineMutation={nurtureRefineMutation}
-          selectedLeadId={activeLeadMatchId}
-          actionConversationId={activeConversationId}
-          nurtureLogs={Array.isArray(nurtureLogsQuery.data?.items) ? nurtureLogsQuery.data.items : []}
-          nurtureLogsLoading={nurtureLogsQuery.isLoading}
-        />
-      ) : null}
+      {referralRejected ? (
+        <div className="space-y-4">
+          {leadDetailsCard}
+          <p className="rounded-lg border border-border/60 bg-background-light/40 px-3 py-2.5 text-sm text-text-muted leading-relaxed">
+            This referral was rejected. The information above is for reference only.
+          </p>
+        </div>
+      ) : referralCompleted ? (
+        <div className="space-y-4">
+          {leadDetailsCard}
+          <p className="rounded-lg border border-border/60 bg-background-light/40 px-3 py-2.5 text-sm text-text-muted leading-relaxed">
+            This referral is marked completed.
+          </p>
+        </div>
+      ) : referralAccepted ? (
+        fromPipelineReferrals ? (
+          <div className="space-y-4">
+            {toolkitTabStrip}
+            {detailTab === "details" ? leadDetailsCard : null}
+            {detailTab === "actions" ? actionsPanel : null}
+            {detailTab === "nurture" ? nurturePanel : null}
+            {detailTab === "notes" ? notesPanel : null}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {leadDetailsCard}
+            <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm leading-relaxed text-text-body">
+                For this accepted referral: use the tabs for actions, nurture email, and pipeline notes.
+              </p>
+              {pipelineWorkspaceHref ? (
+                <Link
+                  href={pipelineWorkspaceHref}
+                  className="inline-flex shrink-0 items-center justify-center rounded-lg bg-primary px-3.5 py-2 text-center text-xs font-semibold text-white shadow-sm transition hover:bg-primary-dark sm:min-w-[12rem]"
+                >
+                  Open workspace · Notes
+                </Link>
+              ) : null}
+            </div>
+            <p className="text-xs leading-relaxed text-text-muted">
+              Or go to{" "}
+              <Link
+                href="/leads?pipeline=referrals"
+                className="font-semibold text-primary hover:text-primary-dark hover:underline"
+              >
+                Leads → Pipeline → Referrals
+              </Link>{" "}
+              and click this referral&apos;s row to reopen this page; then switch to the{" "}
+              <span className="font-medium text-text-heading">Notes</span> tab.
+            </p>
+          </div>
+        )
+      ) : (
+        <div className="space-y-4">
+          {leadDetailsCard}
+          {isTarget ? (
+            <p className="rounded-lg border border-border/60 bg-background-light/40 px-3 py-2.5 text-sm text-text-muted leading-relaxed">
+              Use <span className="font-semibold text-text-heading">Review and process</span> above to open the decision
+              dialog (notes, accept, or reject).
+            </p>
+          ) : (
+            <p className="rounded-lg border border-border/60 bg-background-light/40 px-3 py-2.5 text-sm text-text-muted leading-relaxed">
+              This referral is waiting on the recipient. They will use <span className="font-semibold text-text-heading">Review and process</span> on their inbound view.
+            </p>
+          )}
+        </div>
+      )}
 
-      {detailTab === "notes" ? (
-        <LeadPipelineNotesPanel
-          lead={fullLead || {}}
-          onPatchLead={(payload) => patchLeadMutation.mutateAsync(payload)}
-          patchLeadPending={patchLeadMutation.isPending}
-        />
+      {processModalOpen && referralPending && isTarget ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="referral-process-title"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setProcessModalOpen(false);
+          }}
+        >
+          <div
+            className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-border bg-white p-5 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="referral-process-title" className="text-lg font-semibold text-text-heading">
+              Process this referral
+            </h3>
+            <p className="mt-1 text-sm text-text-muted leading-relaxed">
+              Read the notes from the referrer, then accept the lead into your account or reject the referral.
+            </p>
+
+            <div className="mt-4">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">Notes from referrer</p>
+              <div className="mt-1.5 min-h-[4rem] rounded-lg border border-border/70 bg-background-light/50 px-3 py-2.5 text-sm leading-relaxed text-text-heading whitespace-pre-wrap">
+                {referrerNotesDisplay || "No notes were added when this referral was sent."}
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setProcessModalOpen(false)}
+                disabled={processMutation.isPending || rejectMutation.isPending}
+                className="rounded-lg border border-border px-4 py-2 text-sm font-semibold text-text-heading transition hover:bg-background-light disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => rejectMutation.mutate()}
+                disabled={processMutation.isPending || rejectMutation.isPending}
+                className="rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm font-semibold text-red-800 transition hover:bg-red-100 disabled:opacity-50"
+              >
+                {rejectMutation.isPending ? "Rejecting…" : "Reject"}
+              </button>
+              <button
+                type="button"
+                onClick={() => processMutation.mutate()}
+                disabled={processMutation.isPending || rejectMutation.isPending}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:opacity-50"
+              >
+                {processMutation.isPending ? "Accepting…" : "Accept"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );

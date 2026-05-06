@@ -161,13 +161,13 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
     [form.firstName, form.lastName].filter(Boolean).join(" ").trim() || "Your profile";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-bold tracking-tight text-text-heading sm:text-2xl">
+    <form onSubmit={handleSubmit} className="space-y-5">
+      <h2 className="text-lg font-bold tracking-tight text-text-heading sm:text-xl">
         Personal information
       </h2>
 
       {/* Cover + profile card */}
-      <div className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm">
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-white shadow-sm">
         {/* Cover — fixed 16:5 aspect */}
         <div className="relative aspect-[16/5] w-full min-h-[8rem] sm:min-h-0">
           {coverImage ? (
@@ -183,12 +183,12 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
               aria-hidden
             />
           )}
-          <div className="absolute inset-x-0 top-0 flex justify-end p-3 sm:p-4">
+          <div className="absolute inset-x-0 top-0 flex justify-end p-3 sm:p-3.5">
             <button
               type="button"
               disabled={uploadMedia.isPending}
               onClick={() => coverInputRef.current?.click()}
-              className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/90 px-3 py-1.5 text-[11px] font-semibold text-text-heading shadow-sm backdrop-blur-md transition hover:bg-white disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/90 px-3 py-1 text-[10px] font-semibold text-text-heading shadow-sm backdrop-blur-md transition hover:bg-white disabled:opacity-50"
             >
               <ImageIcon size={13} className="text-primary" aria-hidden />
               {uploadMedia.isPending ? "Uploading…" : "Change cover"}
@@ -204,15 +204,15 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
         </div>
 
         {/* Avatar + name */}
-        <div className="relative flex items-end gap-4 px-5 pb-4 sm:gap-5 sm:px-7 sm:pb-5">
-          <div className="relative z-[1] -mt-8 shrink-0 sm:-mt-10">
-            <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
+        <div className="relative flex items-end gap-3 px-4 pb-3.5 sm:gap-4 sm:px-6 sm:pb-4">
+          <div className="relative z-[1] -mt-8 shrink-0 sm:-mt-9">
+            <div className="relative h-[4rem] w-[4rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-xl">
               {profileImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profileImage} alt="" className="h-full w-full object-cover object-center" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-text-muted/70">
-                  <User size={30} strokeWidth={1.5} />
+                  <User size={24} strokeWidth={1.5} />
                 </div>
               )}
             </div>
@@ -220,7 +220,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
               type="button"
               disabled={uploadMedia.isPending}
               onClick={() => fileInputRef.current?.click()}
-              className="absolute -bottom-1 -right-1 inline-flex items-center gap-1 rounded-full border border-border/70 bg-white px-2 py-0.5 text-[10px] font-semibold text-text-heading shadow transition hover:border-primary/40 hover:text-primary disabled:opacity-50"
+              className="absolute -bottom-1 -right-1 inline-flex items-center gap-1 rounded-full border border-border/70 bg-white px-2 py-0.5 text-[9px] font-semibold text-text-heading shadow transition hover:border-primary/40 hover:text-primary disabled:opacity-50"
               aria-label="Edit profile photo"
             >
               <Pencil size={10} className="shrink-0 text-primary" aria-hidden />
@@ -235,15 +235,15 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
             />
           </div>
           <div className="min-w-0 flex-1 pb-0.5">
-            <p className="text-base font-semibold tracking-tight text-text-heading sm:text-lg">{displayName}</p>
+            <p className="text-sm font-semibold tracking-tight text-text-heading sm:text-base">{displayName}</p>
           </div>
         </div>
       </div>
 
       {/* Contact & scheduling */}
-      <div className="rounded-2xl border border-border/60 bg-white p-5 shadow-sm sm:p-6">
-        <h3 className="text-sm font-semibold text-text-heading">Contact &amp; scheduling</h3>
-        <div className="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-x-5 md:gap-y-4">
+      <div className="rounded-xl border border-border/60 bg-white p-4 shadow-sm sm:p-5">
+        <h3 className="text-xs font-semibold text-text-heading">Contact &amp; scheduling</h3>
+        <div className="mt-3.5 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-x-4 md:gap-y-3">
           <FormField
             label="First Name"
             name="firstName"
@@ -254,6 +254,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
             placeholder="Enter first name"
             icon={User}
             focusedField={focusedField}
+            className="!h-12 text-[13px]"
             required
           />
           <FormField
@@ -266,6 +267,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
             placeholder="Enter last name"
             icon={User}
             focusedField={focusedField}
+            className="!h-12 text-[13px]"
             required
           />
           <FormField
@@ -280,7 +282,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
             icon={Mail}
             focusedField={focusedField}
             disabled
-            className="bg-gray-100 cursor-not-allowed"
+            className="!h-12 bg-gray-100 text-[13px] cursor-not-allowed"
             required
           />
           <FormField
@@ -293,6 +295,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
             placeholder="+1 555 000 0000"
             icon={Phone}
             focusedField={focusedField}
+            className="!h-12 text-[13px]"
           />
           <div className="md:col-span-2">
             <FormField
@@ -305,12 +308,13 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
               placeholder="https://calendly.com/your-handle/..."
               icon={Calendar}
               focusedField={focusedField}
+              className="!h-12 text-[13px]"
             />
           </div>
         </div>
 
-        <div className="mt-6 flex flex-col gap-3 border-t border-border/50 pt-5 sm:flex-row sm:items-center sm:justify-end">
-          <SubmitButton loading={loading} className="w-full sm:w-auto sm:min-w-[11rem]">
+        <div className="mt-5 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-end">
+          <SubmitButton loading={loading} className="w-full text-[13px] sm:w-auto sm:min-w-[10rem]">
             Save changes
           </SubmitButton>
         </div>

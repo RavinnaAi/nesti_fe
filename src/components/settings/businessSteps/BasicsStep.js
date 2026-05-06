@@ -12,7 +12,7 @@ export default function BasicsStep({
   handleSelectChange,
 }) {
   return (
-    <div className="space-y-4">
+    <div className="w-full space-y-4">
       <p className="text-[11px] leading-relaxed text-text-muted">
         Professional type, name, and phone come from your account and cannot be changed here. Your{" "}
         <span className="font-medium text-text-body">company</span>,{" "}

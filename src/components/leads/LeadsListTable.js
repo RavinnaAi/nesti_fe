@@ -31,7 +31,7 @@ export default function LeadsListTable({
   })();
 
   return (
-    <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden">
+    <div className="overflow-hidden rounded-xl border border-border/50 bg-transparent shadow-none">
       {leadsQuery.isLoading ? (
         <div className="p-3 sm:p-4">
           <LeadsPageTableSkeleton

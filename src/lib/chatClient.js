@@ -249,12 +249,13 @@ export async function fetchConversationMessages({ token, conversationId }) {
   });
 }
 
-export async function fetchReferrals({ token, direction, page, limit } = {}) {
+export async function fetchReferrals({ token, direction, page, limit, status } = {}) {
   const authToken = token || getStoredAuthToken();
   const params = new URLSearchParams();
   if (direction) params.set("direction", String(direction));
   if (page != null && page !== "") params.set("page", String(page));
   if (limit != null && limit !== "") params.set("limit", String(limit));
+  if (status) params.set("status", String(status));
   const qs = params.toString();
   const url = qs ? `${API_ENDPOINTS.referrals.list}?${qs}` : API_ENDPOINTS.referrals.list;
   return apiClient({

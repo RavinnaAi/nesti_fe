@@ -114,6 +114,19 @@ export default function NotificationDetailModal({ notification, onClose }) {
         ? normalizeLeadId(display.lead_match_id)
         : null;
 
+  const openReferralAction =
+    display?.action?.type === "open_referral" && String(display?.action?.referral_id || "").trim()
+      ? display.action
+      : null;
+  const openReferralHref = openReferralAction
+    ? (() => {
+        const rid = String(openReferralAction.referral_id || "").trim();
+        const dir = String(openReferralAction.direction || "inbound").trim().toLowerCase();
+        const d = dir === "outbound" ? "outbound" : "inbound";
+        return `/referrals/${encodeURIComponent(rid)}?direction=${encodeURIComponent(d)}`;
+      })()
+    : null;
+
   const created =
     display?.created_at &&
     new Date(display.created_at).toLocaleString(undefined, {
@@ -255,6 +268,18 @@ export default function NotificationDetailModal({ notification, onClose }) {
               className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:brightness-95"
             >
               Open lead
+            </button>
+          ) : null}
+          {openReferralHref && !isLoading && !isError ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(openReferralHref);
+              }}
+              className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:brightness-95"
+            >
+              Open referral
             </button>
           ) : null}
         </div>

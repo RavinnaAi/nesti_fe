@@ -181,7 +181,7 @@ export default function DashboardAnalyticsPanels({
               Open leads →
             </Link>
           </div>
-          <p className="text-xs text-text-muted mb-3">New leads vs. profile views (daily)</p>
+          <p className="text-xs text-text-muted mb-3">New leads, views, inbound referrals, and outbound referrals (daily)</p>
           <div className="h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -208,6 +208,22 @@ export default function DashboardAnalyticsPanels({
                 <Legend wrapperStyle={{ fontSize: 12 }} formatter={(value) => <span className="text-text-body">{value}</span>} />
                 <Area type="monotone" dataKey="lead_created" name="New leads" stroke={PRIMARY_DARK} strokeWidth={2} fill="url(#fillCreated)" />
                 <Area type="monotone" dataKey="lead_viewed" name="Lead views" stroke={ACCENT} strokeWidth={2} fill="url(#fillViews)" />
+                <Area
+                  type="monotone"
+                  dataKey="inbound_referred"
+                  name="Inbound referrals"
+                  stroke="#0ea5e9"
+                  strokeWidth={2}
+                  fill="none"
+                />
+                <Area
+                  type="monotone"
+                  dataKey="outbound_referred"
+                  name="Outbound referrals"
+                  stroke="#f59e0b"
+                  strokeWidth={2}
+                  fill="none"
+                />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -219,7 +235,7 @@ export default function DashboardAnalyticsPanels({
             <h3 className="text-sm font-bold text-text-heading">Funnel</h3>
           </div>
           <p className="text-xs text-text-muted mb-3">
-            Deals use closed-won leads; other rows are activity event counts in the window.
+            Deals use leads moved to Closed—Won in the selected window; other rows are activity event counts.
           </p>
           <div className="h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">

@@ -38,6 +38,10 @@ import LeadsListHeader from "@/components/leads/LeadsListHeader";
 import LeadsListFiltersBar from "@/components/leads/LeadsListFiltersBar";
 import LeadsListTable from "@/components/leads/LeadsListTable";
 import LeadsListPagination from "@/components/leads/LeadsListPagination";
+import ReferralsDataTable, {
+  leadsPipelineReferralDetailHref,
+  normalizeReferralRows,
+} from "@/components/referrals/ReferralsDataTable";
 import LeadsWorkspacePanels from "@/components/leads/LeadsWorkspacePanels";
 import DeleteLeadConfirmModal from "@/components/leads/DeleteLeadConfirmModal";
 import { useLeadsListFilters } from "@/hooks/useLeadsListFilters";
@@ -70,8 +74,16 @@ function LeadsPageContent() {
   const [intentFilter, setIntentFilter] = useState("");
   const [appointmentFilter, setAppointmentFilter] = useState("all");
   const appointmentFilterBoot = useRef(true);
-  const { status: statusFromUrl, pipeline: pipelineFromUrl, filterLabel, toLeadWorkspace, toListPage } =
-    useLeadsListFilters();
+  const {
+    status: statusFromUrl,
+    pipeline: pipelineFromUrl,
+    referral: pipelineReferralIdFromUrl,
+    filterLabel,
+    toLeadWorkspace,
+    toListPage,
+  } = useLeadsListFilters();
+  const isReferralsPipeline = pipelineFromUrl === "referrals";
+  const REFERRALS_PIPELINE_PAGE_SIZE = 10;
   const [activeTab, setActiveTab] = useState("lead_profile");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -99,9 +111,21 @@ function LeadsPageContent() {
   });
   const [closingForm, setClosingForm] = useState({ price: "" });
 
+  /** Legacy `/leads?pipeline=referrals&referral=` bookmarks → dedicated referral page. */
+  useEffect(() => {
+    if (!isReferralsPipeline) return;
+    const rid = String(pipelineReferralIdFromUrl || "").trim();
+    if (!rid) return;
+    router.replace(leadsPipelineReferralDetailHref(rid, currentPage));
+  }, [isReferralsPipeline, pipelineReferralIdFromUrl, currentPage, router]);
+
   useEffect(() => {
     setActiveTab("lead_profile");
   }, [selectedLeadId]);
+
+  useEffect(() => {
+    if (isReferralsPipeline) setSelectedLeadId("");
+  }, [isReferralsPipeline]);
 
   useEffect(() => {
     setHydrated(true);
@@ -136,7 +160,7 @@ function LeadsPageContent() {
 
   const leadsQuery = useQuery({
     queryKey: ["leads", token, currentPage, appointmentFilter, statusFromUrl, pipelineFromUrl],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && !isReferralsPipeline,
     queryFn: () =>
       fetchLeads({
         token,
@@ -147,6 +171,35 @@ function LeadsPageContent() {
         ...(!statusFromUrl && pipelineFromUrl ? { pipeline: pipelineFromUrl } : {}),
       }),
   });
+
+  const referralsPipelineQuery = useQuery({
+    queryKey: ["leads-pipeline-referrals", token, currentPage],
+    enabled: Boolean(token && isReferralsPipeline),
+    queryFn: () =>
+      fetchReferrals({
+        token,
+        direction: "inbound",
+        page: currentPage,
+        limit: REFERRALS_PIPELINE_PAGE_SIZE,
+        status: "accepted",
+      }),
+  });
+
+  const referralPipelineRows = useMemo(() => {
+    if (!isReferralsPipeline) return [];
+    return normalizeReferralRows(referralsPipelineQuery.data);
+  }, [isReferralsPipeline, referralsPipelineQuery.data]);
+
+  const referralsPipelinePagination = useMemo(() => {
+    const p = referralsPipelineQuery.data?.pagination || {};
+    const current = Number(p.current_page || p.page || currentPage || 1);
+    const totalPages = Number(p.total_pages || p.totalPages || 1);
+    const total = Number(p.total || 0);
+    const hasPrev = typeof p.has_prev_page === "boolean" ? p.has_prev_page : current > 1;
+    const hasNext =
+      typeof p.has_next_page === "boolean" ? p.has_next_page : Number.isFinite(totalPages) && current < totalPages;
+    return { current, totalPages, total, hasPrev, hasNext };
+  }, [referralsPipelineQuery.data, currentPage]);
 
   const leadsPagination = useMemo(() => {
     const p = leadsQuery.data?.pagination || leadsQuery.data?.data?.pagination || {};
@@ -508,15 +561,19 @@ function LeadsPageContent() {
   };
 
   const goPrevPage = () => {
-    const nextPage = Math.max(1, leadsPagination.current - 1);
+    const source = isReferralsPipeline ? referralsPipelinePagination : leadsPagination;
+    const nextPage = Math.max(1, source.current - 1);
     setCurrentPage(nextPage);
-    router.push(toListPage({ page: nextPage }));
+    const opts = { page: nextPage };
+    router.push(toListPage(opts));
   };
 
   const goNextPage = () => {
-    const nextPage = leadsPagination.current + 1;
+    const source = isReferralsPipeline ? referralsPipelinePagination : leadsPagination;
+    const nextPage = source.current + 1;
     setCurrentPage(nextPage);
-    router.push(toListPage({ page: nextPage }));
+    const opts = { page: nextPage };
+    router.push(toListPage(opts));
   };
 
   if (!hydrated) {
@@ -529,41 +586,68 @@ function LeadsPageContent() {
     <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10">
       <div className="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 space-y-5">
         <LeadsListHeader filterLabel={filterLabel}>
-          <LeadsListFiltersBar
-            searchTerm={searchTerm}
-            onSearchTermChange={setSearchTerm}
-            intentFilter={intentFilter}
-            onIntentFilterChange={setIntentFilter}
-            appointmentFilter={appointmentFilter}
-            onAppointmentFilterChange={setAppointmentFilter}
-            showIntentFilter={showAgentLeadColumns}
-            searchPlaceholder={
-              showAgentLeadColumns
-                ? "Search by property type, name, phone, city..."
-                : "Search by name, phone, city, email..."
-            }
-          />
+          {!isReferralsPipeline ? (
+            <LeadsListFiltersBar
+              searchTerm={searchTerm}
+              onSearchTermChange={setSearchTerm}
+              intentFilter={intentFilter}
+              onIntentFilterChange={setIntentFilter}
+              appointmentFilter={appointmentFilter}
+              onAppointmentFilterChange={setAppointmentFilter}
+              showIntentFilter={showAgentLeadColumns}
+              searchPlaceholder={
+                showAgentLeadColumns
+                  ? "Search by property type, name, phone, city..."
+                  : "Search by name, phone, city, email..."
+              }
+            />
+          ) : null}
         </LeadsListHeader>
 
         <div className="space-y-4">
-          <LeadsListTable
-            leadsQuery={leadsQuery}
-            filteredConversations={filteredConversations}
-            selectedLeadId={selectedLeadId}
-            toLeadWorkspace={toLeadWorkspace}
-            leadsPageSize={LEADS_PAGE_SIZE}
-            showPropertyMatchesColumn={showPropertyMatchesColumn}
-            showAgentLeadColumns={showAgentLeadColumns}
-          />
+          {isReferralsPipeline ? (
+            <>
+              <ReferralsDataTable
+                rows={referralPipelineRows}
+                isLoading={referralsPipelineQuery.isLoading}
+                isError={referralsPipelineQuery.isError}
+                errorMessage={referralsPipelineQuery.error?.message}
+                direction="inbound"
+                getDetailHref={(id) => leadsPipelineReferralDetailHref(id, currentPage)}
+                heading="Accepted referrals"
+                hint="Opens `/leads/referrals/…` (under Leads, not the Referrals inbox). Use back there to return to this list."
+                emptyMessage="No accepted referrals in your pipeline yet."
+              />
+              <LeadsListPagination
+                leadsQuery={referralsPipelineQuery}
+                leadsPagination={referralsPipelinePagination}
+                onPrev={goPrevPage}
+                onNext={goNextPage}
+                resourceLabel="referrals"
+              />
+            </>
+          ) : (
+            <>
+              <LeadsListTable
+                leadsQuery={leadsQuery}
+                filteredConversations={filteredConversations}
+                selectedLeadId={selectedLeadId}
+                toLeadWorkspace={toLeadWorkspace}
+                leadsPageSize={LEADS_PAGE_SIZE}
+                showPropertyMatchesColumn={showPropertyMatchesColumn}
+                showAgentLeadColumns={showAgentLeadColumns}
+              />
 
-          <LeadsListPagination
-            leadsQuery={leadsQuery}
-            leadsPagination={leadsPagination}
-            onPrev={goPrevPage}
-            onNext={goNextPage}
-          />
+              <LeadsListPagination
+                leadsQuery={leadsQuery}
+                leadsPagination={leadsPagination}
+                onPrev={goPrevPage}
+                onNext={goNextPage}
+              />
+            </>
+          )}
 
-          {selectedLeadId ? (
+          {selectedLeadId && !isReferralsPipeline ? (
             <LeadsWorkspacePanels
               token={token}
               activeTab={activeTab}
