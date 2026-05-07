@@ -14,6 +14,7 @@ function statusChip(status) {
 export default function LeadsNurtureLogsTab({
   logs,
   loading,
+  rowsPerPage = 10,
   page = 1,
   totalPages = 1,
   total = 0,
@@ -22,16 +23,61 @@ export default function LeadsNurtureLogsTab({
   isFetching = false,
   onPrev,
   onNext,
+  paginationOutside = false,
 }) {
   const [selectedLog, setSelectedLog] = useState(null);
+  const emptyRows = Math.max(0, rowsPerPage - logs.length);
+  const paginationStrip = !loading ? (
+    <div
+      className={`flex-shrink-0 flex items-center justify-between gap-3 border-border/80 bg-background-light/40 px-4 py-3 ${
+        paginationOutside ? "rounded-md border" : "border-t"
+      }`}
+    >
+      <p className="flex items-center gap-2 text-xs text-text-muted">
+        {isFetching && !loading ? (
+          <span
+            className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+            aria-hidden
+          />
+        ) : null}
+        <span>
+          Page <span className="font-semibold text-text-heading">{page}</span> of{" "}
+          <span className="font-semibold text-text-heading">{totalPages}</span>
+          {" · "}
+          <span className="font-semibold text-text-heading">{total}</span> total
+        </span>
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!hasPrev || isFetching}
+          onClick={onPrev}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ChevronLeft size={14} />
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={!hasNext || isFetching}
+          onClick={onNext}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Next
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  ) : null;
 
   return (
-    <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden flex flex-col max-h-[min(82vh,calc(100vh-9rem))]">
-      <div className="flex-shrink-0 px-4 py-3 border-b border-border/80 bg-gradient-to-r from-slate-50/90 to-white">
+    <div className="flex h-full min-h-0 w-full flex-col">
+    <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border/50 bg-white shadow-none">
+      <div className="flex-shrink-0 border-b border-border px-3 py-2">
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h2 className="text-sm font-semibold text-text-heading tracking-tight">Nurture logs</h2>
-            <p className="text-xs text-text-muted mt-0.5 max-w-xl leading-relaxed">
+            <h2 className="text-sm font-semibold leading-tight text-text-heading">Nurture logs</h2>
+            <p className="mt-0.5 text-[10px] leading-snug text-text-muted">
               All nurture email activity for your workspace.
             </p>
           </div>
@@ -39,9 +85,9 @@ export default function LeadsNurtureLogsTab({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 bg-slate-50/40">
+      <div className="flex-1 min-h-0 overflow-auto overscroll-contain bg-slate-50/40">
         {loading ? (
-          <div className="py-2">
+          <div className="p-3">
             <NurtureLogsListSkeleton rows={6} />
             <p className="mt-4 flex items-center justify-center gap-2 text-xs font-medium text-primary">
               <span
@@ -52,96 +98,86 @@ export default function LeadsNurtureLogsTab({
             </p>
           </div>
         ) : !logs.length ? (
-          <p className="text-sm text-text-muted text-center py-8">No nurture emails logged yet.</p>
-        ) : (
-          <div className="space-y-2">
-            {logs.map((log) => (
-              <div
-                key={log.id || `${log.sent_at || log.created_at}-${log.subject || "no-subject"}`}
-                role="button"
-                tabIndex={0}
-                onClick={() => setSelectedLog(log)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    setSelectedLog(log);
-                  }
-                }}
-                className="rounded-lg border border-border/70 bg-white px-3 py-2.5 text-sm shadow-sm cursor-pointer hover:border-primary/40 hover:bg-primary/[0.02] transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="font-medium text-text-heading line-clamp-2">{log.subject || "—"}</p>
-                    <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-text-muted">
-                      <span className="inline-flex items-center gap-0.5 min-w-0">
-                        <Mail size={11} className="shrink-0 opacity-70" />
-                        <span className="truncate max-w-[320px]">{log.to_email || "—"}</span>
-                      </span>
-                      {log.sent_at || log.created_at ? (
-                        <span>
-                          ·{" "}
-                          {new Date(log.sent_at || log.created_at).toLocaleString(undefined, {
-                            dateStyle: "short",
-                            timeStyle: "short",
-                          })}
-                        </span>
-                      ) : null}
-                      {log.lead_match_id || log.lead_profile_id ? (
-                        <span>· Lead {String(log.lead_match_id || log.lead_profile_id).slice(0, 8)}</span>
-                      ) : null}
-                    </div>
-                  </div>
-                  <span
-                    className={`shrink-0 text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border ${statusChip(
-                      log.status
-                    )}`}
-                  >
-                    {log.status || "—"}
-                  </span>
-                </div>
-              </div>
-            ))}
+          <div className="p-3">
+            <p className="text-sm text-text-muted text-center py-8">No nurture emails logged yet.</p>
           </div>
+        ) : (
+          <table className="w-full table-auto border-collapse text-left text-[11px] leading-tight">
+            <thead className="border-b border-border bg-primary/[0.04]">
+              <tr className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+                <th className="px-3 py-2 align-middle">Subject</th>
+                <th className="px-3 py-2 align-middle">Recipient</th>
+                <th className="px-3 py-2 align-middle">Sent</th>
+                <th className="px-3 py-2 align-middle">Lead</th>
+                <th className="px-3 py-2 text-right align-middle">Status</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white">
+              {logs.map((log) => (
+                <tr
+                  key={log.id || `${log.sent_at || log.created_at}-${log.subject || "no-subject"}`}
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setSelectedLog(log)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      setSelectedLog(log);
+                    }
+                  }}
+                  className="h-11 cursor-pointer border-b border-border/70 text-[13px] text-text-body transition-colors hover:bg-primary/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20"
+                >
+                  <td className="px-3 py-2.5 text-text-heading">
+                    <p className="truncate font-medium">{log.subject || "—"}</p>
+                  </td>
+                  <td className="px-3 py-2.5 text-text-muted">
+                    <span className="inline-flex max-w-full items-center gap-1.5">
+                      <Mail size={12} className="shrink-0 opacity-70" />
+                      <span className="truncate">{log.to_email || "—"}</span>
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-text-muted">
+                    {log.sent_at || log.created_at
+                      ? new Date(log.sent_at || log.created_at).toLocaleString(undefined, {
+                          dateStyle: "short",
+                          timeStyle: "short",
+                        })
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-text-muted">
+                    {(log.lead_match_id || log.lead_profile_id)
+                      ? `Lead ${String(log.lead_match_id || log.lead_profile_id).slice(0, 8)}`
+                      : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">
+                    <span
+                      className={`inline-flex text-[10px] font-semibold uppercase px-1.5 py-0.5 rounded border ${statusChip(
+                        log.status
+                      )}`}
+                    >
+                      {log.status || "—"}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {Array.from({ length: emptyRows }).map((_, index) => (
+                <tr
+                  key={`empty-row-${index}`}
+                  className="h-11 border-b border-border/70 text-[13px]"
+                  aria-hidden="true"
+                >
+                  <td className="h-11 px-3 py-2.5"><span className="invisible">—</span></td>
+                  <td className="h-11 px-3 py-2.5"><span className="invisible">—</span></td>
+                  <td className="h-11 px-3 py-2.5"><span className="invisible">—</span></td>
+                  <td className="h-11 px-3 py-2.5"><span className="invisible">—</span></td>
+                  <td className="h-11 px-3 py-2.5 text-right"><span className="invisible">—</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         )}
       </div>
-      {!loading ? (
-        <div className="flex-shrink-0 border-t border-border/80 bg-background-light/40 px-4 py-3 flex items-center justify-between">
-          <p className="flex items-center gap-2 text-xs text-text-muted">
-            {isFetching && !loading ? (
-              <span
-                className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
-                aria-hidden
-              />
-            ) : null}
-            <span>
-            Page <span className="font-semibold text-text-heading">{page}</span> of{" "}
-            <span className="font-semibold text-text-heading">{totalPages}</span>
-            {" · "}
-            <span className="font-semibold text-text-heading">{total}</span> total
-            </span>
-          </p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              disabled={!hasPrev || isFetching}
-              onClick={onPrev}
-              className="inline-flex items-center gap-1 rounded-md border border-primary bg-primary px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              <ChevronLeft size={14} />
-              Previous
-            </button>
-            <button
-              type="button"
-              disabled={!hasNext || isFetching}
-              onClick={onNext}
-              className="inline-flex items-center gap-1 rounded-md border border-primary bg-primary px-2.5 py-1.5 text-xs font-semibold text-white shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Next
-              <ChevronRight size={14} />
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {!paginationOutside ? paginationStrip : null}
 
       {selectedLog ? (
         <div className="fixed inset-0 z-[120] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -197,6 +233,8 @@ export default function LeadsNurtureLogsTab({
           </div>
         </div>
       ) : null}
+    </div>
+    {paginationOutside ? <div className="mt-3 flex-shrink-0">{paginationStrip}</div> : null}
     </div>
   );
 }

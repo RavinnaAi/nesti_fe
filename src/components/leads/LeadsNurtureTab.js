@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2, X } from "lucide-react";
 
@@ -26,6 +26,7 @@ export default function LeadsNurtureTab({
   nurtureForm,
   setNurtureForm,
   nurtureMutation,
+  nurturePreviewMutation,
   nurtureDraftMutation,
   nurtureRefineMutation,
   selectedLeadId,
@@ -44,6 +45,11 @@ export default function LeadsNurtureTab({
 }) {
   const [panelTab, setPanelTab] = useState("compose");
   const [selectedLog, setSelectedLog] = useState(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState("");
+  const [previewSubject, setPreviewSubject] = useState("");
+  const [lastPreviewKey, setLastPreviewKey] = useState("");
+  const [draftReady, setDraftReady] = useState(false);
   const nurtureEnabled =
     typeof nurtureEnabledProp === "boolean"
       ? nurtureEnabledProp
@@ -61,6 +67,43 @@ export default function LeadsNurtureTab({
     nurtureForm.subject?.trim() &&
     nurtureForm.body?.trim() &&
     !nurtureMutation.isPending;
+  const canPreview = canAi && nurtureForm.body?.trim();
+  const hasAiDraft = draftReady;
+  const previewRequestKey = JSON.stringify({
+    lead: selectedLeadId || leadProfileId || "",
+    subject: String(nurtureForm.subject || "").trim(),
+    body: String(nurtureForm.body || "").trim(),
+    includeCards: Boolean(nurtureForm.include_property_cards),
+  });
+
+  useEffect(() => {
+    setDraftReady(false);
+    setLastPreviewKey("");
+  }, [selectedLeadId]);
+
+  useEffect(() => {
+    if (nurtureDraftMutation?.data?.draft || nurtureRefineMutation?.data?.draft) {
+      setDraftReady(true);
+    }
+  }, [nurtureDraftMutation?.data, nurtureRefineMutation?.data]);
+
+  useEffect(() => {
+    const p = nurturePreviewMutation?.data?.preview;
+    if (!p?.html) return;
+    setPreviewHtml(String(p.html));
+    setPreviewSubject(String(p.subject || nurtureForm.subject || "").trim());
+    setLastPreviewKey(previewRequestKey);
+    setPreviewOpen(true);
+  }, [nurturePreviewMutation?.data, nurtureForm.subject, previewRequestKey]);
+
+  const handlePreviewClick = () => {
+    if (!canPreview) return;
+    if (previewHtml && lastPreviewKey && lastPreviewKey === previewRequestKey) {
+      setPreviewOpen(true);
+      return;
+    }
+    nurturePreviewMutation?.mutate?.();
+  };
 
   return (
     <div className="rounded-xl border border-border bg-white shadow-sm overflow-hidden flex flex-col max-h-[min(82vh,calc(100vh-9rem))]">
@@ -76,29 +119,31 @@ export default function LeadsNurtureTab({
                 "Draft from lead context, refine, then send. Uses your workspace email configuration."}
             </p>
           </div>
-          <div className="grid grid-cols-2 rounded-lg border border-border bg-white p-1 w-full sm:w-[220px]">
-            <button
-              type="button"
-              onClick={() => setPanelTab("compose")}
-              className={`h-8 rounded-md text-xs font-semibold transition-colors ${
-                panelTab === "compose"
-                  ? "bg-primary text-white"
-                  : "text-text-muted hover:bg-slate-100"
-              }`}
-            >
-              Compose
-            </button>
-            <button
-              type="button"
-              onClick={() => setPanelTab("logs")}
-              className={`h-8 rounded-md text-xs font-semibold transition-colors ${
-                panelTab === "logs"
-                  ? "bg-primary text-white"
-                  : "text-text-muted hover:bg-slate-100"
-              }`}
-            >
-              Logs
-            </button>
+          <div className="w-full sm:w-[220px]">
+            <div className="grid grid-cols-2 rounded-lg border border-border bg-white p-1">
+              <button
+                type="button"
+                onClick={() => setPanelTab("compose")}
+                className={`h-8 rounded-md text-xs font-semibold transition-colors ${
+                  panelTab === "compose"
+                    ? "bg-primary text-white"
+                    : "text-text-muted hover:bg-slate-100"
+                }`}
+              >
+                Compose
+              </button>
+              <button
+                type="button"
+                onClick={() => setPanelTab("logs")}
+                className={`h-8 rounded-md text-xs font-semibold transition-colors ${
+                  panelTab === "logs"
+                    ? "bg-primary text-white"
+                    : "text-text-muted hover:bg-slate-100"
+                }`}
+              >
+                Logs
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -187,7 +232,7 @@ export default function LeadsNurtureTab({
               ) : (
                 <Send size={18} />
               )}
-              {nurtureMutation.isPending ? "Sending…" : "Send nurture email"}
+              {nurtureMutation.isPending ? "Sending..." : "Send nurture email"}
             </button>
           </div>
         </div>
@@ -274,7 +319,7 @@ export default function LeadsNurtureTab({
                       refine_instruction: e.target.value,
                     }))
                   }
-                  placeholder="e.g. Shorten, stronger CTA, more formal…"
+                  placeholder="e.g. Shorten, stronger CTA, more formal..."
                   disabled={!canAi}
                   className="mt-2 w-full rounded-md border border-border bg-white px-2.5 py-2 text-xs disabled:opacity-50"
                 />
@@ -317,10 +362,25 @@ export default function LeadsNurtureTab({
                 </span>
               </span>
             </label>
+            {hasAiDraft ? (
+              <button
+                type="button"
+                onClick={handlePreviewClick}
+                disabled={!canPreview || nurturePreviewMutation?.isPending}
+                className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-white py-2 text-sm font-semibold text-text-heading shadow-sm hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {nurturePreviewMutation?.isPending ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Mail size={16} />
+                )}
+                {nurturePreviewMutation?.isPending ? "Building preview..." : "Preview final email"}
+              </button>
+            ) : null}
 
             {!actionConversationId && selectedLeadId && !leadProfileId ? (
               <p className="text-[11px] text-text-muted leading-snug">
-                No conversation id on this lead — email still sends; logging may
+                No conversation id on this lead - email still sends; logging may
                 omit thread linkage.
               </p>
             ) : null}
@@ -363,7 +423,7 @@ export default function LeadsNurtureTab({
                     <div className="inline-flex items-center gap-2 min-w-0">
                       <History size={13} className="text-text-muted shrink-0" />
                       <span className="font-medium text-text-heading line-clamp-2">
-                        {log.subject || "—"}
+                        {log.subject || "-"}
                       </span>
                     </div>
                     <span
@@ -371,17 +431,17 @@ export default function LeadsNurtureTab({
                         log.status
                       )}`}
                     >
-                      {log.status || "—"}
+                      {log.status || "-"}
                     </span>
                   </div>
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-text-muted">
                     <span className="inline-flex items-center gap-0.5 min-w-0">
                       <Mail size={11} className="shrink-0 opacity-70" />
-                      <span className="truncate max-w-[300px]">{log.to_email || "—"}</span>
+                      <span className="truncate max-w-[300px]">{log.to_email || "-"}</span>
                     </span>
                     {log.sent_at || log.created_at ? (
                       <span>
-                        ·{" "}
+                        {" - "}
                         {new Date(log.sent_at || log.created_at).toLocaleString(undefined, {
                           dateStyle: "short",
                           timeStyle: "short",
@@ -426,11 +486,11 @@ export default function LeadsNurtureTab({
             <div className="px-4 py-3 space-y-3 overflow-y-auto">
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">To</p>
-                <p className="text-sm text-text-heading mt-0.5">{selectedLog.to_email || "—"}</p>
+                <p className="text-sm text-text-heading mt-0.5">{selectedLog.to_email || "-"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Subject</p>
-                <p className="text-sm text-text-heading mt-0.5">{selectedLog.subject || "—"}</p>
+                <p className="text-sm text-text-heading mt-0.5">{selectedLog.subject || "-"}</p>
               </div>
               <div>
                 <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Status</p>
@@ -439,7 +499,7 @@ export default function LeadsNurtureTab({
                     selectedLog.status
                   )}`}
                 >
-                  {selectedLog.status || "—"}
+                  {selectedLog.status || "-"}
                 </span>
               </div>
               <div>
@@ -450,6 +510,35 @@ export default function LeadsNurtureTab({
                   </pre>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {previewOpen ? (
+        <div className="fixed inset-0 z-[125] flex items-center justify-center p-4 bg-black/45 backdrop-blur-sm lg:pl-60">
+          <div className="w-full max-w-3xl rounded-xl border border-border bg-white shadow-2xl max-h-[78vh] overflow-hidden flex flex-col">
+            <div className="flex items-start justify-between gap-3 px-4 py-2.5 border-b border-border/80">
+              <div className="min-w-0">
+                <h3 className="text-sm font-semibold text-text-heading">Final email preview</h3>
+                <p className="text-[11px] text-text-muted mt-0.5 truncate">
+                  {previewSubject || "No subject"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewOpen(false)}
+                className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-border text-text-muted hover:text-text-heading hover:bg-slate-50"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="flex-1 bg-slate-100 flex items-start justify-center p-3">
+              <iframe
+                title="Nurture email preview"
+                srcDoc={previewHtml}
+                className="h-[66vh] w-full max-w-[720px] border border-border/70 rounded-lg bg-white"
+              />
             </div>
           </div>
         </div>

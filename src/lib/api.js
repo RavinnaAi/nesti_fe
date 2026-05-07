@@ -97,6 +97,7 @@ export const API_ENDPOINTS = {
     conversationMessages: withBaseUrl((id) => `/api/chat/conversations/${id}/messages`),
     nurtureDraft: withBaseUrl("/api/chat/nurture/draft"),
     nurtureRefine: withBaseUrl("/api/chat/nurture/refine"),
+    nurturePreview: withBaseUrl("/api/chat/nurture/preview"),
     nurtureSend: withBaseUrl("/api/chat/nurture/send"),
     nurtureLogs: withBaseUrl("/api/chat/nurture/logs"),
     calculators: {

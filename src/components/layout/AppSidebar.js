@@ -13,7 +13,6 @@ import {
   Code2,
   Settings,
   CreditCard,
-  Lock,
   Building2,
   User,
   Target,
@@ -57,7 +56,6 @@ const SETTINGS_ITEMS = [
   { id: "personal", label: "Personal Information", tab: "personal", icon: User },
   { id: "business", label: "Business Information", tab: "business", icon: Building2 },
   { id: "icp", label: "Ideal Client Profile", tab: "icp", icon: Target },
-  { id: "password", label: "Change Password", tab: "password", icon: Lock },
   { id: "subscription", label: "Subscription", tab: "subscription", icon: CreditCard },
   { id: "chatbot", label: "Chatbot", tab: "chatbot", icon: Code2 },
 ];

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { DollarSign, Scale, Users } from "lucide-react";
@@ -13,13 +13,6 @@ const PROFESSIONAL_ROLE_OPTIONS = [
   { value: "agent", label: "Agents", icon: Users },
   { value: "lawyer", label: "Lawyers", icon: Scale },
   { value: "mortgage_broker", label: "Mortgage Brokers", icon: DollarSign },
-];
-
-const REFERRAL_STATUS_OPTIONS = [
-  { value: "pending", label: "Pending" },
-  { value: "accepted", label: "Accepted" },
-  { value: "rejected", label: "Rejected" },
-  { value: "completed", label: "Completed" },
 ];
 
 function displayProfessionalName(row) {
@@ -63,19 +56,11 @@ export default function LeadsActionsTab({
   conversationReferrals,
   activeReferralId,
   setActiveReferralId,
-  referralUpdate,
-  setReferralUpdate,
-  updateReferralMutation,
-  mortgageForm,
-  setMortgageForm,
-  mortgageMutation,
-  mortgageRuns,
-  closingForm,
-  setClosingForm,
-  closingMutation,
-  closingRuns,
 }) {
+  const [referralsPage, setReferralsPage] = useState(1);
+  const [openReferralDetails, setOpenReferralDetails] = useState(null);
   const role = referralForm?.professional_role ?? "";
+  const referralsRowsPerPage = 6;
 
   const professionalsQuery = useQuery({
     queryKey: ["referral-professionals", token, role],
@@ -100,23 +85,45 @@ export default function LeadsActionsTab({
     [professionals, selectedProfessionalId]
   );
 
-  const hasActiveOutboundReferral = useMemo(
+  const hasActiveReferralForSelectedProfessional = useMemo(
     () =>
       conversationReferrals.some((r) => {
+        const targetId = String(r?.target_user_id || "").trim();
         const s = String(r?.status || "").trim().toLowerCase();
+        if (!targetId || targetId !== selectedProfessionalId) return false;
         return s === "pending" || s === "accepted";
       }),
-    [conversationReferrals]
+    [conversationReferrals, selectedProfessionalId]
   );
 
   const canSubmitReferral =
     Boolean(selectedLeadId && actionConversationId && String(referralForm?.target_user_id || "").trim()) &&
-    !hasActiveOutboundReferral &&
+    !hasActiveReferralForSelectedProfessional &&
     !createReferralMutation.isPending;
+  const sortedReferrals = useMemo(() => {
+    return [...conversationReferrals].sort((a, b) => {
+      const aTs = new Date(a?.updated_at || a?.created_at || 0).getTime();
+      const bTs = new Date(b?.updated_at || b?.created_at || 0).getTime();
+      return bTs - aTs;
+    });
+  }, [conversationReferrals]);
+  const referralsTotalPages = Math.max(1, Math.ceil(sortedReferrals.length / referralsRowsPerPage));
+  const safeReferralsPage = Math.min(referralsPage, referralsTotalPages);
+  const paginatedReferrals = useMemo(() => {
+    const start = (safeReferralsPage - 1) * referralsRowsPerPage;
+    return sortedReferrals.slice(start, start + referralsRowsPerPage);
+  }, [safeReferralsPage, sortedReferrals]);
+  const referralsEmptyRowCount = Math.max(0, referralsRowsPerPage - paginatedReferrals.length);
+  const hasPrevReferralsPage = safeReferralsPage > 1;
+  const hasNextReferralsPage = safeReferralsPage < referralsTotalPages;
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <LeadActionSection title="Referrals" subtitle="Connect this lead to another professional.">
+    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+      <LeadActionSection
+        title="Referrals"
+        subtitle="Connect this lead to another professional."
+        className="lg:h-[26rem]"
+      >
         <div className="space-y-3">
           <SelectDropdown
             placeholder="Professional type"
@@ -247,14 +254,14 @@ export default function LeadsActionsTab({
             value={referralForm.notes || ""}
             onChange={(event) => setReferralForm((prev) => ({ ...prev, notes: event.target.value }))}
             placeholder="Notes (optional)"
-            rows={2}
-            className="w-full resize-y rounded-md border border-border bg-white px-2 py-1 text-[11px] placeholder:text-text-muted"
+            rows={6}
+            className="w-full min-w-0 rounded-md border border-border bg-white px-2 py-1 text-[11px] placeholder:text-text-muted lg:min-h-[10rem]"
           />
 
-          {hasActiveOutboundReferral ? (
+          {selectedProfessionalId && hasActiveReferralForSelectedProfessional ? (
             <p className="text-[11px] leading-snug text-amber-800">
-              This lead already has an open referral (pending or accepted). Update its status below or wait until it is
-              rejected or completed before sending another.
+              This lead is already referred to this professional (pending or accepted). You can still
+              refer this lead to a different professional.
             </p>
           ) : null}
 
@@ -262,137 +269,196 @@ export default function LeadsActionsTab({
             type="button"
             onClick={() => createReferralMutation.mutate()}
             disabled={!canSubmitReferral}
-            className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
+            className="h-9 w-full rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
           >
             {createReferralMutation.isPending ? "Saving..." : "Send referral"}
           </button>
         </div>
 
-        <div className="mt-4 space-y-2 text-xs">
-          {conversationReferrals.length === 0 ? (
-            <div className="text-text-muted">No referrals yet.</div>
-          ) : (
-            conversationReferrals.map((referral) => (
-              <button
-                key={referral?.id}
-                type="button"
-                onClick={() => setActiveReferralId(String(referral?.id))}
-                className={`w-full text-left rounded-md border px-3 py-2 ${
-                  String(referral?.id) === String(activeReferralId)
-                    ? "border-primary bg-primary/5"
-                    : "border-border"
-                }`}
+      </LeadActionSection>
+
+      <LeadActionSection
+        title="Previous referrals"
+        subtitle="History of referrals for this lead."
+        className="lg:flex lg:h-[26rem] lg:flex-col"
+      >
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-border">
+          <div className="h-full overflow-auto">
+            <table className="w-full table-auto border-collapse text-left text-[11px]">
+              <thead className="sticky top-0 bg-primary/[0.04] text-[10px] uppercase tracking-wide text-text-muted">
+                <tr>
+                  <th className="px-2 py-2 font-semibold">Type</th>
+                  <th className="px-2 py-2 font-semibold">Status</th>
+                  <th className="px-2 py-2 font-semibold">Referred to</th>
+                  <th className="px-2 py-2 font-semibold">Updated</th>
+                </tr>
+              </thead>
+              <tbody>
+                {sortedReferrals.length === 0 ? (
+                  <tr>
+                    <td className="px-2 py-3 text-text-muted" colSpan={4}>
+                      No referrals yet for this lead.
+                    </td>
+                  </tr>
+                ) : (
+                  paginatedReferrals.map((referral) => {
+                    const id = String(referral?.id || "");
+                    const selected = id && id === String(activeReferralId || "");
+                    const referredTo = referral?.target_professional || null;
+                    const referredToName = String(
+                      referredTo?.full_name ||
+                        [referredTo?.first_name, referredTo?.last_name].filter(Boolean).join(" ")
+                    ).trim() || "—";
+                    const referredToAvatar = String(referredTo?.profile_image || "").trim();
+                    const referredToInitials =
+                      referredToName === "—"
+                        ? "—"
+                        : referredToName
+                            .split(/\s+/)
+                            .filter(Boolean)
+                            .slice(0, 2)
+                            .map((part) => part[0]?.toUpperCase() || "")
+                            .join("");
+                    const updatedAtRaw = referral?.updated_at || referral?.created_at;
+                    const updatedAt = updatedAtRaw
+                      ? new Date(updatedAtRaw).toLocaleString()
+                      : "—";
+                    return (
+                      <tr
+                        key={id || JSON.stringify(referral)}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => {
+                          setActiveReferralId(id);
+                          setOpenReferralDetails(referral);
+                        }}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            setActiveReferralId(id);
+                            setOpenReferralDetails(referral);
+                          }
+                        }}
+                        className={`cursor-pointer border-t border-border/70 ${
+                          selected ? "bg-primary/10" : "hover:bg-primary/[0.04]"
+                        }`}
+                      >
+                        <td className="px-2 py-2 font-medium text-text-heading">
+                          {formatReferralVerticalLabel(referral?.target_vertical)}
+                        </td>
+                        <td className="px-2 py-2 text-text-body">{String(referral?.status || "—")}</td>
+                        <td className="px-2 py-2 text-text-body">
+                          <div className="flex items-center gap-2">
+                            {referredToAvatar ? (
+                              // eslint-disable-next-line @next/next/no-img-element -- remote CDN avatar URL
+                              <img
+                                src={referredToAvatar}
+                                alt=""
+                                className="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-border/70"
+                              />
+                            ) : (
+                              <span className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/[0.10] text-[9px] font-bold text-primary-dark ring-1 ring-primary/15">
+                                {referredToInitials}
+                              </span>
+                            )}
+                            <span className="truncate">{referredToName}</span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-2 text-text-muted">{updatedAt}</td>
+                      </tr>
+                    );
+                  })
+                )}
+                {sortedReferrals.length > 0
+                  ? Array.from({ length: referralsEmptyRowCount }).map((_, idx) => (
+                      <tr key={`referrals-empty-row-${idx}`} className="border-t border-border/70">
+                        <td className="px-2 py-2.5">
+                          <span className="invisible">—</span>
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <span className="invisible">—</span>
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <span className="invisible">—</span>
+                        </td>
+                        <td className="px-2 py-2.5">
+                          <span className="invisible">—</span>
+                        </td>
+                      </tr>
+                    ))
+                  : null}
+              </tbody>
+            </table>
+          </div>
+
+          {openReferralDetails ? (
+            <div className="absolute inset-0 z-10 flex items-start justify-center p-3 sm:p-4">
+              <div
+                className="w-full max-w-md rounded-xl border border-border bg-white p-4 shadow-xl"
+                role="dialog"
+                aria-modal="false"
+                aria-label="Referral details"
               >
-                <div className="font-semibold text-text-heading">
-                  {formatReferralVerticalLabel(referral?.target_vertical)}
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-text-heading">Referral details</h3>
+                  <button
+                    type="button"
+                    onClick={() => setOpenReferralDetails(null)}
+                    className="rounded-md border border-border px-2 py-1 text-xs font-semibold text-text-muted hover:text-text-heading"
+                  >
+                    Close
+                  </button>
                 </div>
-                <div className="text-text-muted">Status: {referral?.status || "—"}</div>
-              </button>
-            ))
-          )}
+
+                <div className="space-y-2 text-xs">
+                  <div className="rounded-md border border-border/70 bg-background-light/40 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wide text-text-muted">Status</div>
+                    <div className="mt-0.5 font-semibold text-text-heading capitalize">
+                      {String(openReferralDetails?.status || "—")}
+                    </div>
+                  </div>
+
+                  <div className="rounded-md border border-border/70 bg-background-light/40 px-3 py-2">
+                    <div className="text-[10px] uppercase tracking-wide text-text-muted">Notes</div>
+                    <div className="mt-0.5 whitespace-pre-wrap text-text-body">
+                      {String(openReferralDetails?.notes || "").trim() || "No notes added."}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
-        {activeReferralId ? (
-          <div className="mt-4 space-y-2 border-t border-border/70 pt-4">
-            <SelectDropdown
-              placeholder="Update status"
-              value={referralUpdate.status || ""}
-              onChange={(value) => setReferralUpdate((prev) => ({ ...prev, status: value }))}
-              options={REFERRAL_STATUS_OPTIONS}
-              size="small"
-            />
-            <textarea
-              value={referralUpdate.notes}
-              onChange={(event) =>
-                setReferralUpdate((prev) => ({ ...prev, notes: event.target.value }))
-              }
-              placeholder="Update notes"
-              rows={2}
-              className="w-full resize-y rounded-md border border-border px-2 py-1.5 text-xs"
-            />
-            <button
-              type="button"
-              onClick={() => updateReferralMutation.mutate()}
-              disabled={updateReferralMutation.isPending}
-              className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-            >
-              {updateReferralMutation.isPending ? "Updating..." : "Update referral"}
-            </button>
+        {sortedReferrals.length > 0 ? (
+          <div className="mt-3 flex items-center justify-between border-t border-border/70 pt-3 text-xs">
+            <p className="text-text-muted">
+              Page <span className="font-semibold text-text-heading">{safeReferralsPage}</span> of{" "}
+              <span className="font-semibold text-text-heading">{referralsTotalPages}</span>
+              {" · "}
+              <span className="font-semibold text-text-heading">{sortedReferrals.length}</span> referrals
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setReferralsPage((p) => Math.max(1, p - 1))}
+                disabled={!hasPrevReferralsPage}
+                className="h-8 rounded-md border border-border px-3 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                onClick={() => setReferralsPage((p) => Math.min(referralsTotalPages, p + 1))}
+                disabled={!hasNextReferralsPage}
+                className="h-8 rounded-md border border-border px-3 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
           </div>
         ) : null}
       </LeadActionSection>
 
-      <LeadActionSection title="Mortgage calculator" subtitle="Log a mortgage estimate.">
-        <div className="grid grid-cols-2 gap-2">
-          <input
-            type="number"
-            value={mortgageForm.price}
-            onChange={(event) => setMortgageForm((prev) => ({ ...prev, price: event.target.value }))}
-            placeholder="Price"
-            className="h-9 rounded-md border border-border px-2 text-xs"
-          />
-          <input
-            type="number"
-            value={mortgageForm.down_payment}
-            onChange={(event) =>
-              setMortgageForm((prev) => ({ ...prev, down_payment: event.target.value }))
-            }
-            placeholder="Down payment"
-            className="h-9 rounded-md border border-border px-2 text-xs"
-          />
-          <input
-            type="number"
-            value={mortgageForm.annual_rate}
-            onChange={(event) =>
-              setMortgageForm((prev) => ({ ...prev, annual_rate: event.target.value }))
-            }
-            placeholder="Annual rate %"
-            className="h-9 rounded-md border border-border px-2 text-xs"
-          />
-          <input
-            type="number"
-            value={mortgageForm.amort_years}
-            onChange={(event) =>
-              setMortgageForm((prev) => ({ ...prev, amort_years: event.target.value }))
-            }
-            placeholder="Amort years"
-            className="h-9 rounded-md border border-border px-2 text-xs"
-          />
-        </div>
-        <button
-          type="button"
-          onClick={() => mortgageMutation.mutate()}
-          disabled={!selectedLeadId || !actionConversationId || mortgageMutation.isPending}
-          className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-        >
-          {mortgageMutation.isPending ? "Running..." : "Run mortgage"}
-        </button>
-        <div className="text-xs text-text-muted">
-          {mortgageRuns.length ? `Runs: ${mortgageRuns.length}` : "No mortgage runs yet."}
-        </div>
-      </LeadActionSection>
-
-      <LeadActionSection title="Closing cost" subtitle="Log a closing cost estimate.">
-        <div className="space-y-2">
-          <input
-            type="number"
-            value={closingForm.price}
-            onChange={(event) => setClosingForm((prev) => ({ ...prev, price: event.target.value }))}
-            placeholder="Price"
-            className="h-9 rounded-md border border-border px-2 text-xs w-full"
-          />
-          <button
-            type="button"
-            onClick={() => closingMutation.mutate()}
-            disabled={!selectedLeadId || !actionConversationId || closingMutation.isPending}
-            className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-          >
-            {closingMutation.isPending ? "Running..." : "Run closing cost"}
-          </button>
-          <div className="text-xs text-text-muted">
-            {closingRuns.length ? `Runs: ${closingRuns.length}` : "No closing runs yet."}
-          </div>
-        </div>
-      </LeadActionSection>
     </div>
   );
 }

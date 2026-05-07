@@ -32,15 +32,15 @@ function VerifyResetOTPContent() {
   const verifying =
     verifyResetMutation.isPending || verifyResetMutation.isLoading;
 
-  // Resolve email from Redux and/or ?email= (avoids false "no email" redirect on client nav / refresh)
+  // Resolve email from Redux and/or ?email= (prefer query when present for deterministic flow).
   useEffect(() => {
     const fromStore = resetEmail?.trim().toLowerCase() || "";
     const fromQuery = emailParam;
-    const resolved = fromStore || fromQuery;
+    const resolved = fromQuery || fromStore;
 
     if (resolved) {
       setEmail(resolved);
-      if (!fromStore && fromQuery) {
+      if (fromQuery && fromStore !== fromQuery) {
         dispatch(setResetEmail(fromQuery));
       }
       return;

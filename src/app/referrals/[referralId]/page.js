@@ -34,7 +34,7 @@ export default function ReferralLeadPage() {
 
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-background-light/30">
-      <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
+      <div className="w-full px-4 py-8 sm:px-6">
         <div className="mb-6 flex flex-wrap items-center gap-3">
           <Link
             href={backHref}
@@ -48,7 +48,9 @@ export default function ReferralLeadPage() {
             <p className="text-sm text-text-muted">
               {fromPipeline
                 ? "Opened from Leads → Pipeline → Referrals. Use the arrow above to return to that list."
-                : "Full workspace for this referral (handoff notes, snapshot, actions)."}
+                : dirParam === "outbound"
+                  ? "Read-only snapshot of a referral you sent. The recipient manages nurture and notes on their side."
+                  : "Full workspace for this referral (handoff notes, snapshot, actions)."}
             </p>
           </div>
         </div>

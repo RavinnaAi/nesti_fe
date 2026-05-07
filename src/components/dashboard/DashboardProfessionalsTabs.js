@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { fetchProfessionals } from "@/lib/professionalsClient";
+import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
 const TABS = [
   { id: "agent", label: "Agents" },
@@ -28,12 +30,23 @@ function initialsFor(row) {
     .join("") || "U";
 }
 
-export default function DashboardProfessionalsTabs({ token, initialRole = "agent", showTabs = true }) {
+export default function DashboardProfessionalsTabs({
+  token,
+  initialRole = "agent",
+  showTabs = true,
+  paginationOutside = false,
+}) {
   const router = useRouter();
   const normalizedInitialRole = TABS.some((t) => t.id === initialRole) ? initialRole : "agent";
   const [activeTab, setActiveTab] = useState(normalizedInitialRole);
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 10;
+  const pageSize = useDynamicTablePageSize({
+    minRows: 10,
+    maxRows: 24,
+    rowHeight: 42,
+    reserveHeight: 260,
+  });
+  const effectivePageSize = Math.max(10, pageSize - 2);
 
   useEffect(() => {
     setActiveTab(normalizedInitialRole);
@@ -43,9 +56,9 @@ export default function DashboardProfessionalsTabs({ token, initialRole = "agent
     setPage(1);
   }, [activeTab]);
   const query = useQuery({
-    queryKey: ["dashboard-professionals", token, activeTab, page, PAGE_SIZE],
+    queryKey: ["dashboard-professionals", token, activeTab, page, effectivePageSize],
     enabled: Boolean(token),
-    queryFn: () => fetchProfessionals({ token, role: activeTab, page, limit: PAGE_SIZE }),
+    queryFn: () => fetchProfessionals({ token, role: activeTab, page, limit: effectivePageSize }),
     staleTime: 60_000,
     placeholderData: (prev) => prev,
   });
@@ -60,9 +73,49 @@ export default function DashboardProfessionalsTabs({ token, initialRole = "agent
   const total = Number(pagination.total || items.length || 0);
   const hasPrev = Boolean(pagination.has_prev_page || currentPage > 1);
   const hasNext = Boolean(pagination.has_next_page || currentPage < totalPages);
+  const tableRows = useMemo(() => {
+    if (items.length >= effectivePageSize) return items;
+    return [...items, ...Array.from({ length: effectivePageSize - items.length }, () => null)];
+  }, [items, effectivePageSize]);
+
+  const paginationStrip = (
+    <div
+      className={`flex flex-wrap items-center justify-between gap-3 border-border/80 bg-background-light/40 px-3 py-2.5 ${
+        paginationOutside ? "rounded-md border" : "mt-2 border-t"
+      }`}
+    >
+      <p className="text-xs text-text-muted">
+        Page <span className="font-semibold text-text-heading">{currentPage}</span> of{" "}
+        <span className="font-semibold text-text-heading">{totalPages}</span>
+        {" · "}
+        <span className="font-semibold text-text-heading">{total}</span> total
+      </p>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          disabled={!hasPrev || query.isFetching}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <ChevronLeft size={14} />
+          Previous
+        </button>
+        <button
+          type="button"
+          disabled={!hasNext || query.isFetching}
+          onClick={() => setPage((p) => p + 1)}
+          className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          Next
+          <ChevronRight size={14} />
+        </button>
+      </div>
+    </div>
+  );
 
   return (
-    <section className="min-w-0 rounded-xl border border-border bg-white p-3 shadow-sm">
+    <>
+      <section className="min-w-0 rounded-xl border border-border bg-white p-3 shadow-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 className="text-sm font-semibold text-text-heading">Professionals</h2>
@@ -125,7 +178,22 @@ export default function DashboardProfessionalsTabs({ token, initialRole = "agent
                 </td>
               </tr>
             ) : (
-              items.map((row) => (
+              tableRows.map((row, rowIndex) => {
+                if (!row) {
+                  return (
+                    <tr key={`professionals-empty-row-${rowIndex}`} className="h-[42px]" aria-hidden>
+                      {Array.from({ length: 8 }).map((_, cellIdx) => (
+                        <td
+                          key={`professionals-empty-cell-${rowIndex}-${cellIdx}`}
+                          className="px-2 py-1.5"
+                        >
+                          <span className="invisible">—</span>
+                        </td>
+                      ))}
+                    </tr>
+                  );
+                }
+                return (
                 <tr
                   key={row.id}
                   role="button"
@@ -178,37 +246,15 @@ export default function DashboardProfessionalsTabs({ token, initialRole = "agent
                   <td className="px-2 py-1.5 font-semibold tabular-nums">{Number(row.total_deals || 0)}</td>
                   <td className="px-2 py-1.5 capitalize">{String(row.professional_type || row.role || "—").replace(/_/g, " ")}</td>
                 </tr>
-              ))
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
-      <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-border/70 pt-2">
-        <p className="text-[11px] text-text-muted">
-          Page <span className="font-semibold text-text-heading">{currentPage}</span> of{" "}
-          <span className="font-semibold text-text-heading">{totalPages}</span>
-          {" · "}
-          <span className="font-semibold text-text-heading">{total}</span> total
-        </p>
-        <div className="flex items-center gap-1">
-          <button
-            type="button"
-            disabled={!hasPrev || query.isFetching}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            className="rounded border border-primary bg-primary px-2 py-1 text-[10px] font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Prev
-          </button>
-          <button
-            type="button"
-            disabled={!hasNext || query.isFetching}
-            onClick={() => setPage((p) => p + 1)}
-            className="rounded border border-primary bg-primary px-2 py-1 text-[10px] font-semibold text-white transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </section>
+      {!paginationOutside ? paginationStrip : null}
+      </section>
+      {paginationOutside ? <div className="mt-3">{paginationStrip}</div> : null}
+    </>
   );
 }

@@ -3,6 +3,7 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { UserRound } from "lucide-react";
+import { ReferralsTableSkeleton } from "@/components/ui/ContentSkeletons";
 import {
   getInboundAcceptedReferralRowStatus,
   inboundReferralPipelineChipClass,
@@ -223,15 +224,41 @@ function ProfessionalCell({ user, fallbackName }) {
   );
 }
 
-function ScoreCell({ summary }) {
-  const hasScore =
-    summary?.lead_score != null &&
-    summary.lead_score !== "" &&
-    !Number.isNaN(Number(summary.lead_score));
-  if (!hasScore) return <span className="text-text-muted">—</span>;
-  return (
-    <span className="text-[11px] font-semibold tabular-nums text-text-heading">{Number(summary.lead_score)}</span>
-  );
+function consultCell(row, direction) {
+  const appt = String(row?.appointment_status ?? "").trim().toLowerCase();
+  const nurture = Boolean(row?.nurture_consultation_booked);
+  const statusRaw =
+    direction === "outbound"
+      ? row?.viewer_match_status ?? row?.target_match_status ?? row?.status
+      : row?.target_match_status ?? row?.viewer_match_status ?? row?.status;
+  const st = String(statusRaw ?? "")
+    .trim()
+    .toLowerCase();
+  const pipeBooked = st === "consult_booked" || st === "showing_booked";
+
+  if (appt === "canceled") {
+    return {
+      label: "Canceled",
+      className: "border-amber-200 bg-amber-50 text-amber-800",
+      title: "Appointment or Calendly event marked as canceled",
+    };
+  }
+  if (appt === "booked" || nurture || pipeBooked) {
+    const bits = [];
+    if (pipeBooked) bits.push("pipeline consult/showing");
+    if (appt === "booked") bits.push("Calendly or resolved booking");
+    if (nurture) bits.push("nurture email meeting");
+    return {
+      label: "Booked",
+      className: "border-violet-200 bg-violet-50 text-violet-800",
+      title: bits.length ? bits.join(" · ") : "Consultation booked",
+    };
+  }
+  return {
+    label: "Not booked",
+    className: "border-slate-200 bg-slate-50 text-slate-600",
+    title: "No booking signal on this referral row yet",
+  };
 }
 
 /**
@@ -249,6 +276,7 @@ export default function ReferralsDataTable({
   hint,
   emptyMessage,
   footer = null,
+  rowsPerPage = 10,
   /** When set, highlights the matching row (e.g. selected `referral` on `/leads`). */
   selectedReferralId = "",
 }) {
@@ -278,9 +306,12 @@ export default function ReferralsDataTable({
 
   const getHref = typeof getDetailHref === "function" ? getDetailHref : () => "";
   const selectedId = String(selectedReferralId || "").trim();
+  const showConsultColumn = dir !== "outbound";
+  const normalizedRowsPerPage = Math.max(1, Number(rowsPerPage) || 10);
+  const emptyRowCount = Math.max(0, normalizedRowsPerPage - rows.length);
 
   return (
-    <section className="w-full max-w-none overflow-hidden rounded-xl border border-border/50 bg-transparent shadow-none">
+    <section className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none">
       <div className="border-b border-border px-3 py-2">
         <h2 className="text-sm font-semibold leading-tight text-text-heading">{heading}</h2>
         {hint ? (
@@ -288,13 +319,15 @@ export default function ReferralsDataTable({
         ) : null}
       </div>
       {isLoading ? (
-        <div className="px-3 py-4 text-xs text-text-muted">Loading referrals…</div>
+        <div className="px-2 py-2 sm:px-3 sm:py-3">
+          <ReferralsTableSkeleton rows={normalizedRowsPerPage} showConsultColumn={showConsultColumn} />
+        </div>
       ) : isError ? (
         <div className="px-3 py-4 text-xs text-red-700">{errorMessage || "Could not load referrals."}</div>
       ) : rows.length === 0 ? (
         <div className="px-3 py-4 text-xs text-text-muted">{emptyMessage}</div>
       ) : (
-        <div className="w-full overflow-x-auto">
+        <div className="w-full flex-1 overflow-x-auto">
           <table className="w-full max-w-full table-auto border-collapse text-left text-[11px] leading-tight">
             <thead className="border-b border-border bg-primary/[0.04]">
               <tr className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
@@ -305,7 +338,6 @@ export default function ReferralsDataTable({
                 >
                   Lead type
                 </th>
-                <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Score</th>
                 {showAgentReferralColumns ? (
                   <>
                     <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Intent</th>
@@ -327,6 +359,9 @@ export default function ReferralsDataTable({
                 >
                   Status
                 </th>
+                {showConsultColumn ? (
+                  <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Consult</th>
+                ) : null}
                 <th className="min-w-[7rem] px-2 py-1.5 text-left align-middle">Referred by</th>
                 <th
                   className="whitespace-nowrap px-2 py-1.5 text-left align-middle"
@@ -345,6 +380,7 @@ export default function ReferralsDataTable({
                 const leadName = leadDisplayName(ref);
                 const href = id ? getHref(id, dir) : "#";
                 const rowSelected = Boolean(selectedId && id && selectedId === id);
+                const consult = consultCell(ref, dir);
 
                 return (
                   <tr
@@ -381,9 +417,6 @@ export default function ReferralsDataTable({
                     <td className="px-2 py-1.5 align-middle whitespace-nowrap">
                       <span className="font-medium text-text-heading">{leadTypeLabel}</span>
                     </td>
-                    <td className="px-2 py-1.5 align-middle whitespace-nowrap">
-                      <ScoreCell summary={summary} />
-                    </td>
                     {showAgentReferralColumns ? (
                       <>
                         <td className="px-2 py-1.5 align-middle">{intentCell(summary)}</td>
@@ -397,6 +430,16 @@ export default function ReferralsDataTable({
                     <td className="px-2 py-1.5 align-middle">
                       <ReferralListStatusCell row={ref} direction={dir} />
                     </td>
+                    {showConsultColumn ? (
+                      <td className="px-2 py-1.5 align-middle">
+                        <span
+                          className={`inline-block rounded border px-1.5 py-0.5 text-[10px] font-semibold leading-snug ${consult.className}`}
+                          title={consult.title}
+                        >
+                          {consult.label}
+                        </span>
+                      </td>
+                    ) : null}
                     <td className="px-2 py-1.5 align-middle">
                       <ProfessionalCell user={referrer} fallbackName="—" />
                     </td>
@@ -408,6 +451,28 @@ export default function ReferralsDataTable({
                   </tr>
                 );
               })}
+              {Array.from({ length: emptyRowCount }).map((_, idx) => (
+                <tr
+                  key={`referrals-empty-row-${idx}`}
+                  className="h-11 border-b border-border/60 align-middle"
+                  aria-hidden
+                >
+                  {Array.from({
+                    length:
+                      6 +
+                      (showAgentReferralColumns ? 2 : 0) +
+                      (showProfessionalFocusColumn ? 1 : 0) +
+                      (showConsultColumn ? 1 : 0),
+                  }).map((__, cellIdx) => (
+                    <td
+                      key={`referrals-empty-cell-${idx}-${cellIdx}`}
+                      className="h-11 px-2 py-1.5 align-middle"
+                    >
+                      <span className="invisible">—</span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

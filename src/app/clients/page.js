@@ -10,9 +10,7 @@ import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfile
 import { AppointmentStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
 import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
-
-/** Matches leads list page size — API `limit` for `/api/leads/profiles`. */
-const PAGE_SIZE = 10;
+import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
 const th =
   "whitespace-nowrap px-1.5 py-1.5 text-left text-[10px] font-semibold capitalize tracking-wide text-text-muted sm:text-[11px]";
@@ -131,6 +129,13 @@ export default function ClientsPage() {
   const [hydrated, setHydrated] = useState(false);
   const [page, setPage] = useState(1);
   const [icpTier, setIcpTier] = useState("");
+  const pageSize = useDynamicTablePageSize({
+    minRows: 10,
+    maxRows: 24,
+    rowHeight: 42,
+    reserveHeight: 230,
+  });
+  const effectivePageSize = Math.max(10, pageSize - 2);
 
   useEffect(() => {
     setHydrated(true);
@@ -141,19 +146,23 @@ export default function ClientsPage() {
   }, [icpTier]);
 
   const clientsQuery = useQuery({
-    queryKey: ["clients", token, page, PAGE_SIZE, icpTier],
+    queryKey: ["clients", token, page, effectivePageSize, icpTier],
     enabled: Boolean(token),
     queryFn: () =>
       fetchLeadProfiles({
         token,
         page,
-        limit: PAGE_SIZE,
+        limit: effectivePageSize,
         icp_tier: icpTier || undefined,
       }),
     placeholderData: (prev) => prev,
   });
 
   const profiles = useMemo(() => normalizeProfiles(clientsQuery.data), [clientsQuery.data]);
+  const tableRows = useMemo(() => {
+    if (profiles.length >= effectivePageSize) return profiles;
+    return [...profiles, ...Array.from({ length: effectivePageSize - profiles.length }, () => null)];
+  }, [profiles, effectivePageSize]);
   const pagination = clientsQuery.data?.pagination || {};
   const currentPage = Number(pagination.page || page || 1);
   const totalPages = Number(pagination.total_pages || 1);
@@ -164,9 +173,9 @@ export default function ClientsPage() {
   if (!hydrated) {
     return (
       <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2.5 pt-5 sm:px-4 sm:pt-6">
-        <div className="mx-auto w-full max-w-7xl">
+        <div className="w-full">
           <div className="overflow-hidden rounded-md border border-border/90 bg-white p-2 shadow-sm sm:p-3">
-            <ClientsTableSkeleton rows={PAGE_SIZE} />
+            <ClientsTableSkeleton rows={effectivePageSize} />
             <p className="mt-3 text-center text-[10px] font-medium text-primary sm:text-[11px]">Loading…</p>
           </div>
         </div>
@@ -177,8 +186,8 @@ export default function ClientsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] pb-3 font-body text-text-body antialiased sm:pb-4">
-      <div className="mx-auto w-full max-w-7xl shrink-0 space-y-1.5 px-2.5 pt-5 sm:px-4 sm:pt-6">
+    <div className="flex h-[calc(100vh-4rem)] flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] pb-3 font-body text-text-body antialiased sm:pb-4">
+      <div className="flex h-full w-full flex-col space-y-1.5 px-2.5 pt-5 sm:px-4 sm:pt-6">
         <div className="flex flex-wrap items-end justify-between gap-1.5">
           <div>
             <h1 className="font-heading inline-flex items-center gap-1 text-base font-bold tracking-tight text-text-heading sm:text-lg">
@@ -196,10 +205,10 @@ export default function ClientsPage() {
           />
         </div>
 
-        <div className="overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">
           {clientsQuery.isLoading ? (
             <div className="p-2 sm:p-3">
-              <ClientsTableSkeleton rows={PAGE_SIZE} />
+              <ClientsTableSkeleton rows={effectivePageSize} />
               <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
                 <span
                   className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
@@ -229,7 +238,18 @@ export default function ClientsPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {profiles.map((profile) => {
+                  {tableRows.map((profile, rowIndex) => {
+                    if (!profile) {
+                      return (
+                        <tr key={`clients-empty-row-${rowIndex}`} className="h-[42px]">
+                          {Array.from({ length: 9 }).map((_, cellIdx) => (
+                            <td key={`clients-empty-cell-${rowIndex}-${cellIdx}`} className={td}>
+                              <span className="invisible">—</span>
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    }
                     const p = profile?.property || {};
                     const q = profile?.qualification || {};
                     const leadRefs = Array.isArray(profile?.lead_refs) ? profile.lead_refs : [];
@@ -325,45 +345,46 @@ export default function ClientsPage() {
             </div>
           )}
 
-          {!clientsQuery.isLoading ? (
-            <div className="flex flex-wrap items-center justify-between gap-1.5 border-t border-border/80 bg-primary/[0.03] px-1.5 py-1">
-              <p className="flex items-center gap-1.5 text-[9px] text-text-muted sm:text-[10px]">
-                {clientsQuery.isFetching && !clientsQuery.isLoading ? (
-                  <span
-                    className="inline-block size-3 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
-                    aria-hidden
-                  />
-                ) : null}
-                <span>
+        </div>
+
+        {!clientsQuery.isLoading ? (
+          <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 rounded-md border border-border/80 bg-background-light/40 px-3 py-2.5">
+            <p className="flex items-center gap-2 text-xs text-text-muted">
+              {clientsQuery.isFetching && !clientsQuery.isLoading ? (
+                <span
+                  className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
+                  aria-hidden
+                />
+              ) : null}
+              <span>
                 Page <span className="font-semibold text-text-heading">{currentPage}</span> of{" "}
                 <span className="font-semibold text-text-heading">{totalPages}</span>
                 {" · "}
                 <span className="font-semibold text-text-heading">{total}</span> total
-                </span>
-              </p>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={!hasPrev || clientsQuery.isFetching}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  className="inline-flex h-6 items-center gap-0.5 rounded border border-primary bg-primary px-1.5 text-[9px] font-semibold capitalize text-white shadow-sm transition duration-150 hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:h-7 sm:px-2 sm:text-[10px]"
-                >
-                  <ChevronLeft size={12} />
-                  Prev
-                </button>
-                <button
-                  type="button"
-                  disabled={!hasNext || clientsQuery.isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                  className="inline-flex h-6 items-center gap-0.5 rounded border border-primary bg-primary px-1.5 text-[9px] font-semibold capitalize text-white shadow-sm transition duration-150 hover:brightness-95 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-40 sm:h-7 sm:px-2 sm:text-[10px]"
-                >
-                  Next
-                  <ChevronRight size={12} />
-                </button>
-              </div>
+              </span>
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={!hasPrev || clientsQuery.isFetching}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <ChevronLeft size={14} />
+                Previous
+              </button>
+              <button
+                type="button"
+                disabled={!hasNext || clientsQuery.isFetching}
+                onClick={() => setPage((p) => p + 1)}
+                className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Next
+                <ChevronRight size={14} />
+              </button>
             </div>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
     </div>
   );

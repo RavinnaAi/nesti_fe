@@ -12,8 +12,7 @@ import ReferralsDataTable, {
   defaultReferralsDetailHref,
   normalizeReferralRows,
 } from "@/components/referrals/ReferralsDataTable";
-
-const REFERRALS_PAGE_SIZE = 10;
+import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
 function referralsListHref(direction, page) {
   const p = new URLSearchParams();
@@ -32,6 +31,13 @@ export default function ReferralsPage() {
 
   const { isAuthenticated } = useAuthGuard();
   const token = useAppSelector((s) => s.auth.token);
+  const rowsPerPage = useDynamicTablePageSize({
+    minRows: 10,
+    maxRows: 24,
+    rowHeight: 44,
+    reserveHeight: 240,
+  });
+  const effectiveRowsPerPage = Math.max(10, rowsPerPage - 2);
 
   const rawPage = Number.parseInt(String(searchParams.get("page") || "1"), 10);
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -46,14 +52,14 @@ export default function ReferralsPage() {
   }, [router, searchParams]);
 
   const referralsQuery = useQuery({
-    queryKey: ["chat-referrals", token, direction, page, REFERRALS_PAGE_SIZE, "all"],
+    queryKey: ["chat-referrals", token, direction, page, effectiveRowsPerPage, "all"],
     enabled: Boolean(token),
     queryFn: () =>
       fetchReferrals({
         token,
         direction,
         page,
-        limit: REFERRALS_PAGE_SIZE,
+        limit: effectiveRowsPerPage,
       }),
     staleTime: 30_000,
     placeholderData: (prev) => prev,
@@ -77,7 +83,7 @@ export default function ReferralsPage() {
   const paginationFooter =
     !referralsQuery.isLoading && total > 0 ? (
       <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border/80 bg-background-light/40 px-3 py-2.5">
-        <p className="flex items-center gap-2 text-[11px] text-text-muted">
+        <p className="flex items-center gap-2 text-xs text-text-muted">
           {referralsQuery.isFetching && !referralsQuery.isLoading ? (
             <span
               className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
@@ -96,7 +102,7 @@ export default function ReferralsPage() {
             href={referralsListHref(direction, Math.max(1, currentPage - 1))}
             scroll={false}
             aria-disabled={!hasPrev || referralsQuery.isFetching}
-            className={`inline-flex items-center gap-1 rounded-md border border-primary bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95 ${
+            className={`h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light inline-flex items-center gap-1 ${
               !hasPrev || referralsQuery.isFetching ? "pointer-events-none opacity-40" : ""
             }`}
           >
@@ -107,7 +113,7 @@ export default function ReferralsPage() {
             href={referralsListHref(direction, currentPage + 1)}
             scroll={false}
             aria-disabled={!hasNext || referralsQuery.isFetching}
-            className={`inline-flex items-center gap-1 rounded-md border border-primary bg-primary px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95 ${
+            className={`h-8 px-3 rounded-md border border-border text-xs font-semibold text-text-heading hover:bg-background-light inline-flex items-center gap-1 ${
               !hasNext || referralsQuery.isFetching ? "pointer-events-none opacity-40" : ""
             }`}
           >
@@ -119,8 +125,8 @@ export default function ReferralsPage() {
     ) : null;
 
   return (
-    <div className="min-h-[calc(100vh-4rem)] bg-background-light/30">
-      <div className="mx-auto w-full max-w-screen-2xl px-4 py-5 sm:px-6">
+    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-background-light/30">
+      <div className="flex h-full w-full flex-col px-4 py-5 sm:px-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <Link
@@ -141,48 +147,27 @@ export default function ReferralsPage() {
               </p>
             </div>
           </div>
-          <div className="inline-flex rounded-lg border border-border bg-white p-1 shadow-sm">
-            <Link
-              href={referralsListHref("inbound", 1)}
-              scroll={false}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                direction === "inbound"
-                  ? "bg-primary/12 text-primary-dark ring-1 ring-primary/15"
-                  : "text-text-muted hover:text-text-heading"
-              }`}
-            >
-              Inbound ({inboundTotal})
-            </Link>
-            <Link
-              href={referralsListHref("outbound", 1)}
-              scroll={false}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold transition ${
-                direction === "outbound"
-                  ? "bg-primary/12 text-primary-dark ring-1 ring-primary/15"
-                  : "text-text-muted hover:text-text-heading"
-              }`}
-            >
-              Outbound ({outboundTotal})
-            </Link>
-          </div>
         </div>
 
-        <ReferralsDataTable
-          rows={rows}
-          isLoading={referralsQuery.isLoading}
-          isError={referralsQuery.isError}
-          errorMessage={referralsQuery.error?.message}
-          direction={direction}
-          getDetailHref={defaultReferralsDetailHref}
-          heading={direction === "inbound" ? "Inbound referrals" : "Outbound referrals"}
-          hint="Click any row to open the referral workspace. Columns follow each row's source lead type (agent vs lawyer vs mortgage broker)."
-          emptyMessage={
-            direction === "inbound"
-              ? "No inbound referrals."
-              : "You have not referred any leads yet."
-          }
-          footer={paginationFooter}
-        />
+        <div className="min-h-0 flex-1">
+          <ReferralsDataTable
+            rows={rows}
+            isLoading={referralsQuery.isLoading}
+            isError={referralsQuery.isError}
+            errorMessage={referralsQuery.error?.message}
+            direction={direction}
+            getDetailHref={defaultReferralsDetailHref}
+            heading={direction === "inbound" ? "Inbound referrals" : "Outbound referrals"}
+            hint="Click any row to open the referral workspace. Columns follow each row's source lead type (agent vs lawyer vs mortgage broker)."
+            emptyMessage={
+              direction === "inbound"
+                ? "No inbound referrals."
+                : "You have not referred any leads yet."
+            }
+            footer={paginationFooter}
+            rowsPerPage={effectiveRowsPerPage}
+          />
+        </div>
       </div>
     </div>
   );

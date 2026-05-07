@@ -23,6 +23,8 @@ export default function LeadsListTable({
   showAgentLeadColumns = true,
 }) {
   const router = useRouter();
+  const visibleRowsTarget = Math.max(1, Number(leadsPageSize) || 10);
+  const emptyRowCount = Math.max(0, visibleRowsTarget - filteredConversations.length);
   const tableMinClass = (() => {
     if (showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[1060px]";
     if (showAgentLeadColumns && !showPropertyMatchesColumn) return "min-w-[980px]";
@@ -31,7 +33,7 @@ export default function LeadsListTable({
   })();
 
   return (
-    <div className="overflow-hidden rounded-xl border border-border/50 bg-transparent shadow-none">
+    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none">
       {leadsQuery.isLoading ? (
         <div className="p-3 sm:p-4">
           <LeadsPageTableSkeleton
@@ -39,14 +41,13 @@ export default function LeadsListTable({
             showPropertyMatchesColumn={showPropertyMatchesColumn}
             showAgentLeadColumns={showAgentLeadColumns}
           />
-          <p className="mt-3 text-xs font-medium text-text-muted">Loading leads…</p>
         </div>
       ) : leadsQuery.isError ? (
         <div className="p-4 text-sm text-red-600">Failed to load leads.</div>
       ) : filteredConversations.length === 0 ? (
         <div className="p-4 text-sm text-text-muted">No leads found.</div>
       ) : (
-        <div className="overflow-x-auto">
+        <div className="w-full flex-1 overflow-x-auto">
           <table className={`w-full table-auto ${tableMinClass}`}>
             <thead className="bg-primary/[0.04] border-b border-border">
               <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
@@ -150,6 +151,24 @@ export default function LeadsListTable({
                   </tr>
                 );
               })}
+              {Array.from({ length: emptyRowCount }).map((_, idx) => (
+                <tr
+                  key={`leads-empty-row-${idx}`}
+                  className="h-11 border-b border-border/70 text-[13px]"
+                  aria-hidden
+                >
+                  {Array.from({
+                    length:
+                      7 +
+                      (showAgentLeadColumns ? 2 : 0) +
+                      (showPropertyMatchesColumn ? 1 : 0),
+                  }).map((__, cellIdx) => (
+                    <td key={`leads-empty-cell-${idx}-${cellIdx}`} className="h-11 px-3 py-2.5">
+                      <span className="invisible">—</span>
+                    </td>
+                  ))}
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

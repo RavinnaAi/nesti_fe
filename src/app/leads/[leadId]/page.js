@@ -16,9 +16,7 @@ import {
   fetchNurtureLogs,
   postNurtureDraft,
   postNurtureRefine,
-  runMortgageCalculator,
-  runClosingCalculator,
-  fetchCalculatorRuns,
+  postNurturePreview,
 } from "@/lib/chatClient";
 import {
   fetchLeadById,
@@ -41,6 +39,35 @@ import {
   normalizeList,
   sanitizeInternalReturnPath,
 } from "@/lib/leadsPageUtils";
+
+function stripListingBulletRows(text) {
+  const raw = String(text || "");
+  if (!raw.trim()) return "";
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  const isListingBullet = (value) => {
+    const s = String(value || "").trim().replace(/^_+/, "").trim();
+    if (!/^[-*]\s+/.test(s)) return false;
+    const lower = s.toLowerCase();
+    return /\$[\d,]/.test(s) || /bed|bath|budget|stretch|area match|property type|match/i.test(lower);
+  };
+  let i = 0;
+  while (i < lines.length) {
+    const line = String(lines[i] || "").trim();
+    if (/^matched options include\s*:/i.test(line)) {
+      i += 1;
+      while (i < lines.length && (!String(lines[i] || "").trim() || isListingBullet(lines[i]))) i += 1;
+      continue;
+    }
+    if (isListingBullet(line)) {
+      i += 1;
+      continue;
+    }
+    out.push(lines[i]);
+    i += 1;
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 
 function LeadWorkspacePageContent() {
   const { isAuthenticated } = useAuthGuard();
@@ -100,13 +127,6 @@ function LeadWorkspacePageContent() {
     tone: "",
     include_property_cards: true,
   });
-  const [mortgageForm, setMortgageForm] = useState({
-    price: "",
-    down_payment: "",
-    annual_rate: "",
-    amort_years: "",
-  });
-  const [closingForm, setClosingForm] = useState({ price: "" });
 
   useEffect(() => {
     setHydrated(true);
@@ -256,19 +276,6 @@ function LeadWorkspacePageContent() {
     });
   }, [leadId, nurtureSuggestedEmail]);
 
-  const mortgageRunsQuery = useQuery({
-    queryKey: ["chat-calculators", token, "mortgage"],
-    enabled: Boolean(token),
-    queryFn: () => fetchCalculatorRuns({ token, type: "mortgage" }),
-  });
-  const closingRunsQuery = useQuery({
-    queryKey: ["chat-calculators", token, "closing"],
-    enabled: Boolean(token),
-    queryFn: () => fetchCalculatorRuns({ token, type: "closing" }),
-  });
-  const mortgageRuns = useMemo(() => normalizeList(mortgageRunsQuery.data), [mortgageRunsQuery.data]);
-  const closingRuns = useMemo(() => normalizeList(closingRunsQuery.data), [closingRunsQuery.data]);
-
   const createReferralMutation = useMutation({
     mutationFn: () =>
       createReferral({
@@ -323,7 +330,7 @@ function LeadWorkspacePageContent() {
         setNurtureForm((prev) => ({
           ...prev,
           subject: d.subject ?? prev.subject,
-          body: d.body_text ?? prev.body,
+          body: stripListingBulletRows(d.body_text ?? prev.body),
         }));
       }
       toast.success("Draft ready. Review and send.");
@@ -348,7 +355,7 @@ function LeadWorkspacePageContent() {
         setNurtureForm((prev) => ({
           ...prev,
           subject: d.subject ?? prev.subject,
-          body: d.body_text ?? prev.body,
+          body: stripListingBulletRows(d.body_text ?? prev.body),
           refine_instruction: "",
         }));
       }
@@ -378,28 +385,19 @@ function LeadWorkspacePageContent() {
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
 
-  const mortgageMutation = useMutation({
+  const nurturePreviewMutation = useMutation({
     mutationFn: () =>
-      runMortgageCalculator({
+      postNurturePreview({
         token,
-        payload: { ...mortgageForm, conversation_id: actionConversationId || undefined },
+        payload: {
+          lead_match_id: leadId,
+          conversation_id: actionConversationId || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
+        },
       }),
-    onSuccess: () => {
-      toast.success("Mortgage calculator run saved");
-      queryClient.invalidateQueries({ queryKey: ["chat-calculators", token, "mortgage"] });
-    },
-  });
-
-  const closingMutation = useMutation({
-    mutationFn: () =>
-      runClosingCalculator({
-        token,
-        payload: { ...closingForm, conversation_id: actionConversationId || undefined },
-      }),
-    onSuccess: () => {
-      toast.success("Closing cost run saved");
-      queryClient.invalidateQueries({ queryKey: ["chat-calculators", token, "closing"] });
-    },
+    onError: (err) => toast.error(err?.message || "Failed to build email preview"),
   });
 
   const cancelCalendlyMutation = useMutation({
@@ -460,7 +458,7 @@ function LeadWorkspacePageContent() {
 
   return (
     <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 space-y-4">
+      <div className="w-full px-5 md:px-6 py-5 md:py-6 space-y-4">
         <button
           type="button"
           onClick={() => router.push(returnHref)}
@@ -511,17 +509,10 @@ function LeadWorkspacePageContent() {
             updateReferralMutation={updateReferralMutation}
             actionConversationId={actionConversationId}
             conversationReferrals={conversationReferrals}
-            mortgageForm={mortgageForm}
-            setMortgageForm={setMortgageForm}
-            mortgageMutation={mortgageMutation}
-            mortgageRuns={mortgageRuns}
-            closingForm={closingForm}
-            setClosingForm={setClosingForm}
-            closingMutation={closingMutation}
-            closingRuns={closingRuns}
             nurtureForm={nurtureForm}
             setNurtureForm={setNurtureForm}
             nurtureMutation={nurtureMutation}
+            nurturePreviewMutation={nurturePreviewMutation}
             nurtureDraftMutation={nurtureDraftMutation}
             nurtureRefineMutation={nurtureRefineMutation}
             nurtureLogs={nurtureLogs}

@@ -6,6 +6,7 @@ import { RefreshCw } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useProfileQuery } from "@/hooks/useAuthApi";
 import { useRecordLeadView } from "@/hooks/useRecordLeadView";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -43,6 +44,7 @@ export default function DashboardPage() {
   const { user, token } = useAppSelector((state) => state.auth);
   const personalInfo = useAppSelector((state) => state.profile.personalInfo);
   const businessInfo = useAppSelector((state) => state.profile.businessInfo);
+  const profileQuery = useProfileQuery();
   const { isAuthenticated, profile } = useAuthGuard();
   const activeUser = profile?.user || profile?.data || user;
 
@@ -114,9 +116,12 @@ export default function DashboardPage() {
   }, [businessInfo?.professionalType, userRole]);
 
   const heroBio = useMemo(() => {
-    const t = businessInfo?.testimonial || businessInfo?.bio;
+    const t =
+      businessInfo?.testimonial ||
+      businessInfo?.bio ||
+      profileQuery.data?.professionalProfile?.bio;
     return typeof t === "string" ? t.trim() : "";
-  }, [businessInfo?.testimonial, businessInfo?.bio]);
+  }, [businessInfo?.testimonial, businessInfo?.bio, profileQuery.data?.professionalProfile?.bio]);
 
   const [isMounted, setIsMounted] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -371,7 +376,7 @@ export default function DashboardPage() {
 
   return (
     <div className="relative z-[1] min-h-screen bg-white">
-      <div className="max-w-6xl mx-auto space-y-8 px-4 pb-10 pt-5 sm:px-6 sm:pt-6">
+      <div className="w-full space-y-8 px-4 pb-10 pt-5 sm:px-6 sm:pt-6">
         {/* Hero — same two-part card as Settings → Personal information (cover strip + white footer row) */}
         <motion.section
           initial={{ opacity: 0, y: 10 }}

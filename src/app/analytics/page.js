@@ -83,7 +83,7 @@ export default function AnalyticsPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="max-w-6xl mx-auto px-6 py-10 space-y-6">
+      <div className="w-full px-6 py-10 space-y-6">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-text-heading">Analytics</h1>

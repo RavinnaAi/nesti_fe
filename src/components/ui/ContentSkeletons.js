@@ -87,6 +87,77 @@ export function LeadsPageTableSkeleton({
   );
 }
 
+export function ReferralsTableSkeleton({ rows = 8, showConsultColumn = true }) {
+  const headers = [
+    "Lead",
+    "Lead type",
+    "Intent",
+    "Property type",
+    "Referral focus",
+    "Lead category",
+    "Status",
+    ...(showConsultColumn ? ["Consult"] : []),
+    "Referred by",
+    "Referrer role",
+  ];
+  return (
+    <div className="overflow-x-auto" aria-hidden>
+      <table className="w-full max-w-full table-auto border-collapse text-left text-[11px] leading-tight">
+        <thead className="border-b border-border bg-primary/[0.04]">
+          <tr className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+            {headers.map((h) => (
+              <th key={h} className="whitespace-nowrap px-2 py-1.5">
+                {h}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody className="text-text-body">
+          {Array.from({ length: rows }).map((_, i) => (
+            <tr key={i} className="border-b border-border/50">
+              <td className="px-2 py-1.5">
+                <div className="flex items-center gap-1.5">
+                  <SkeletonBlock className="h-3 w-3 rounded-full" />
+                  <SkeletonBlock className="h-3.5 w-24 max-w-full" />
+                </div>
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-20" />
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-16" />
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-20" />
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-24" />
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-16" />
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-14" />
+              </td>
+              {showConsultColumn ? (
+                <td className="px-2 py-1.5">
+                  <SkeletonBlock className="h-3.5 w-14" />
+                </td>
+              ) : null}
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-20" />
+              </td>
+              <td className="px-2 py-1.5">
+                <SkeletonBlock className="h-3.5 w-20" />
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 export function LeadDetailPageSkeleton() {
   return (
     <div className="space-y-4" aria-busy="true" aria-label="Loading lead">

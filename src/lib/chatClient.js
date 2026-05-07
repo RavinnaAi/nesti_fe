@@ -333,6 +333,16 @@ export async function sendNurtureEmail({ token, payload }) {
   });
 }
 
+export async function postNurturePreview({ token, payload }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.nurturePreview,
+    method: "POST",
+    data: payload,
+    token: authToken,
+  });
+}
+
 export async function fetchNurtureLogs({ token, leadMatchId, leadProfileId, page, limit }) {
   const authToken = token || getStoredAuthToken();
   const params = new URLSearchParams();

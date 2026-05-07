@@ -20,8 +20,7 @@ import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfile
 import { AppointmentStatusChip } from "@/components/clients/AppointmentStatusChip";
 import { ClientProfileCardSkeleton, ProfileLeadsTableSkeleton } from "@/components/ui/ContentSkeletons";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
-
-const PAGE_SIZE = 10;
+import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
 const normalizeList = (data) => {
   if (!data) return [];
@@ -83,6 +82,12 @@ export default function ClientProfileLeadsPage() {
     include_property_cards: true,
   });
   const [resolvedLeadMatchId, setResolvedLeadMatchId] = useState(null);
+  const pageSize = useDynamicTablePageSize({
+    minRows: 10,
+    maxRows: 24,
+    rowHeight: 42,
+    reserveHeight: 250,
+  });
   /** 'leads' | 'nurture' — nurture opens the email composer in its own tab. */
   const [clientWorkspaceTab, setClientWorkspaceTab] = useState("leads");
 
@@ -97,14 +102,14 @@ export default function ClientProfileLeadsPage() {
   });
 
   const leadsQuery = useQuery({
-    queryKey: ["lead-profile-leads", profileId, page, PAGE_SIZE, token],
+    queryKey: ["lead-profile-leads", profileId, page, pageSize, token],
     enabled: Boolean(token && profileId),
     queryFn: () =>
       fetchLeadsByProfileId({
         token,
         profileId,
         page,
-        limit: PAGE_SIZE,
+        limit: pageSize,
       }),
     placeholderData: (p) => p,
   });
@@ -120,6 +125,10 @@ export default function ClientProfileLeadsPage() {
     const raw = leadsQuery.data?.leads;
     return Array.isArray(raw) ? raw : [];
   }, [leadsQuery.data]);
+  const tableRows = useMemo(() => {
+    if (leads.length >= pageSize) return leads;
+    return [...leads, ...Array.from({ length: pageSize - leads.length }, () => null)];
+  }, [leads, pageSize]);
 
   const pagination = leadsQuery.data?.pagination || {};
   const currentPage = Number(pagination.page || page || 1);
@@ -270,7 +279,7 @@ export default function ClientProfileLeadsPage() {
   if (!hydrated) {
     return (
       <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2 pb-3 pt-4 sm:px-3 sm:pb-4 sm:pt-5">
-        <div className="mx-auto w-full max-w-5xl space-y-3">
+        <div className="w-full space-y-3">
           <ClientProfileCardSkeleton />
           <p className="text-center text-[11px] font-medium text-primary">Loading…</p>
         </div>
@@ -281,7 +290,7 @@ export default function ClientProfileLeadsPage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2 pb-3 pt-4 font-body antialiased sm:px-3 sm:pb-4 sm:pt-5">
-      <div className="mx-auto w-full max-w-5xl shrink-0 space-y-3">
+      <div className="w-full shrink-0 space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <Link
             href="/clients"
@@ -519,7 +528,7 @@ export default function ClientProfileLeadsPage() {
 
               {leadsQuery.isLoading && !leadsQuery.data ? (
                 <div className="px-2 py-4 sm:px-3">
-                  <ProfileLeadsTableSkeleton rows={PAGE_SIZE} />
+                  <ProfileLeadsTableSkeleton rows={pageSize} />
                   <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
                     <span
                       className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
@@ -559,7 +568,21 @@ export default function ClientProfileLeadsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-border/60">
-                      {leads.map((lead) => {
+                      {tableRows.map((lead, rowIndex) => {
+                        if (!lead) {
+                          return (
+                            <tr key={`client-leads-empty-row-${rowIndex}`}>
+                              {Array.from({ length: 11 }).map((_, cellIdx) => (
+                                <td
+                                  key={`client-leads-empty-cell-${rowIndex}-${cellIdx}`}
+                                  className="px-2 py-1.5"
+                                >
+                                  <span className="invisible">—</span>
+                                </td>
+                              ))}
+                            </tr>
+                          );
+                        }
                         const prop = lead.property || {};
                         const qual = lead.qualification || {};
                         const conversionProp = lead.conversion?.property || {};
@@ -645,29 +668,31 @@ export default function ClientProfileLeadsPage() {
               )}
 
               {leads.length > 0 ? (
-                <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/80 bg-primary/[0.03] px-2 py-2">
-                  <p className="text-[10px] text-text-muted">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/80 bg-background-light/40 px-3 py-2.5">
+                  <p className="text-xs text-text-muted">
                     Page <span className="font-semibold text-text-heading">{currentPage}</span> of{" "}
                     <span className="font-semibold text-text-heading">{totalPages}</span>
                     {" · "}
                     <span className="font-semibold text-text-heading">{total}</span> leads
                   </p>
-                  <div className="flex gap-1">
+                  <div className="flex items-center gap-2">
                     <button
                       type="button"
                       disabled={!hasPrev || leadsQuery.isFetching}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
-                      className="rounded border border-primary bg-primary px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-40"
+                      className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
                     >
-                      Prev
+                      <ChevronLeft size={14} />
+                      Previous
                     </button>
                     <button
                       type="button"
                       disabled={!hasNext || leadsQuery.isFetching}
                       onClick={() => setPage((p) => p + 1)}
-                      className="rounded border border-primary bg-primary px-2 py-1 text-[10px] font-semibold text-white disabled:opacity-40"
+                      className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       Next
+                      <ChevronRight size={14} />
                     </button>
                   </div>
                 </div>

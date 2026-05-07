@@ -12,7 +12,7 @@ export const LEAD_WORKSPACE_TABS = [
   { id: "consultation", label: "Consultation" },
   { id: "nurture", label: "Nurture Email" },
   { id: "pipeline", label: "Notes" },
-  { id: "others", label: "Others" },
+  { id: "others", label: "Referrals" },
 ];
 
 export const LEAD_WORKSPACE_TAB_IDS = new Set(LEAD_WORKSPACE_TABS.map((t) => t.id));
@@ -44,7 +44,7 @@ const LAWYER_TAB_LABEL_OVERRIDES = {
   lead_profile: "Client & contact",
   lead_details: "Matter overview",
   nurture: "Nurture email",
-  others: "Tools & referrals",
+  others: "Referrals",
 };
 
 function normalizedRole(role) {

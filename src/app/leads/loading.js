@@ -7,7 +7,6 @@ export default function LeadsLoading() {
       <div className="overflow-hidden rounded-xl border border-border/50 bg-transparent shadow-none">
         <div className="p-3 sm:p-4">
           <LeadsPageTableSkeleton rows={10} />
-          <p className="mt-3 text-xs font-medium text-text-muted">Loading leads…</p>
         </div>
       </div>
     </div>

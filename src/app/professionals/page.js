@@ -20,9 +20,14 @@ export default function ProfessionalsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="min-h-0 flex-1 bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-4 py-5">
-      <div className="mx-auto w-full max-w-6xl">
-        <DashboardProfessionalsTabs token={token} initialRole={role} showTabs={false} />
+    <div className="flex h-[calc(100vh-4rem)] flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-4 py-5">
+      <div className="w-full min-h-0 flex-1">
+        <DashboardProfessionalsTabs
+          token={token}
+          initialRole={role}
+          showTabs={false}
+          paginationOutside
+        />
       </div>
     </div>
   );

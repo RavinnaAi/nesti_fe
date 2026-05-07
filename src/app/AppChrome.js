@@ -32,6 +32,8 @@ export default function AppChrome({ children }) {
   const businessInfo = useAppSelector((state) => state.profile.businessInfo);
 
   const [isMounted, setIsMounted] = useState(false);
+  const [authCheckReady, setAuthCheckReady] = useState(false);
+  const [hasPersistedToken, setHasPersistedToken] = useState(false);
   const [isSidebarMobileOpen, setIsSidebarMobileOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
@@ -40,6 +42,24 @@ export default function AppChrome({ children }) {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted || typeof window === "undefined") return;
+    try {
+      const raw = localStorage.getItem("nesti_auth_state") || sessionStorage.getItem("nesti_auth_state");
+      if (!raw) {
+        setHasPersistedToken(false);
+        setAuthCheckReady(true);
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      setHasPersistedToken(Boolean(parsed?.token));
+      setAuthCheckReady(true);
+    } catch {
+      setHasPersistedToken(false);
+      setAuthCheckReady(true);
+    }
+  }, [isMounted, token]);
 
   useProfileSetupRedirect(isMounted);
 
@@ -74,12 +94,15 @@ export default function AppChrome({ children }) {
 
   const isChatbotEmbed = pathname.startsWith("/chatbot");
   const isCalendlyCallback = pathname.startsWith("/calendly-callback");
+  const isFixedTableListRoute =
+    pathname === "/leads" || pathname === "/referrals" || pathname === "/clients";
   const isPublicAuthPage = useMemo(
     () =>
       pathname === "/" ||
       pathname === "/log-in" ||
       pathname === "/sign-up" ||
       pathname.startsWith("/forgot-password") ||
+      pathname.startsWith("/verify-reset-otp") ||
       pathname.startsWith("/reset-password") ||
       pathname.startsWith("/verify-email") ||
       pathname.startsWith("/publicPage"),
@@ -179,10 +202,11 @@ export default function AppChrome({ children }) {
 
   useEffect(() => {
     if (!isMounted) return;
-    if (token) return;
+    if (!authCheckReady) return;
+    if (token || hasPersistedToken) return;
     if (isPublicAuthPage || isChatbotEmbed || isCalendlyCallback) return;
     router.replace("/");
-  }, [isMounted, token, isPublicAuthPage, isChatbotEmbed, isCalendlyCallback, router]);
+  }, [isMounted, authCheckReady, token, hasPersistedToken, isPublicAuthPage, isChatbotEmbed, isCalendlyCallback, router]);
 
   useEffect(() => {
     if (!userMenuOpen) return;
@@ -202,6 +226,21 @@ export default function AppChrome({ children }) {
     };
   }, [userMenuOpen]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!(token && !isPublicAuthPage && isFixedTableListRoute)) return;
+
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.body.style.overflow = prevBodyOverflow;
+    };
+  }, [token, isPublicAuthPage, isFixedTableListRoute]);
+
   // ── Chatbot embed: no chrome at all ──
   if (isChatbotEmbed) {
     return <>{children}</>;
@@ -212,8 +251,19 @@ export default function AppChrome({ children }) {
     return <>{children}</>;
   }
 
-  // ── Not yet mounted: render public shell (no blocking spinner) ──
+  // ── Not yet mounted: never render public shell on protected routes ──
   if (!isMounted) {
+    if (!isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback) {
+      return (
+        <>
+          <BackgroundElements variant="default" />
+          <main className="relative z-10 flex min-h-screen w-full items-center justify-center">
+            <p className="text-sm text-text-muted">Loading workspace...</p>
+          </main>
+          <CustomToastContainer />
+        </>
+      );
+    }
     return (
       <>
         <BackgroundElements variant="default" />
@@ -222,6 +272,19 @@ export default function AppChrome({ children }) {
           {children}
         </main>
         <Footer />
+        <CustomToastContainer />
+      </>
+    );
+  }
+
+  // ── Mounted but auth-check still resolving on protected routes ──
+  if (!authCheckReady && !isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback) {
+    return (
+      <>
+        <BackgroundElements variant="default" />
+        <main className="relative z-10 flex min-h-screen w-full items-center justify-center">
+          <p className="text-sm text-text-muted">Loading workspace...</p>
+        </main>
         <CustomToastContainer />
       </>
     );
@@ -334,7 +397,13 @@ export default function AppChrome({ children }) {
                 </div>
               </div>
             </header>
-            <main className="relative z-0 flex min-h-0 flex-1 flex-col overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+            <main
+              className={`relative z-0 flex min-h-0 flex-1 flex-col ${
+                isFixedTableListRoute
+                  ? "overflow-hidden"
+                  : "overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              }`}
+            >
               {children}
             </main>
           </div>

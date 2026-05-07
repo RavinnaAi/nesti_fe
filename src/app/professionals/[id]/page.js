@@ -64,8 +64,6 @@ export default function ProfessionalDetailPage() {
   const name = displayName(pro);
   const roleBadgeText = humanizeToken(pro?.professional_type || pro?.role || "").toUpperCase();
   const hasCover = Boolean(pro?.cover_image);
-  const totalLeads = Number(pro?.total_leads || 0);
-  const totalDeals = Number(pro?.total_deals || 0);
 
   const personalInfo = {
     fullName: name,
@@ -107,7 +105,7 @@ export default function ProfessionalDetailPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="mx-auto max-w-3xl space-y-4 px-4 py-6 sm:px-6 sm:py-8">
+      <div className="w-full space-y-4 px-4 py-6 sm:px-6 sm:py-8">
         {query.isLoading ? (
           <section className="rounded-2xl border border-border bg-white p-6 shadow-sm">
             <p className="text-sm text-text-muted">Loading professional profile...</p>
@@ -173,14 +171,6 @@ export default function ProfessionalDetailPage() {
                     ) : null}
                   </div>
                   <p className="mt-1.5 text-sm text-text-muted/90">{businessInfo.bio || "No bio added yet."}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary-dark">
-                      Leads {totalLeads}
-                    </span>
-                    <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-emerald-700">
-                      Deals {totalDeals}
-                    </span>
-                  </div>
                 </div>
               </div>
             </motion.div>

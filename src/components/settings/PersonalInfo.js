@@ -8,6 +8,7 @@ import SubmitButton from "@/components/auth/SubmitButton";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useSavePersonalInfo, useUploadProfileMedia } from "@/hooks/useProfileApi";
 import { setPersonalInfo } from "@/store/profileSlice";
+import ChangePassword from "@/components/settings/ChangePassword";
 
 function phoneDigitCount(value) {
   const s = String(value || "").trim();
@@ -51,6 +52,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
   const fileInputRef = useRef(null);
   const coverInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const savePersonalInfo = useSavePersonalInfo();
   const uploadMedia = useUploadProfileMedia();
 
@@ -76,7 +78,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     const errors = validatePersonalInfo(form);
     if (Object.keys(errors).length) {
       Object.values(errors).forEach((msg) => toast.error(msg));
@@ -161,7 +163,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
     [form.firstName, form.lastName].filter(Boolean).join(" ").trim() || "Your profile";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5">
+    <div className="space-y-5">
       <h2 className="text-lg font-bold tracking-tight text-text-heading sm:text-xl">
         Personal information
       </h2>
@@ -314,11 +316,46 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
         </div>
 
         <div className="mt-5 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-end">
-          <SubmitButton loading={loading} className="w-full text-[13px] sm:w-auto sm:min-w-[10rem]">
+          <button
+            type="button"
+            onClick={() => setShowPasswordModal(true)}
+            className="w-full rounded-md border border-border bg-white px-4 py-2 text-[13px] font-semibold text-text-heading transition hover:border-primary/40 hover:text-primary sm:w-auto"
+          >
+            Change password
+          </button>
+          <SubmitButton
+            loading={loading}
+            type="button"
+            onClick={handleSubmit}
+            className="w-full text-[13px] sm:w-auto sm:min-w-[10rem]"
+          >
             Save changes
           </SubmitButton>
         </div>
       </div>
-    </form>
+
+      {showPasswordModal ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-transparent p-4 lg:pl-60"
+          style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        >
+          <div className="w-full max-w-lg rounded-lg border border-border/90 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+              <h3 className="text-sm font-semibold text-text-heading">Change password</h3>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-text-muted hover:text-text-heading hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-3">
+              <ChangePassword />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

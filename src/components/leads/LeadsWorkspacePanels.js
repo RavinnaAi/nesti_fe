@@ -45,17 +45,10 @@ export default function LeadsWorkspacePanels({
   updateReferralMutation,
   actionConversationId,
   conversationReferrals,
-  mortgageForm,
-  setMortgageForm,
-  mortgageMutation,
-  mortgageRuns,
-  closingForm,
-  setClosingForm,
-  closingMutation,
-  closingRuns,
   nurtureForm,
   setNurtureForm,
   nurtureMutation,
+  nurturePreviewMutation,
   nurtureDraftMutation,
   nurtureRefineMutation,
   nurtureLogs,
@@ -98,7 +91,7 @@ export default function LeadsWorkspacePanels({
               title="Delete this lead"
             >
               <Trash2 size={14} aria-hidden />
-              {deleteLeadMutation.isPending ? "Deleting…" : "Delete"}
+              {deleteLeadMutation.isPending ? "Deleting..." : "Delete"}
             </button>
           }
         />
@@ -185,14 +178,6 @@ export default function LeadsWorkspacePanels({
           referralUpdate={referralUpdate}
           setReferralUpdate={setReferralUpdate}
           updateReferralMutation={updateReferralMutation}
-          mortgageForm={mortgageForm}
-          setMortgageForm={setMortgageForm}
-          mortgageMutation={mortgageMutation}
-          mortgageRuns={mortgageRuns}
-          closingForm={closingForm}
-          setClosingForm={setClosingForm}
-          closingMutation={closingMutation}
-          closingRuns={closingRuns}
         />
       ) : null}
 
@@ -201,6 +186,7 @@ export default function LeadsWorkspacePanels({
           nurtureForm={nurtureForm}
           setNurtureForm={setNurtureForm}
           nurtureMutation={nurtureMutation}
+          nurturePreviewMutation={nurturePreviewMutation}
           nurtureDraftMutation={nurtureDraftMutation}
           nurtureRefineMutation={nurtureRefineMutation}
           selectedLeadId={selectedLeadId}

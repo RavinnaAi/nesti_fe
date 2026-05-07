@@ -7,7 +7,6 @@ import { motion, AnimatePresence } from "framer-motion";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import PersonalInfo from "@/components/settings/PersonalInfo";
-import ChangePassword from "@/components/settings/ChangePassword";
 import SubscriptionInfo from "@/components/settings/SubscriptionInfo";
 import ChatbotEmbed from "@/components/settings/ChatbotEmbed";
 import BusinessInformation from "@/components/settings/BusinessInformation";
@@ -29,7 +28,6 @@ const VALID_TABS = [
   "personal",
   "business",
   "icp",
-  "password",
   "subscription",
   "chatbot",
   "leads",
@@ -37,7 +35,7 @@ const VALID_TABS = [
 
 function SettingsPageFallback() {
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8 space-y-4" aria-busy="true" aria-label="Loading settings">
+    <div className="w-full px-4 py-8 space-y-4" aria-busy="true" aria-label="Loading settings">
       <div className="rounded-xl border border-border bg-white p-6 shadow-sm space-y-4">
         <SkeletonBlock className="h-6 w-48 max-w-full" />
         <SkeletonBlock className="h-4 w-full max-w-xl" />
@@ -300,8 +298,6 @@ function SettingsPageContent() {
     switch (activeTab) {
       case "personal":
         return <PersonalInfo onSaveSuccess={onPersonalSaveSuccess} />;
-      case "password":
-        return <ChangePassword />;
       case "subscription":
         return <SubscriptionInfo />;
       case "chatbot":
@@ -323,7 +319,7 @@ function SettingsPageContent() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 pb-6 pt-8 sm:pt-9">
+    <div className="w-full px-4 pb-6 pt-8 sm:pt-9">
       {setupIncomplete ? (
         <div
           className="mb-4 rounded-xl border border-amber-200/90 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-sm"

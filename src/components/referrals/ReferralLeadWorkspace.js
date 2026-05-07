@@ -8,6 +8,7 @@ import {
   fetchNurtureLogs,
   fetchReferralLeadDetails,
   postNurtureDraft,
+  postNurturePreview,
   postNurtureRefine,
   processReferralRequest,
   sendNurtureEmail,
@@ -244,6 +245,31 @@ export default function ReferralLeadWorkspace({
   const lead = detailQuery.data?.lead || null;
   const context = detailQuery.data?.context || {};
 
+  const referralDraftContext = useMemo(() => {
+    const sourceProfessional =
+      context?.source_professional && typeof context.source_professional === "object"
+        ? context.source_professional
+        : {};
+    const sourceName = String(sourceProfessional?.full_name || "").trim();
+    const sourceRole = String(context?.source_role || "").trim();
+    const targetRole = String(context?.target_role || "").trim();
+    const actionRole = String(context?.action_role || "").trim();
+    const referralNotes = String(detailQuery.data?.referral?.notes || "").trim();
+    return {
+      source_professional_name: sourceName || undefined,
+      source_professional_role: sourceRole || undefined,
+      target_professional_role: targetRole || undefined,
+      action_professional_role: actionRole || undefined,
+      referral_notes: referralNotes || undefined,
+    };
+  }, [
+    context?.source_professional,
+    context?.source_role,
+    context?.target_role,
+    context?.action_role,
+    detailQuery.data?.referral?.notes,
+  ]);
+
   const activeLeadMatchId = String(lead?.lead_match_id || "").trim();
   const activeConversationId = String(lead?.conversation_id || "").trim();
 
@@ -313,6 +339,7 @@ export default function ReferralLeadWorkspace({
           lead_match_id: activeLeadMatchId,
           goal: nurtureForm.goal?.trim() || undefined,
           tone: nurtureForm.tone?.trim() || undefined,
+          referral_context: referralDraftContext,
         },
       }),
     onSuccess: (data) => {
@@ -338,6 +365,7 @@ export default function ReferralLeadWorkspace({
           subject: nurtureForm.subject,
           body: nurtureForm.body,
           instruction: nurtureForm.refine_instruction.trim(),
+          referral_context: referralDraftContext,
         },
       }),
     onSuccess: (data) => {
@@ -366,6 +394,7 @@ export default function ReferralLeadWorkspace({
           subject: nurtureForm.subject,
           body: nurtureForm.body,
           include_property_cards: nurtureForm.include_property_cards,
+          referral_context: referralDraftContext,
         },
       }),
     onSuccess: () => {
@@ -373,6 +402,22 @@ export default function ReferralLeadWorkspace({
       queryClient.invalidateQueries({ queryKey: ["referrals-nurture-logs", token, activeLeadMatchId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
+  });
+
+  const nurturePreviewMutation = useMutation({
+    mutationFn: () =>
+      postNurturePreview({
+        token,
+        payload: {
+          lead_match_id: activeLeadMatchId,
+          conversation_id: activeConversationId || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
+          referral_context: referralDraftContext,
+        },
+      }),
+    onError: (err) => toast.error(err?.message || "Failed to build email preview"),
   });
 
   const referralForTargetCheck = detailQuery.data?.referral || {};
@@ -423,6 +468,8 @@ export default function ReferralLeadWorkspace({
   const referralPending = referralStatusRaw === "pending" || referralStatusRaw === "";
   const referrerNotesDisplay = String(referralRecord.notes ?? "").trim();
   const dirQ = referralDirection === "outbound" ? "outbound" : "inbound";
+  /** Sender’s list: no workspace tabs (nurture/notes/actions)—read-only snapshot. */
+  const isOutboundReferral = dirQ === "outbound";
   const pipelineListPage = Math.max(1, Number(listPage) || 1);
   const pipelineWorkspaceHref =
     referralId &&
@@ -448,15 +495,10 @@ export default function ReferralLeadWorkspace({
 
       <DetailFieldsSection title="Contact" maxCols={2}>
         <DetailRow label="Name" value={contact.full_name} />
-        <DetailRow label="Email" value={contact.email} />
+        <DetailRow label="Email" value={contact.canonical_email || contact.email} />
         <DetailRow label="Phone" value={contact.phone} />
         <DetailRow label="Preferred contact" value={contact.preferred_contact_method} mode="humanize" />
         <DetailRow label="Best time to contact" value={contact.best_time_to_contact} mode="humanize" />
-        {contact.canonical_email &&
-        String(contact.canonical_email).trim().toLowerCase() !==
-          String(contact.email || "").trim().toLowerCase() ? (
-          <DetailRow label="Canonical email" value={contact.canonical_email} />
-        ) : null}
         {(() => {
           const ph = String(contact.phone || "").replace(/\D/g, "");
           const cph = String(contact.canonical_phone || "").replace(/\D/g, "");
@@ -565,6 +607,7 @@ export default function ReferralLeadWorkspace({
       nurtureForm={nurtureForm}
       setNurtureForm={setNurtureForm}
       nurtureMutation={nurtureMutation}
+      nurturePreviewMutation={nurturePreviewMutation}
       nurtureDraftMutation={nurtureDraftMutation}
       nurtureRefineMutation={nurtureRefineMutation}
       selectedLeadId={activeLeadMatchId}
@@ -685,7 +728,15 @@ export default function ReferralLeadWorkspace({
           </p>
         </div>
       ) : referralAccepted ? (
-        fromPipelineReferrals ? (
+        isOutboundReferral ? (
+          <div className="space-y-4">
+            {leadDetailsCard}
+            <p className="rounded-lg border border-border/60 bg-background-light/40 px-3 py-2.5 text-sm text-text-muted leading-relaxed">
+              Outbound referral — view only. The recipient manages actions, nurture email, and notes in their
+              workspace after they accept.
+            </p>
+          </div>
+        ) : fromPipelineReferrals ? (
           <div className="space-y-4">
             {toolkitTabStrip}
             {detailTab === "details" ? leadDetailsCard : null}

@@ -49,8 +49,9 @@ export default function ForgotPasswordPage() {
     setLoader(true);
     try {
       await forgotPasswordMutation.mutateAsync(email);
-      dispatch(setResetEmail(email.toLowerCase().trim()));
-      router.push("/verify-reset-otp");
+      const normalizedEmail = email.toLowerCase().trim();
+      dispatch(setResetEmail(normalizedEmail));
+      router.push(`/verify-reset-otp?email=${encodeURIComponent(normalizedEmail)}`);
     } catch (error) {
       console.error("Forgot password error:", error);
       // Error toast: useForgotPassword onError already notifies the user.

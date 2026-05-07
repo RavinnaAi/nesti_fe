@@ -15,9 +15,7 @@ import {
   fetchNurtureLogs,
   postNurtureDraft,
   postNurtureRefine,
-  runMortgageCalculator,
-  runClosingCalculator,
-  fetchCalculatorRuns,
+  postNurturePreview,
 } from "@/lib/chatClient";
 import {
   fetchLeads,
@@ -50,10 +48,39 @@ import {
   getActionConversationId,
   getConversationMeta,
   getLeadMatchId,
-  LEADS_PAGE_SIZE,
   matchesSearch,
   normalizeList,
 } from "@/lib/leadsPageUtils";
+import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
+
+function stripListingBulletRows(text) {
+  const raw = String(text || "");
+  if (!raw.trim()) return "";
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  const isListingBullet = (value) => {
+    const s = String(value || "").trim().replace(/^_+/, "").trim();
+    if (!/^[-*]\s+/.test(s)) return false;
+    const lower = s.toLowerCase();
+    return /\$[\d,]/.test(s) || /bed|bath|budget|stretch|area match|property type|match/i.test(lower);
+  };
+  let i = 0;
+  while (i < lines.length) {
+    const line = String(lines[i] || "").trim();
+    if (/^matched options include\s*:/i.test(line)) {
+      i += 1;
+      while (i < lines.length && (!String(lines[i] || "").trim() || isListingBullet(lines[i]))) i += 1;
+      continue;
+    }
+    if (isListingBullet(line)) {
+      i += 1;
+      continue;
+    }
+    out.push(lines[i]);
+    i += 1;
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 
 function LeadsPageContent() {
   const { isAuthenticated } = useAuthGuard();
@@ -83,7 +110,13 @@ function LeadsPageContent() {
     toListPage,
   } = useLeadsListFilters();
   const isReferralsPipeline = pipelineFromUrl === "referrals";
-  const REFERRALS_PIPELINE_PAGE_SIZE = 10;
+  const dynamicRowsPerPage = useDynamicTablePageSize({
+    minRows: 10,
+    maxRows: 24,
+    rowHeight: 44,
+    reserveHeight: 240,
+  });
+  const leadsRowsPerPage = Math.max(10, dynamicRowsPerPage - 1);
   const [activeTab, setActiveTab] = useState("lead_profile");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -103,15 +136,8 @@ function LeadsPageContent() {
     tone: "",
     include_property_cards: true,
   });
-  const [mortgageForm, setMortgageForm] = useState({
-    price: "",
-    down_payment: "",
-    annual_rate: "",
-    amort_years: "",
-  });
-  const [closingForm, setClosingForm] = useState({ price: "" });
 
-  /** Legacy `/leads?pipeline=referrals&referral=` bookmarks → dedicated referral page. */
+  /** Legacy `/leads?pipeline=referrals&referral=` bookmarks -> dedicated referral page. */
   useEffect(() => {
     if (!isReferralsPipeline) return;
     const rid = String(pipelineReferralIdFromUrl || "").trim();
@@ -159,13 +185,21 @@ function LeadsPageContent() {
   }, [appointmentFilter]);
 
   const leadsQuery = useQuery({
-    queryKey: ["leads", token, currentPage, appointmentFilter, statusFromUrl, pipelineFromUrl],
+    queryKey: [
+      "leads",
+      token,
+      currentPage,
+      leadsRowsPerPage,
+      appointmentFilter,
+      statusFromUrl,
+      pipelineFromUrl,
+    ],
     enabled: Boolean(token) && !isReferralsPipeline,
     queryFn: () =>
       fetchLeads({
         token,
         page: currentPage,
-        limit: LEADS_PAGE_SIZE,
+        limit: leadsRowsPerPage,
         ...(appointmentFilter && appointmentFilter !== "all" ? { appointment: appointmentFilter } : {}),
         ...(statusFromUrl ? { status: statusFromUrl } : {}),
         ...(!statusFromUrl && pipelineFromUrl ? { pipeline: pipelineFromUrl } : {}),
@@ -173,14 +207,14 @@ function LeadsPageContent() {
   });
 
   const referralsPipelineQuery = useQuery({
-    queryKey: ["leads-pipeline-referrals", token, currentPage],
+    queryKey: ["leads-pipeline-referrals", token, currentPage, leadsRowsPerPage],
     enabled: Boolean(token && isReferralsPipeline),
     queryFn: () =>
       fetchReferrals({
         token,
         direction: "inbound",
         page: currentPage,
-        limit: REFERRALS_PIPELINE_PAGE_SIZE,
+        limit: leadsRowsPerPage,
         status: "accepted",
       }),
   });
@@ -341,24 +375,6 @@ function LeadsPageContent() {
     });
   }, [selectedLeadId, nurtureSuggestedEmail]);
 
-  const mortgageRunsQuery = useQuery({
-    queryKey: ["chat-calculators", token, "mortgage"],
-    enabled: Boolean(token),
-    queryFn: () => fetchCalculatorRuns({ token, type: "mortgage" }),
-  });
-
-  const closingRunsQuery = useQuery({
-    queryKey: ["chat-calculators", token, "closing"],
-    enabled: Boolean(token),
-    queryFn: () => fetchCalculatorRuns({ token, type: "closing" }),
-  });
-
-  const mortgageRuns = useMemo(
-    () => normalizeList(mortgageRunsQuery.data),
-    [mortgageRunsQuery.data]
-  );
-  const closingRuns = useMemo(() => normalizeList(closingRunsQuery.data), [closingRunsQuery.data]);
-
   const createReferralMutation = useMutation({
     mutationFn: () =>
       createReferral({
@@ -413,7 +429,7 @@ function LeadsPageContent() {
         setNurtureForm((prev) => ({
           ...prev,
           subject: d.subject ?? prev.subject,
-          body: d.body_text ?? prev.body,
+          body: stripListingBulletRows(d.body_text ?? prev.body),
         }));
       }
       toast.success("Draft ready. Review and send.");
@@ -438,7 +454,7 @@ function LeadsPageContent() {
         setNurtureForm((prev) => ({
           ...prev,
           subject: d.subject ?? prev.subject,
-          body: d.body_text ?? prev.body,
+          body: stripListingBulletRows(d.body_text ?? prev.body),
           refine_instruction: "",
         }));
       }
@@ -474,36 +490,19 @@ function LeadsPageContent() {
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
 
-  const mortgageMutation = useMutation({
+  const nurturePreviewMutation = useMutation({
     mutationFn: () =>
-      runMortgageCalculator({
+      postNurturePreview({
         token,
         payload: {
-          ...mortgageForm,
+          lead_match_id: selectedLeadId,
           conversation_id: actionConversationId || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
         },
       }),
-    onSuccess: () => {
-      toast.success("Mortgage calculator run saved");
-      queryClient.invalidateQueries({ queryKey: ["chat-calculators", token, "mortgage"] });
-    },
-    onError: (err) => toast.error(err?.message || "Failed to run mortgage calculator"),
-  });
-
-  const closingMutation = useMutation({
-    mutationFn: () =>
-      runClosingCalculator({
-        token,
-        payload: {
-          ...closingForm,
-          conversation_id: actionConversationId || undefined,
-        },
-      }),
-    onSuccess: () => {
-      toast.success("Closing cost run saved");
-      queryClient.invalidateQueries({ queryKey: ["chat-calculators", token, "closing"] });
-    },
-    onError: (err) => toast.error(err?.message || "Failed to run closing cost calculator"),
+    onError: (err) => toast.error(err?.message || "Failed to build email preview"),
   });
 
   const cancelCalendlyMutation = useMutation({
@@ -577,14 +576,20 @@ function LeadsPageContent() {
   };
 
   if (!hydrated) {
-    return <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+    return <div className="min-h-[calc(100vh-4rem)] flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
   }
 
   if (!isAuthenticated) return null;
 
+  const lockViewportForList = !selectedLeadId;
+
   return (
-    <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="max-w-7xl mx-auto px-5 md:px-6 py-5 md:py-6 space-y-5">
+    <div
+      className={`flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10 ${
+        lockViewportForList ? "h-[calc(100vh-4rem)] overflow-hidden" : "min-h-[calc(100vh-4rem)]"
+      }`}
+    >
+      <div className="flex h-full w-full flex-col gap-5 px-5 py-5 md:px-6 md:py-6">
         <LeadsListHeader filterLabel={filterLabel}>
           {!isReferralsPipeline ? (
             <LeadsListFiltersBar
@@ -604,7 +609,7 @@ function LeadsPageContent() {
           ) : null}
         </LeadsListHeader>
 
-        <div className="space-y-4">
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
           {isReferralsPipeline ? (
             <>
               <ReferralsDataTable
@@ -615,8 +620,9 @@ function LeadsPageContent() {
                 direction="inbound"
                 getDetailHref={(id) => leadsPipelineReferralDetailHref(id, currentPage)}
                 heading="Accepted referrals"
-                hint="Opens `/leads/referrals/…` (under Leads, not the Referrals inbox). Use back there to return to this list."
+                hint="Opens `/leads/referrals/...` (under Leads, not the Referrals inbox). Use back there to return to this list."
                 emptyMessage="No accepted referrals in your pipeline yet."
+                rowsPerPage={leadsRowsPerPage}
               />
               <LeadsListPagination
                 leadsQuery={referralsPipelineQuery}
@@ -628,15 +634,17 @@ function LeadsPageContent() {
             </>
           ) : (
             <>
-              <LeadsListTable
-                leadsQuery={leadsQuery}
-                filteredConversations={filteredConversations}
-                selectedLeadId={selectedLeadId}
-                toLeadWorkspace={toLeadWorkspace}
-                leadsPageSize={LEADS_PAGE_SIZE}
-                showPropertyMatchesColumn={showPropertyMatchesColumn}
-                showAgentLeadColumns={showAgentLeadColumns}
-              />
+              <div className="min-h-0 flex-1">
+                <LeadsListTable
+                  leadsQuery={leadsQuery}
+                  filteredConversations={filteredConversations}
+                  selectedLeadId={selectedLeadId}
+                  toLeadWorkspace={toLeadWorkspace}
+                leadsPageSize={leadsRowsPerPage}
+                  showPropertyMatchesColumn={showPropertyMatchesColumn}
+                  showAgentLeadColumns={showAgentLeadColumns}
+                />
+              </div>
 
               <LeadsListPagination
                 leadsQuery={leadsQuery}
@@ -675,17 +683,10 @@ function LeadsPageContent() {
               updateReferralMutation={updateReferralMutation}
               actionConversationId={actionConversationId}
               conversationReferrals={conversationReferrals}
-              mortgageForm={mortgageForm}
-              setMortgageForm={setMortgageForm}
-              mortgageMutation={mortgageMutation}
-              mortgageRuns={mortgageRuns}
-              closingForm={closingForm}
-              setClosingForm={setClosingForm}
-              closingMutation={closingMutation}
-              closingRuns={closingRuns}
               nurtureForm={nurtureForm}
               setNurtureForm={setNurtureForm}
               nurtureMutation={nurtureMutation}
+              nurturePreviewMutation={nurturePreviewMutation}
               nurtureDraftMutation={nurtureDraftMutation}
               nurtureRefineMutation={nurtureRefineMutation}
               nurtureLogs={nurtureLogs}

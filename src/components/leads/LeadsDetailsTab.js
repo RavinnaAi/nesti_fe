@@ -142,12 +142,14 @@ export default function LeadsDetailsTab({
       {selectedConversation ? (
         <>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            {getConversationMeta(selectedConversation).isMatched === true ? (
+            {!isLawyerLead && !isMortgageBrokerLead && getConversationMeta(selectedConversation).isMatched === true ? (
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 font-semibold shadow-sm">
                 <CheckCircle2 size={14} />
                 Matched Lead
               </span>
-            ) : getConversationMeta(selectedConversation).isMatched === false ? (
+            ) : !isLawyerLead &&
+              !isMortgageBrokerLead &&
+              getConversationMeta(selectedConversation).isMatched === false ? (
               <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 font-semibold shadow-sm">
                 <XCircle size={14} />
                 Mismatched Lead
@@ -193,7 +195,6 @@ export default function LeadsDetailsTab({
                   From the chat intake — use with the legal qualification below.
                 </p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  <KeyValue label="Location / area" value={property.location} />
                   <KeyValue label="Property address" value={property.address} />
                   <KeyValue
                     label="Budget (reference)"
