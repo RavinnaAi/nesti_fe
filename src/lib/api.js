@@ -77,6 +77,15 @@ export const API_ENDPOINTS = {
     lead: withBaseUrl((id) => `/api/referrals/${id}/lead`),
     process: withBaseUrl((id) => `/api/referrals/${id}/process`),
   },
+  invites: {
+    list: withBaseUrl("/api/invites"),
+    metrics: withBaseUrl("/api/invites/metrics"),
+    conversions: withBaseUrl("/api/invites/conversions"),
+    resolve: withBaseUrl((token) => `/api/invites/resolve/${token}`),
+    capture: withBaseUrl("/api/invites/capture"),
+    finalize: withBaseUrl("/api/invites/finalize"),
+    rewardEvents: withBaseUrl("/api/invites/rewards/events"),
+  },
   leads: {
     list: withBaseUrl("/api/leads"),
     profiles: withBaseUrl("/api/leads/profiles"),

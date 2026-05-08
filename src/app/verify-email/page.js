@@ -32,7 +32,13 @@ export default function VerifyEmailPage() {
 
   const otpInputRefs = useRef([]);
   const isVerifyingRef = useRef(false); // prevents duplicate submissions
-  const { getEmail, getVerificationToken, clearSignupData } = useSignupFlow();
+  const {
+    getEmail,
+    getVerificationToken,
+    getInviteToken,
+    saveSignupData,
+    clearSignupData,
+  } = useSignupFlow();
   const verifyEmailMutation = useVerifyEmail();
   const resendMutation = useResendVerification();
   const verifying = verifyEmailMutation.isPending || verifyEmailMutation.isLoading;
@@ -81,6 +87,7 @@ export default function VerifyEmailPage() {
       await verifyEmailMutation.mutateAsync({
         otp: code,
         verificationToken,
+        invite_token: getInviteToken() || undefined,
       });
       clearSignupData();
       setVerificationStatus("success"); // triggers the useEffect above to navigate
@@ -108,7 +115,18 @@ export default function VerifyEmailPage() {
 
     setResendSuccess(false);
     try {
-      await resendMutation.mutateAsync(email);
+      const verificationToken = getVerificationToken();
+      const data = await resendMutation.mutateAsync({
+        email,
+        verificationToken,
+      });
+      if (data?.verificationToken) {
+        saveSignupData({
+          email,
+          verificationToken: data.verificationToken,
+          inviteToken: getInviteToken() || null,
+        });
+      }
       setResendSuccess(true);
     } catch (error) {
       // errors handled via mutation toast

@@ -21,6 +21,11 @@ import {
   CALENDLY_OAUTH_WINDOW_NAME,
 } from "@/lib/calendlyOAuthPopup";
 import { useProfileSetupRedirect } from "@/hooks/useProfileSetupRedirect";
+import { finalizeInviteToken } from "@/lib/inviteClient";
+import {
+  clearInviteAttribution,
+  getInviteAttribution,
+} from "@/lib/inviteAttributionStorage";
 
 export default function AppChrome({ children }) {
   const pathname = usePathname() || "";
@@ -38,6 +43,7 @@ export default function AppChrome({ children }) {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
   const calendlyOAuthBroadcastAt = useRef(0);
+  const inviteFinalizeAttemptedRef = useRef(false);
 
   useEffect(() => {
     setIsMounted(true);
@@ -60,6 +66,10 @@ export default function AppChrome({ children }) {
       setAuthCheckReady(true);
     }
   }, [isMounted, token]);
+
+  useEffect(() => {
+    inviteFinalizeAttemptedRef.current = false;
+  }, [token]);
 
   useProfileSetupRedirect(isMounted);
 
@@ -92,6 +102,30 @@ export default function AppChrome({ children }) {
     };
   }, [token, queryClient]);
 
+  useEffect(() => {
+    if (!token || !isMounted) return;
+    if (inviteFinalizeAttemptedRef.current) return;
+    const attr = getInviteAttribution();
+    if (!attr?.token) return;
+    inviteFinalizeAttemptedRef.current = true;
+
+    finalizeInviteToken({
+      token: attr.token,
+      authToken: token,
+      method: "session_finalize",
+      path: pathname || "",
+    })
+      .then((res) => {
+        if (res?.success) {
+          clearInviteAttribution();
+          queryClient.invalidateQueries({ queryKey: ["invite-metrics"] });
+        }
+      })
+      .catch(() => {
+        inviteFinalizeAttemptedRef.current = false;
+      });
+  }, [token, isMounted, pathname, queryClient]);
+
   const isChatbotEmbed = pathname.startsWith("/chatbot");
   const isCalendlyCallback = pathname.startsWith("/calendly-callback");
   const isFixedTableListRoute =
@@ -101,6 +135,7 @@ export default function AppChrome({ children }) {
       pathname === "/" ||
       pathname === "/log-in" ||
       pathname === "/sign-up" ||
+      pathname.startsWith("/invite/") ||
       pathname.startsWith("/forgot-password") ||
       pathname.startsWith("/verify-reset-otp") ||
       pathname.startsWith("/reset-password") ||

@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
@@ -14,15 +14,33 @@ import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
 import { useLogin } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
+import { getInviteAttribution, saveInviteAttribution } from "@/lib/inviteAttributionStorage";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = useAppSelector((state) => state.auth.token);
+  const [inviteToken, setInviteToken] = useState("");
 
   // Logged-in users belong in the app — do not wipe session on mount (that broke reload flows).
   useEffect(() => {
     if (token) router.replace("/dashboard");
   }, [token, router]);
+
+  useEffect(() => {
+    const fromQuery =
+      String(searchParams?.get("invite") || searchParams?.get("ref") || "").trim();
+    if (fromQuery) {
+      setInviteToken(fromQuery);
+      saveInviteAttribution(fromQuery, {
+        sourceChannel: String(searchParams?.get("channel") || "direct"),
+        landingPath: typeof window !== "undefined" ? window.location.pathname : "/log-in",
+      });
+      return;
+    }
+    const persisted = getInviteAttribution();
+    if (persisted?.token) setInviteToken(String(persisted.token).trim());
+  }, [searchParams]);
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
     email: "",
@@ -61,6 +79,7 @@ export default function LoginPage() {
       await loginMutation.mutateAsync({
         email: form.email.trim(),
         password: form.password,
+        invite_token: inviteToken || undefined,
       });
       router.push("/dashboard");
     } catch (err) {

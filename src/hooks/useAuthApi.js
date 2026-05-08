@@ -28,6 +28,7 @@ export function useSignup() {
           email: payload.email?.toLowerCase().trim(),
           password: payload.password,
           role: payload.role,
+          invite_token: payload.invite_token || undefined,
         },
       }),
     onError: toastError,
@@ -44,11 +45,14 @@ export function useVerifyEmail() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ otp, verificationToken }) =>
+    mutationFn: ({ otp, verificationToken, invite_token }) =>
       apiClient({
         url: API_ENDPOINTS.auth.verifyEmail,
         method: "POST",
-        data: { otp: String(otp).trim() },
+        data: {
+          otp: String(otp).trim(),
+          invite_token: invite_token || undefined,
+        },
         token: verificationToken,
         rawToken: true,
       }),
@@ -96,6 +100,7 @@ export function useLogin() {
         data: {
           email: payload.email?.toLowerCase().trim(),
           password: payload.password,
+          invite_token: payload.invite_token || undefined,
         },
       }),
     onSuccess: (data) => {
@@ -312,12 +317,22 @@ export function useGoogleSignup() {
 // ─── Resend Verification (stub — backend not yet implemented) ─────────────────
 export function useResendVerification() {
   return useMutation({
-    mutationFn: (email) =>
-      apiClient({
+    mutationFn: (input) => {
+      const email =
+        typeof input === "string"
+          ? input
+          : String(input?.email || "").trim();
+      const verificationToken =
+        typeof input === "object" ? input?.verificationToken || "" : "";
+      return apiClient({
         url: API_ENDPOINTS.auth.resendVerification,
         method: "POST",
-        data: { email: email.toLowerCase().trim() },
-      }),
+        data: {
+          email: email.toLowerCase().trim(),
+          verification_token: verificationToken || undefined,
+        },
+      });
+    },
     onSuccess: (data) => {
       toast.success(
         data?.message || "Verification email sent. Please check your inbox."

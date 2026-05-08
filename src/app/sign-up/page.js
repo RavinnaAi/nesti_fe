@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
@@ -24,14 +24,32 @@ import {
 import { useSignupFlow } from "@/hooks/useSignupFlow";
 import { useSignup, useGoogleSignup } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
+import { getInviteAttribution, saveInviteAttribution } from "@/lib/inviteAttributionStorage";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const token = useAppSelector((state) => state.auth.token);
+  const [inviteToken, setInviteToken] = useState("");
 
   useEffect(() => {
     if (token) router.replace("/dashboard");
   }, [token, router]);
+
+  useEffect(() => {
+    const fromQuery =
+      String(searchParams?.get("invite") || searchParams?.get("ref") || "").trim();
+    if (fromQuery) {
+      setInviteToken(fromQuery);
+      saveInviteAttribution(fromQuery, {
+        sourceChannel: String(searchParams?.get("channel") || "direct"),
+        landingPath: typeof window !== "undefined" ? window.location.pathname : "/sign-up",
+      });
+      return;
+    }
+    const persisted = getInviteAttribution();
+    if (persisted?.token) setInviteToken(String(persisted.token).trim());
+  }, [searchParams]);
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(null);
@@ -55,6 +73,7 @@ export default function SignUpPage() {
         {
           token: tokenResponse.access_token,
           token_type: "access_token",
+          invite_token: inviteToken || undefined,
         },
         {
           onSuccess: () => router.push("/dashboard"),
@@ -122,12 +141,14 @@ export default function SignUpPage() {
         email: form.email.toLowerCase().trim(),
         password: form.password,
         role: form.role,
+        invite_token: inviteToken || undefined,
       });
 
       // Persist email + verificationToken for the OTP verification step
       saveSignupData({
         email: form.email,
         verificationToken: data?.verificationToken || null,
+        inviteToken: inviteToken || null,
       });
 
       // Redirect to verify email page

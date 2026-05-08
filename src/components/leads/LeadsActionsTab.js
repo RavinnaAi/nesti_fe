@@ -2,11 +2,14 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { useMutation } from "@tanstack/react-query";
 import { useQuery } from "@tanstack/react-query";
-import { DollarSign, Scale, Users } from "lucide-react";
+import { Copy, DollarSign, Mail, MessageCircle, Scale, Share2, Users, X } from "lucide-react";
+import { toast } from "react-toastify";
 import LeadActionSection from "@/components/leads/LeadActionSection";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 import { fetchProfessionals } from "@/lib/professionalsClient";
+import { createInviteLink } from "@/lib/inviteClient";
 
 /** Same role ids + labels as `DashboardProfessionalsTabs` (Agents / Lawyers / Mortgage Brokers). */
 const PROFESSIONAL_ROLE_OPTIONS = [
@@ -61,6 +64,8 @@ export default function LeadsActionsTab({
   const [openReferralDetails, setOpenReferralDetails] = useState(null);
   const role = referralForm?.professional_role ?? "";
   const referralsRowsPerPage = 6;
+  const [leadInviteShareUrl, setLeadInviteShareUrl] = useState("");
+  const [shareModalOpen, setShareModalOpen] = useState(false);
 
   const professionalsQuery = useQuery({
     queryKey: ["referral-professionals", token, role],
@@ -73,6 +78,31 @@ export default function LeadsActionsTab({
         limit: 100,
       }),
     staleTime: 60_000,
+  });
+  const createLeadInviteMutation = useMutation({
+    mutationFn: () =>
+      createInviteLink({
+        token,
+        payload: {
+          source_channel: "lead_referral",
+          source_conversation_id: actionConversationId,
+          intended_role: role || undefined,
+          intended_audience: "professional",
+          metadata: {
+            origin: "lead_actions_tab",
+            lead_match_id: selectedLeadId || "",
+          },
+        },
+      }),
+    onSuccess: (data) => {
+      const shareUrl = String(data?.share_url || data?.invite?.share_url || "").trim();
+      setLeadInviteShareUrl(shareUrl);
+      setShareModalOpen(true);
+      toast.success("Referral link generated.");
+    },
+    onError: (error) => {
+      toast.error(error?.message || "Could not create lead invite link.");
+    },
   });
 
   const professionals = useMemo(() => {
@@ -116,15 +146,53 @@ export default function LeadsActionsTab({
   const referralsEmptyRowCount = Math.max(0, referralsRowsPerPage - paginatedReferrals.length);
   const hasPrevReferralsPage = safeReferralsPage > 1;
   const hasNextReferralsPage = safeReferralsPage < referralsTotalPages;
+  const shareText = leadInviteShareUrl
+    ? `Join Nesti via this referral link: ${leadInviteShareUrl}`
+    : "";
+  const shareLinks = {
+    email: leadInviteShareUrl
+      ? `mailto:?subject=${encodeURIComponent(
+          "Join my Nesti referral network"
+        )}&body=${encodeURIComponent(shareText)}`
+      : "#",
+    whatsapp: leadInviteShareUrl
+      ? `https://wa.me/?text=${encodeURIComponent(shareText)}`
+      : "#",
+    sms: leadInviteShareUrl
+      ? `sms:?body=${encodeURIComponent(shareText)}`
+      : "#",
+    social: leadInviteShareUrl
+      ? `https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}`
+      : "#",
+  };
 
   return (
-    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-stretch">
       <LeadActionSection
         title="Referrals"
         subtitle="Connect this lead to another professional."
-        className="lg:h-[26rem]"
+        className="lg:flex lg:h-[26rem] lg:flex-col"
+        headerAction={
+          <button
+            type="button"
+            onClick={() => {
+              if (leadInviteShareUrl) {
+                setShareModalOpen(true);
+                return;
+              }
+              createLeadInviteMutation.mutate();
+            }}
+            disabled={!token || !actionConversationId || createLeadInviteMutation.isPending}
+            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary/25 bg-white text-primary-dark transition hover:bg-primary/[0.08] disabled:opacity-50"
+            aria-label="Share referral link"
+            title="Share referral link"
+          >
+            <Share2 size={13} />
+          </button>
+        }
       >
-        <div className="space-y-3">
+        <div className="flex h-full min-h-0 flex-col gap-3.5">
+          <div className="space-y-3.5">
           <SelectDropdown
             placeholder="Professional type"
             value={role}
@@ -143,19 +211,19 @@ export default function LeadsActionsTab({
             <p className="mb-1 text-[10px] font-semibold uppercase tracking-wide text-text-muted">
               Refer to (one)
             </p>
-            <div className="rounded-md border border-border bg-background-light/40">
+            <div className="overflow-hidden rounded-lg border border-border bg-background-light/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
               {!role ? (
-                <div className="px-2 py-2 text-[11px] leading-snug text-text-muted">
+                <div className="px-2.5 py-2 text-[11px] leading-snug text-text-muted">
                   Select a professional type above to load colleagues you can refer to.
                 </div>
               ) : professionalsQuery.isLoading ? (
-                <div className="px-2 py-2 text-[11px] text-text-muted">Loading professionals…</div>
+                <div className="px-2.5 py-2 text-[11px] text-text-muted">Loading professionals…</div>
               ) : professionalsQuery.isError ? (
-                <div className="px-2 py-2 text-[11px] text-red-600">
+                <div className="px-2.5 py-2 text-[11px] text-red-600">
                   {professionalsQuery.error?.message || "Could not load professionals."}
                 </div>
               ) : professionals.length === 0 ? (
-                <div className="px-2 py-2 text-[11px] text-text-muted">
+                <div className="px-2.5 py-2 text-[11px] text-text-muted">
                   No professionals found for this type yet.
                 </div>
               ) : selectedProfessional ? (
@@ -200,7 +268,7 @@ export default function LeadsActionsTab({
                   </button>
                 </div>
               ) : (
-                <ul className="max-h-44 divide-y divide-border/60 overflow-y-auto">
+                <ul className="max-h-44 divide-y divide-border/60 overflow-y-auto bg-white/40">
                   {professionals.map((row) => {
                     const id = String(row?.id || "");
                     const labelName = displayProfessionalName(row);
@@ -250,13 +318,15 @@ export default function LeadsActionsTab({
             </div>
           </div>
 
-          <textarea
-            value={referralForm.notes || ""}
-            onChange={(event) => setReferralForm((prev) => ({ ...prev, notes: event.target.value }))}
-            placeholder="Notes (optional)"
-            rows={6}
-            className="w-full min-w-0 rounded-md border border-border bg-white px-2 py-1 text-[11px] placeholder:text-text-muted lg:min-h-[10rem]"
-          />
+          <div className="rounded-lg border border-border bg-white/70 p-1.5">
+            <textarea
+              value={referralForm.notes || ""}
+              onChange={(event) => setReferralForm((prev) => ({ ...prev, notes: event.target.value }))}
+              placeholder="Notes (optional)"
+              rows={5}
+              className="w-full min-w-0 rounded-md border border-transparent bg-white px-2 py-1.5 text-[11px] placeholder:text-text-muted focus:border-border lg:h-[8.75rem] lg:min-h-[8.75rem] lg:max-h-[8.75rem]"
+            />
+          </div>
 
           {selectedProfessionalId && hasActiveReferralForSelectedProfessional ? (
             <p className="text-[11px] leading-snug text-amber-800">
@@ -264,15 +334,16 @@ export default function LeadsActionsTab({
               refer this lead to a different professional.
             </p>
           ) : null}
-
           <button
             type="button"
             onClick={() => createReferralMutation.mutate()}
             disabled={!canSubmitReferral}
-            className="h-9 w-full rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
+            className="h-9 w-full shrink-0 rounded-md bg-gradient-to-r from-primary to-primary-dark text-white text-xs font-semibold shadow-sm transition hover:shadow-md disabled:opacity-50"
           >
             {createReferralMutation.isPending ? "Saving..." : "Send referral"}
           </button>
+
+        </div>
         </div>
 
       </LeadActionSection>
@@ -282,10 +353,10 @@ export default function LeadsActionsTab({
         subtitle="History of referrals for this lead."
         className="lg:flex lg:h-[26rem] lg:flex-col"
       >
-        <div className="relative min-h-0 flex-1 overflow-hidden rounded-md border border-border">
+        <div className="relative min-h-0 flex-1 overflow-hidden rounded-lg border border-border shadow-[inset_0_1px_0_rgba(255,255,255,0.3)]">
           <div className="h-full overflow-auto">
             <table className="w-full table-auto border-collapse text-left text-[11px]">
-              <thead className="sticky top-0 bg-primary/[0.04] text-[10px] uppercase tracking-wide text-text-muted">
+              <thead className="sticky top-0 bg-primary/[0.06] text-[10px] uppercase tracking-wide text-text-muted backdrop-blur-sm">
                 <tr>
                   <th className="px-2 py-2 font-semibold">Type</th>
                   <th className="px-2 py-2 font-semibold">Status</th>
@@ -339,7 +410,7 @@ export default function LeadsActionsTab({
                             setOpenReferralDetails(referral);
                           }
                         }}
-                        className={`cursor-pointer border-t border-border/70 ${
+                        className={`cursor-pointer border-t border-border/60 transition-colors ${
                           selected ? "bg-primary/10" : "hover:bg-primary/[0.04]"
                         }`}
                       >
@@ -442,7 +513,7 @@ export default function LeadsActionsTab({
                 type="button"
                 onClick={() => setReferralsPage((p) => Math.max(1, p - 1))}
                 disabled={!hasPrevReferralsPage}
-                className="h-8 rounded-md border border-border px-3 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-40"
+                className="h-8 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-primary/[0.06] disabled:opacity-40"
               >
                 Previous
               </button>
@@ -450,7 +521,7 @@ export default function LeadsActionsTab({
                 type="button"
                 onClick={() => setReferralsPage((p) => Math.min(referralsTotalPages, p + 1))}
                 disabled={!hasNextReferralsPage}
-                className="h-8 rounded-md border border-border px-3 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-40"
+                className="h-8 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-primary/[0.06] disabled:opacity-40"
               >
                 Next
               </button>
@@ -459,6 +530,108 @@ export default function LeadsActionsTab({
         ) : null}
       </LeadActionSection>
 
+      {shareModalOpen ? (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/35 p-4">
+          <div className="w-full max-w-lg rounded-xl border border-border bg-white p-4 shadow-2xl">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-text-heading">Share referral link</h3>
+              <button
+                type="button"
+                onClick={() => setShareModalOpen(false)}
+                className="rounded-md border border-border p-1.5 text-text-muted hover:text-text-heading"
+                aria-label="Close share modal"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            <p className="mb-3 text-xs text-text-muted">
+              Share this lead referral link through your preferred channel.
+            </p>
+
+            <input
+              type="text"
+              readOnly
+              value={leadInviteShareUrl}
+              className="mb-3 h-10 w-full rounded-md border border-border bg-background-light/40 px-2.5 text-xs text-text-heading"
+            />
+
+            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <a
+                href={shareLinks.email}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                  leadInviteShareUrl
+                    ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                    : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                }`}
+              >
+                <Mail size={12} />
+                Email
+              </a>
+              <a
+                href={shareLinks.whatsapp}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                  leadInviteShareUrl
+                    ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                    : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                }`}
+              >
+                <MessageCircle size={12} />
+                WhatsApp
+              </a>
+              <a
+                href={shareLinks.sms}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                  leadInviteShareUrl
+                    ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                    : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                }`}
+              >
+                <Share2 size={12} />
+                SMS
+              </a>
+              <a
+                href={shareLinks.social}
+                target="_blank"
+                rel="noreferrer"
+                className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                  leadInviteShareUrl
+                    ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                    : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                }`}
+              >
+                <Share2 size={12} />
+                Social
+              </a>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(leadInviteShareUrl);
+                    toast.success("Referral link copied.");
+                  } catch {
+                    toast.error("Unable to copy referral link.");
+                  }
+                }}
+                disabled={!leadInviteShareUrl}
+                className="inline-flex h-9 items-center gap-1.5 rounded-md border border-border bg-white px-3 text-xs font-semibold text-text-heading hover:bg-primary/[0.07] disabled:opacity-50"
+              >
+                <Copy size={12} />
+                Copy link
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

@@ -38,6 +38,14 @@ function referringProfessionalRoleLabel(ref, summary) {
   return "—";
 }
 
+function referredToProfessionalRoleLabel(ref) {
+  const fromAccount = String(ref?.target_professional?.role || "").trim();
+  if (fromAccount) return roleLabel(fromAccount);
+  const fromVertical = String(ref?.target_vertical || "").trim();
+  if (fromVertical) return roleLabel(fromVertical);
+  return "—";
+}
+
 function leadDisplayName(ref) {
   const n = String(ref?.lead_contact?.full_name || "").trim();
   if (n) return n;
@@ -282,6 +290,8 @@ export default function ReferralsDataTable({
 }) {
   const router = useRouter();
   const dir = direction === "outbound" ? "outbound" : "inbound";
+  const counterpartyLabel = dir === "outbound" ? "Referred to" : "Referred by";
+  const counterpartyRoleLabel = dir === "outbound" ? "Referred to role" : "Referrer role";
 
   const showAgentReferralColumns = useMemo(
     () =>
@@ -289,13 +299,25 @@ export default function ReferralsDataTable({
     [rows]
   );
 
-  const showProfessionalFocusColumn = useMemo(
+  const hasProfessionalFocusColumn = useMemo(
     () =>
       rows.some((r) => {
         const role = String(r?.lead_summary?.source_role || "").trim().toLowerCase();
         return role === "lawyer" || role === "mortgage_broker";
       }),
     [rows]
+  );
+
+  const viewerRoleGuess = useMemo(() => {
+    if (!Array.isArray(rows) || rows.length === 0) return "";
+    const first = rows[0] || {};
+    const roleRaw = dir === "outbound" ? first?.referrer?.role : first?.target_professional?.role;
+    return String(roleRaw || "").trim().toLowerCase();
+  }, [rows, dir]);
+
+  // Agents don't need the "Referral focus" column on outbound list (it’s mostly empty noise).
+  const showProfessionalFocusColumn = Boolean(
+    hasProfessionalFocusColumn && !(dir === "outbound" && viewerRoleGuess === "agent")
   );
 
   const navigateToRow = (id) => {
@@ -362,12 +384,18 @@ export default function ReferralsDataTable({
                 {showConsultColumn ? (
                   <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Consult</th>
                 ) : null}
-                <th className="min-w-[7rem] px-2 py-1.5 text-left align-middle">Referred by</th>
+                <th className="min-w-[7rem] px-2 py-1.5 text-left align-middle">
+                  {counterpartyLabel}
+                </th>
                 <th
                   className="whitespace-nowrap px-2 py-1.5 text-left align-middle"
-                  title="Professional role of the colleague who referred this lead (e.g. lawyer, agent)."
+                  title={
+                    dir === "outbound"
+                      ? "Professional role of the colleague you referred this lead to (e.g. lawyer, agent)."
+                      : "Professional role of the colleague who referred this lead (e.g. lawyer, agent)."
+                  }
                 >
-                  Referrer role
+                  {counterpartyRoleLabel}
                 </th>
               </tr>
             </thead>
@@ -375,12 +403,18 @@ export default function ReferralsDataTable({
               {rows.map((ref) => {
                 const id = String(ref?.id || "").trim();
                 const referrer = ref?.referrer || null;
+                const targetProfessional = ref?.target_professional || null;
+                const counterparty = dir === "outbound" ? targetProfessional : referrer;
                 const summary = ref?.lead_summary || null;
                 const leadTypeLabel = summary?.source_role ? roleLabel(summary.source_role) : "—";
                 const leadName = leadDisplayName(ref);
                 const href = id ? getHref(id, dir) : "#";
                 const rowSelected = Boolean(selectedId && id && selectedId === id);
                 const consult = consultCell(ref, dir);
+                const roleText =
+                  dir === "outbound"
+                    ? referredToProfessionalRoleLabel(ref)
+                    : referringProfessionalRoleLabel(ref, summary);
 
                 return (
                   <tr
@@ -388,7 +422,7 @@ export default function ReferralsDataTable({
                     tabIndex={0}
                     role="link"
                     aria-label={`Open referral for ${leadName}`}
-                    aria-selected={rowSelected}
+                    aria-current={rowSelected ? "page" : undefined}
                     className={`cursor-pointer border-b border-border/50 align-middle transition-colors hover:bg-primary/[0.05] focus-visible:bg-primary/[0.06] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary/30 ${
                       rowSelected ? "bg-primary/[0.08] ring-1 ring-inset ring-primary/15" : ""
                     }`}
@@ -441,11 +475,11 @@ export default function ReferralsDataTable({
                       </td>
                     ) : null}
                     <td className="px-2 py-1.5 align-middle">
-                      <ProfessionalCell user={referrer} fallbackName="—" />
+                      <ProfessionalCell user={counterparty} fallbackName="—" />
                     </td>
                     <td className="px-2 py-1.5 align-middle">
                       <span className="font-medium text-text-heading">
-                        {referringProfessionalRoleLabel(ref, summary)}
+                        {roleText}
                       </span>
                     </td>
                   </tr>

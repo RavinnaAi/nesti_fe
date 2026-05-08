@@ -23,7 +23,8 @@ export default function Header() {
   // Prevent hydration mismatch:
   // server render doesn't have client auth state yet, so defer auth-dependent
   // navigation until after mount.
-  const isAuthenticated = isMounted && Boolean(token);
+  const isInviteLanding = String(pathname || "").startsWith("/invite/");
+  const isAuthenticated = isMounted && Boolean(token) && !isInviteLanding;
 
   const NAVIGATION_ITEMS = useMemo(
     () =>
