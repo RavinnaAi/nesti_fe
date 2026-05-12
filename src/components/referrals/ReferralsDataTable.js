@@ -4,10 +4,6 @@ import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { UserRound } from "lucide-react";
 import { ReferralsTableSkeleton } from "@/components/ui/ContentSkeletons";
-import {
-  getInboundAcceptedReferralRowStatus,
-  inboundReferralPipelineChipClass,
-} from "@/lib/leadPipelineConfig";
 
 export function normalizeReferralRows(data) {
   if (!data) return [];
@@ -122,6 +118,29 @@ function propertyTypeCell(summary) {
   );
 }
 
+function detailsCell(summary) {
+  const role = String(summary?.source_role || "").trim().toLowerCase();
+  if (role === "agent") {
+    const intent = meaningfulIntentText(summary?.intent);
+    const prop = String(summary?.property_type || "").trim();
+    const parts = [
+      intent ? fmtIntent(intent) : "",
+      prop ? String(prop) : "",
+    ].filter(Boolean);
+    return parts.length ? (
+      <span className="line-clamp-2 font-medium leading-snug text-text-heading">
+        {parts.join(" · ")}
+      </span>
+    ) : (
+      <span className="text-text-muted">—</span>
+    );
+  }
+  if (role === "lawyer" || role === "mortgage_broker") {
+    return professionalFocusCell(summary);
+  }
+  return <span className="text-text-muted">—</span>;
+}
+
 function categoryCell(summary) {
   const v = summary?.lead_category != null ? String(summary.lead_category).trim() : "";
   return v ? (
@@ -136,6 +155,15 @@ const REFERRAL_WORKFLOW_CHIP = {
   pending: "border-amber-200 bg-amber-50 text-amber-950",
   rejected: "border-red-200 bg-red-50 text-red-900",
   completed: "border-slate-200 bg-slate-50 text-slate-800",
+};
+
+// When a referral is accepted, the recipient may later update their pipeline stage in Notes.
+// For list tables, we only surface a small set of "manual pipeline statuses" here; booking-related
+// stages are already represented by the Consult column.
+const ACCEPTED_PIPELINE_STATUS_OVERRIDE = {
+  nurturing: { label: "Nurturing", chipClass: "border-amber-200 bg-amber-50 text-amber-950" },
+  converted: { label: "Won", chipClass: "border-emerald-200 bg-emerald-50 text-emerald-900" },
+  closed_lost: { label: "Lost", chipClass: "border-slate-200 bg-slate-100 text-slate-800" },
 };
 
 const CHIP_WRAP =
@@ -161,31 +189,34 @@ function ReferralStatusChip({ status }) {
   return <StatusChipSpan label={label} chipClass={chipClass} title={label} />;
 }
 
-function ReferralListStatusCell({ row, direction }) {
-  const refStatus = String(row?.status || "")
-    .trim()
-    .toLowerCase();
-  const inboundAccepted = direction !== "outbound" && refStatus === "accepted";
-  if (inboundAccepted) {
-    const inboundStatus =
-      row?.target_match_status != null ? row?.target_match_status : row?.viewer_match_status;
-    const inboundUpdatedAt =
-      row?.target_match_updated_at != null
-        ? row?.target_match_updated_at
-        : row?.viewer_match_updated_at;
-    const { label, tone } = getInboundAcceptedReferralRowStatus(inboundStatus, {
-      referralUpdatedAt: row?.updated_at,
-      viewerMatchUpdatedAt: inboundUpdatedAt,
-    });
-    return (
-      <StatusChipSpan
-        label={label}
-        chipClass={inboundReferralPipelineChipClass(tone)}
-        title="Accepted until you change pipeline in Notes; then shows your updated stage (e.g. Nurturing)."
-      />
-    );
-  }
-  return <ReferralStatusChip status={row?.status} />;
+function ReferralWorkflowOrPipelineStatusChip({ row }) {
+  const refStatus = String(row?.status || "").trim().toLowerCase();
+  if (refStatus !== "accepted") return <ReferralStatusChip status={row?.status} />;
+
+  const pipelineStatus =
+    String(row?.viewer_match_status || row?.target_match_status || "")
+      .trim()
+      .toLowerCase();
+  const override = ACCEPTED_PIPELINE_STATUS_OVERRIDE[pipelineStatus];
+  if (!override) return <ReferralStatusChip status={row?.status} />;
+
+  const referralUpdatedAtMs = Date.parse(String(row?.updated_at || ""));
+  const matchUpdatedAtMs = Date.parse(
+    String(row?.viewer_match_updated_at || row?.target_match_updated_at || "")
+  );
+  const hasFreshMatchUpdate =
+    Number.isFinite(referralUpdatedAtMs) &&
+    Number.isFinite(matchUpdatedAtMs) &&
+    matchUpdatedAtMs > referralUpdatedAtMs + 5000;
+  if (!hasFreshMatchUpdate) return <ReferralStatusChip status={row?.status} />;
+
+  return (
+    <StatusChipSpan
+      label={override.label}
+      chipClass={override.chipClass}
+      title="Updated in Notes (pipeline stage)"
+    />
+  );
 }
 
 function initialsFromName(name) {
@@ -293,33 +324,6 @@ export default function ReferralsDataTable({
   const counterpartyLabel = dir === "outbound" ? "Referred to" : "Referred by";
   const counterpartyRoleLabel = dir === "outbound" ? "Referred to role" : "Referrer role";
 
-  const showAgentReferralColumns = useMemo(
-    () =>
-      rows.some((r) => String(r?.lead_summary?.source_role || "").trim().toLowerCase() === "agent"),
-    [rows]
-  );
-
-  const hasProfessionalFocusColumn = useMemo(
-    () =>
-      rows.some((r) => {
-        const role = String(r?.lead_summary?.source_role || "").trim().toLowerCase();
-        return role === "lawyer" || role === "mortgage_broker";
-      }),
-    [rows]
-  );
-
-  const viewerRoleGuess = useMemo(() => {
-    if (!Array.isArray(rows) || rows.length === 0) return "";
-    const first = rows[0] || {};
-    const roleRaw = dir === "outbound" ? first?.referrer?.role : first?.target_professional?.role;
-    return String(roleRaw || "").trim().toLowerCase();
-  }, [rows, dir]);
-
-  // Agents don't need the "Referral focus" column on outbound list (it’s mostly empty noise).
-  const showProfessionalFocusColumn = Boolean(
-    hasProfessionalFocusColumn && !(dir === "outbound" && viewerRoleGuess === "agent")
-  );
-
   const navigateToRow = (id) => {
     const clean = String(id || "").trim();
     if (!clean) return;
@@ -360,27 +364,14 @@ export default function ReferralsDataTable({
                 >
                   Lead type
                 </th>
-                {showAgentReferralColumns ? (
-                  <>
-                    <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Intent</th>
-                    <th className="min-w-[5rem] px-2 py-1.5 text-left align-middle">Property type</th>
-                  </>
-                ) : null}
-                {showProfessionalFocusColumn ? (
-                  <th
-                    className="min-w-[6rem] px-2 py-1.5 text-left align-middle"
-                    title="Lawyer or mortgage snapshot for that row; agent rows use Intent / Property columns."
-                  >
-                    Referral focus
-                  </th>
-                ) : null}
-                <th className="min-w-[6rem] px-2 py-1.5 text-left align-middle">Lead category</th>
                 <th
-                  className="whitespace-nowrap px-2 py-1.5 text-left align-middle"
-                  title="Accepted while pipeline is New; after you update Notes/pipeline, shows that stage (e.g. Nurturing)."
+                  className="min-w-[10rem] px-2 py-1.5 text-left align-middle"
+                  title="Agent rows show intent + property type; lawyer/broker rows show their qualification snapshot."
                 >
-                  Status
+                  Details
                 </th>
+                <th className="min-w-[6rem] px-2 py-1.5 text-left align-middle">Lead category</th>
+                <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Status</th>
                 {showConsultColumn ? (
                   <th className="whitespace-nowrap px-2 py-1.5 text-left align-middle">Consult</th>
                 ) : null}
@@ -451,18 +442,10 @@ export default function ReferralsDataTable({
                     <td className="px-2 py-1.5 align-middle whitespace-nowrap">
                       <span className="font-medium text-text-heading">{leadTypeLabel}</span>
                     </td>
-                    {showAgentReferralColumns ? (
-                      <>
-                        <td className="px-2 py-1.5 align-middle">{intentCell(summary)}</td>
-                        <td className="px-2 py-1.5 align-middle">{propertyTypeCell(summary)}</td>
-                      </>
-                    ) : null}
-                    {showProfessionalFocusColumn ? (
-                      <td className="px-2 py-1.5 align-middle">{professionalFocusCell(summary)}</td>
-                    ) : null}
+                    <td className="px-2 py-1.5 align-middle">{detailsCell(summary)}</td>
                     <td className="px-2 py-1.5 align-middle leading-snug">{categoryCell(summary)}</td>
                     <td className="px-2 py-1.5 align-middle">
-                      <ReferralListStatusCell row={ref} direction={dir} />
+                      <ReferralWorkflowOrPipelineStatusChip row={ref} />
                     </td>
                     {showConsultColumn ? (
                       <td className="px-2 py-1.5 align-middle">
@@ -493,10 +476,7 @@ export default function ReferralsDataTable({
                 >
                   {Array.from({
                     length:
-                      6 +
-                      (showAgentReferralColumns ? 2 : 0) +
-                      (showProfessionalFocusColumn ? 1 : 0) +
-                      (showConsultColumn ? 1 : 0),
+                      6 + (showConsultColumn ? 1 : 0),
                   }).map((__, cellIdx) => (
                     <td
                       key={`referrals-empty-cell-${idx}-${cellIdx}`}

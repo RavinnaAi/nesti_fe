@@ -90,6 +90,10 @@ function LeadsPageContent() {
   const roleFilteredTabs = useMemo(() => getLeadWorkspaceTabsForRole(userRole), [userRole]);
   const showPropertyMatchesColumn = !roleHidesLeadPropertyMatches(userRole);
   const showAgentLeadColumns = roleShowsLeadsListAgentColumns(userRole);
+  const showMortgageLeadColumns = String(userRole || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_") === "mortgage_broker";
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
   const leadFromUrl = String(searchParams.get("lead") || "").trim();
@@ -643,6 +647,7 @@ function LeadsPageContent() {
                 leadsPageSize={leadsRowsPerPage}
                   showPropertyMatchesColumn={showPropertyMatchesColumn}
                   showAgentLeadColumns={showAgentLeadColumns}
+                  showMortgageLeadColumns={showMortgageLeadColumns}
                 />
               </div>
 

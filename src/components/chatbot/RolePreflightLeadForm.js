@@ -136,6 +136,14 @@ const MORTGAGE_DOWN = [
   { value: "no_savings", label: "No savings yet" },
 ];
 
+const MORTGAGE_BUDGET_RANGE = [
+  SELECT_EMPTY,
+  { value: "under_400k", label: "Under $400K" },
+  { value: "400k_700k", label: "$400K–$700K" },
+  { value: "700k_1m", label: "$700K–$1M" },
+  { value: "1m_plus", label: "$1M+" },
+];
+
 const MORTGAGE_PROPERTY_BUDGET = [
   SELECT_EMPTY,
   { value: "clearly_defined", label: "Clearly defined" },
@@ -203,6 +211,7 @@ export default function RolePreflightLeadForm({
   roleUi = {},
 }) {
   const isLawyer = role === "lawyer";
+  const isMortgageBroker = role === "mortgage_broker";
   const barSteps = isLawyer ? LAWYER_PREFLIGHT_SEGMENT_STEPS : MORTGAGE_PREFLIGHT_SEGMENT_STEPS;
   const [stepError, setStepError] = useState("");
 
@@ -261,8 +270,8 @@ export default function RolePreflightLeadForm({
     onStepNext();
   };
 
-  /** Lawyer: header + step bar already show progress; skip duplicate badge + hint. */
-  const stepIntro = isLawyer ? null : (
+  /** Mortgage broker: keep the step bar, but remove the extra helper line under it. */
+  const stepIntro = isLawyer || isMortgageBroker ? null : (
     <p className="text-[11px] text-text-muted">
       <span
         className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold mr-1.5 ${roleUi.accentBadge || "bg-primary text-white"}`}
@@ -539,12 +548,13 @@ export default function RolePreflightLeadForm({
         />
       </Field>
       <Field label="Property budget / price range" className="sm:col-span-2">
-        <input
-          type="text"
-          className={inputCls}
-          placeholder="e.g. $400K – $600K"
+        <ChatSelect
+          triggerClassName={selectTriggerCls}
+          activeClass={selectActiveClass}
+          hoverClass={selectHoverClass}
           value={draft.budget}
-          onChange={(e) => onFieldChange("budget", e.target.value)}
+          onChange={(v) => onFieldChange("budget", v)}
+          options={MORTGAGE_BUDGET_RANGE}
         />
       </Field>
       <Field label="Property budget clarity">

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
-import { ArrowLeft, ExternalLink, Mail, User } from "lucide-react";
+import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Mail, User } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchLeadProfileById, fetchLeadsByProfileId } from "@/lib/leadsClient";
@@ -32,6 +32,11 @@ const normalizeList = (data) => {
 
 function humanize(value) {
   if (value == null || value === "") return "—";
+  const raw = String(value).trim();
+  if (/^\d+_\d+$/.test(raw)) {
+    const [a, b] = raw.split("_");
+    return `${a}–${b}`;
+  }
   const slug = formatLeadIntakeSlug(value);
   if (slug) return slug;
   return String(value).replace(/_/g, " ");
@@ -121,6 +126,7 @@ export default function ClientProfileLeadsPage() {
     .trim()
     .toLowerCase();
   const isLawyerProfile = profileProfessionalType === "lawyer";
+  const isMortgageBrokerProfile = profileProfessionalType === "mortgage_broker";
   const leads = useMemo(() => {
     const raw = leadsQuery.data?.leads;
     return Array.isArray(raw) ? raw : [];
@@ -349,119 +355,209 @@ export default function ClientProfileLeadsPage() {
               <div className="mt-3 border-t border-border/70 pt-2">
                 <table className="w-full border-collapse">
                   <tbody>
-                    <tr className="border-b border-border/50">
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Transaction stage" : "Intent"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.transaction_stage
-                            : profile?.intent,
-                        )}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Location</th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.property?.location)}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Closing timeline" : "Timeline"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.closing_timeline
-                            : profile?.property?.timeline,
-                        )}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Appointment</th>
-                      <td className="px-2 py-1 align-middle sm:text-[11px]">
-                        <AppointmentStatusChip status={profile?.appointment_status || "not_booked"} />
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border/50">
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Leads linked</th>
-                      <td className="px-2 py-1 text-[10px] font-medium tabular-nums text-text-body sm:text-[11px]">
-                        {linkedCountLabel}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Address</th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.property?.address)}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Transaction type" : "Type"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.transaction_type
-                            : profile?.property?.property_type,
-                        )}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Preferred</th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.contact?.preferred_contact_method)}
-                      </td>
-                    </tr>
-                    <tr className="border-b border-border/50">
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Best time</th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(profile?.contact?.best_time_to_contact)}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Property value" : "Mortgage"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.property_value
-                            : profile?.qualification?.mortgage_status,
-                        )}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Legal services" : "Realtor"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.legal_services_needed
-                            : profile?.qualification?.realtor_status,
-                        )}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "First-time buyer" : "Viewing"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.first_time_buyer
-                            : profile?.qualification?.viewing_readiness,
-                        )}
-                      </td>
-                    </tr>
-                    <tr>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Realtor involved" : "Motivation"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.realtor_involved
-                            : profile?.qualification?.motivation_reason,
-                        )}
-                      </td>
-                      <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
-                        {isLawyerProfile ? "Mortgage status" : "Urgency"}
-                      </th>
-                      <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
-                        {humanize(
-                          isLawyerProfile
-                            ? profile?.qualification?.mortgage_status
-                            : profile?.qualification?.urgency_readiness,
-                        )}
-                      </td>
-                      <td className="px-2 py-1" colSpan={4} />
-                    </tr>
+                    {isMortgageBrokerProfile ? (
+                      <>
+                        <tr className="border-b border-border/50">
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Timeline</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              profile?.qualification?.mortgage_timeline || profile?.property?.timeline,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Pre-approval
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.pre_approval_status)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Credit range
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium tabular-nums text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.credit_score_range)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Employment
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.employment_status)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-border/50">
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Income</th>
+                          <td className="px-2 py-1 text-[10px] font-medium tabular-nums text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.household_income)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Down payment
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.down_payment_readiness)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Purpose</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.purchase_purpose)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Urgency</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.qualification?.urgency_signal)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-border/50">
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Location</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.property?.location)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Address</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.property?.address)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Preferred
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.contact?.preferred_contact_method)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Best time
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.contact?.best_time_to_contact)}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Leads linked
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium tabular-nums text-text-body sm:text-[11px]">
+                            {linkedCountLabel}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            Appointment
+                          </th>
+                          <td className="px-2 py-1 align-middle sm:text-[11px]">
+                            <AppointmentStatusChip status={profile?.appointment_status || "not_booked"} />
+                          </td>
+                          <td className="px-2 py-1" colSpan={4} />
+                        </tr>
+                      </>
+                    ) : (
+                      <>
+                        <tr className="border-b border-border/50">
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Transaction stage" : "Intent"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.transaction_stage
+                                : profile?.intent,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Location</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.property?.location)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Closing timeline" : "Timeline"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.closing_timeline
+                                : profile?.property?.timeline,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Appointment</th>
+                          <td className="px-2 py-1 align-middle sm:text-[11px]">
+                            <AppointmentStatusChip status={profile?.appointment_status || "not_booked"} />
+                          </td>
+                        </tr>
+                        <tr className="border-b border-border/50">
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Leads linked</th>
+                          <td className="px-2 py-1 text-[10px] font-medium tabular-nums text-text-body sm:text-[11px]">
+                            {linkedCountLabel}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Address</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.property?.address)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Transaction type" : "Type"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.transaction_type
+                                : profile?.property?.property_type,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Preferred</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.contact?.preferred_contact_method)}
+                          </td>
+                        </tr>
+                        <tr className="border-b border-border/50">
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">Best time</th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(profile?.contact?.best_time_to_contact)}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Property value" : "Mortgage"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.property_value
+                                : profile?.qualification?.mortgage_status,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Legal services" : "Realtor"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.legal_services_needed
+                                : profile?.qualification?.realtor_status,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "First-time buyer" : "Viewing"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.first_time_buyer
+                                : profile?.qualification?.viewing_readiness,
+                            )}
+                          </td>
+                        </tr>
+                        <tr>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Realtor involved" : "Motivation"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.realtor_involved
+                                : profile?.qualification?.motivation_reason,
+                            )}
+                          </td>
+                          <th className="px-2 py-1 text-left text-[10px] font-medium text-text-muted">
+                            {isLawyerProfile ? "Mortgage status" : "Urgency"}
+                          </th>
+                          <td className="px-2 py-1 text-[10px] font-medium capitalize text-text-body sm:text-[11px]">
+                            {humanize(
+                              isLawyerProfile
+                                ? profile?.qualification?.mortgage_status
+                                : profile?.qualification?.urgency_readiness,
+                            )}
+                          </td>
+                          <td className="px-2 py-1" colSpan={4} />
+                        </tr>
+                      </>
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -528,7 +624,12 @@ export default function ClientProfileLeadsPage() {
 
               {leadsQuery.isLoading && !leadsQuery.data ? (
                 <div className="px-2 py-4 sm:px-3">
-                  <ProfileLeadsTableSkeleton rows={pageSize} />
+                  <ProfileLeadsTableSkeleton
+                    rows={pageSize}
+                    variant={
+                      isMortgageBrokerProfile ? "mortgage_broker" : isLawyerProfile ? "lawyer" : "agent"
+                    }
+                  />
                   <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
                     <span
                       className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
@@ -546,12 +647,12 @@ export default function ClientProfileLeadsPage() {
                   <table className="w-full border-collapse text-left text-sm">
                     <thead>
                       <tr className="border-b border-border text-[10px] font-semibold capitalize tracking-wide text-text-muted">
-                        <th className="px-2 py-1.5">
-                          {isLawyerProfile ? "Stage" : "Intent"}
-                        </th>
-                        <th className="px-2 py-1.5">
-                          {isLawyerProfile ? "Transaction" : "Type"}
-                        </th>
+                        {!isMortgageBrokerProfile ? (
+                          <>
+                            <th className="px-2 py-1.5">{isLawyerProfile ? "Stage" : "Intent"}</th>
+                            <th className="px-2 py-1.5">{isLawyerProfile ? "Transaction" : "Type"}</th>
+                          </>
+                        ) : null}
                         <th className="px-2 py-1.5">Location</th>
                         <th className="px-2 py-1.5">
                           {isLawyerProfile ? "Closing" : "Timeline"}
@@ -559,6 +660,12 @@ export default function ClientProfileLeadsPage() {
                         <th className="px-2 py-1.5 pr-3 text-right">
                           {isLawyerProfile ? "Value" : "Budget"}
                         </th>
+                        {isMortgageBrokerProfile ? (
+                          <>
+                            <th className="px-2 py-1.5">Pre-approval</th>
+                            <th className="px-2 py-1.5">Credit</th>
+                          </>
+                        ) : null}
                         <th className="px-2 py-1.5 pl-3">Grade</th>
                         <th className="px-2 py-1.5 text-center">Score</th>
                         <th className="px-2 py-1.5">Preferred</th>
@@ -599,6 +706,9 @@ export default function ClientProfileLeadsPage() {
                           conversionProp.property_budget ||
                           prop.budget ||
                           prop.expected_price;
+                        const rowMortgageTimeline = qual.mortgage_timeline || rowTimeline;
+                        const rowPreApproval = qual.pre_approval_status;
+                        const rowCredit = qual.credit_score_range;
                         return (
                           <tr
                             key={lead.id}
@@ -613,27 +723,45 @@ export default function ClientProfileLeadsPage() {
                             }}
                             className="hover:bg-primary/[0.06] cursor-pointer"
                           >
-                            <td className="px-2 py-1.5 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
-                              {isLawyerProfile
-                                ? humanize(rowTransactionStage)
-                                : lead.intent && lead.intent !== "unspecified"
-                                  ? humanize(lead.intent)
-                                  : "—"}
-                            </td>
-                            <td className="px-2 py-1.5 text-[10px] capitalize text-text-heading sm:text-[11px]">
-                              {isLawyerProfile ? humanize(rowTransactionType) : humanize(rowPropertyType)}
-                            </td>
+                            {!isMortgageBrokerProfile ? (
+                              <>
+                                <td className="px-2 py-1.5 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
+                                  {isLawyerProfile
+                                    ? humanize(rowTransactionStage)
+                                    : lead.intent && lead.intent !== "unspecified"
+                                      ? humanize(lead.intent)
+                                      : "—"}
+                                </td>
+                                <td className="px-2 py-1.5 text-[10px] capitalize text-text-heading sm:text-[11px]">
+                                  {isLawyerProfile ? humanize(rowTransactionType) : humanize(rowPropertyType)}
+                                </td>
+                              </>
+                            ) : null}
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
                               {humanize(rowLocation)}
                             </td>
                             <td className="px-2 py-1.5 text-[10px] capitalize text-text-muted sm:text-[11px]">
-                              {isLawyerProfile ? humanize(rowClosingTimeline) : humanize(rowTimeline)}
+                              {isLawyerProfile
+                                ? humanize(rowClosingTimeline)
+                                : isMortgageBrokerProfile
+                                  ? humanize(rowMortgageTimeline)
+                                  : humanize(rowTimeline)}
                             </td>
                             <td className="px-2 py-1.5 pr-3 text-right text-[10px] font-medium tabular-nums text-text-heading sm:text-[11px]">
                               {isLawyerProfile
                                 ? humanize(rowPropertyValue)
                                 : formatBudgetValue(rowBudget)}
                             </td>
+                            {isMortgageBrokerProfile ? (
+                              <>
+                                <td className="px-2 py-1.5 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
+                                  {humanize(rowPreApproval)}
+                                </td>
+                                <td className="px-2 py-1.5 text-[10px] font-medium tabular-nums text-text-heading sm:text-[11px]">
+                                  {humanize(rowCredit)}
+                                </td>
+                              </>
+                            ) : null}
                             <td className="px-2 py-1.5 pl-3 text-[10px] font-medium capitalize text-text-heading sm:text-[11px]">
                               {humanize(lead.grade)}
                             </td>

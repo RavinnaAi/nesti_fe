@@ -208,7 +208,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
         {/* Avatar + name */}
         <div className="relative flex items-end gap-3 px-4 pb-3.5 sm:gap-4 sm:px-6 sm:pb-4">
           <div className="relative z-[1] -mt-8 shrink-0 sm:-mt-9">
-            <div className="relative h-[4rem] w-[4rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[4.5rem] sm:w-[4.5rem] sm:rounded-xl">
+            <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
               {profileImage ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={profileImage} alt="" className="h-full w-full object-cover object-center" />

@@ -125,10 +125,15 @@ function IcpTierDropdown({ value, onChange, disabled }) {
 export default function ClientsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthGuard();
-  const token = useAppSelector((state) => state.auth.token);
+  const { token, user: authUser } = useAppSelector((state) => state.auth);
   const [hydrated, setHydrated] = useState(false);
   const [page, setPage] = useState(1);
   const [icpTier, setIcpTier] = useState("");
+  const viewerRole = String(authUser?.role || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const isMortgageBrokerViewer = viewerRole === "mortgage_broker";
   const pageSize = useDynamicTablePageSize({
     minRows: 10,
     maxRows: 24,
@@ -175,7 +180,7 @@ export default function ClientsPage() {
       <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2.5 pt-5 sm:px-4 sm:pt-6">
         <div className="w-full">
           <div className="overflow-hidden rounded-md border border-border/90 bg-white p-2 shadow-sm sm:p-3">
-            <ClientsTableSkeleton rows={effectivePageSize} />
+            <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
             <p className="mt-3 text-center text-[10px] font-medium text-primary sm:text-[11px]">Loading…</p>
           </div>
         </div>
@@ -208,7 +213,7 @@ export default function ClientsPage() {
         <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">
           {clientsQuery.isLoading ? (
             <div className="p-2 sm:p-3">
-              <ClientsTableSkeleton rows={effectivePageSize} />
+              <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
               <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
                 <span
                   className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
@@ -231,7 +236,7 @@ export default function ClientsPage() {
                     <th className={`${th} !pl-px`}>Phone</th>
                     <th className={th}>Address</th>
                     <th className={th}>Timeline</th>
-                    <th className={`${th} pr-2`}>Mortgage</th>
+                    {!isMortgageBrokerViewer ? <th className={`${th} pr-2`}>Mortgage</th> : null}
                     <th className={`${th} pl-0 pr-4 text-right sm:pr-5`}>Budget</th>
                     <th className={`${th} pl-1`}>Appointment</th>
                     <th className={`${th} text-center tabular-nums`}>Leads</th>
@@ -240,9 +245,10 @@ export default function ClientsPage() {
                 <tbody className="divide-y divide-border/60">
                   {tableRows.map((profile, rowIndex) => {
                     if (!profile) {
+                      const cells = isMortgageBrokerViewer ? 8 : 9;
                       return (
                         <tr key={`clients-empty-row-${rowIndex}`} className="h-[42px]">
-                          {Array.from({ length: 9 }).map((_, cellIdx) => (
+                          {Array.from({ length: cells }).map((_, cellIdx) => (
                             <td key={`clients-empty-cell-${rowIndex}-${cellIdx}`} className={td}>
                               <span className="invisible">—</span>
                             </td>
@@ -312,11 +318,13 @@ export default function ClientsPage() {
                             {humanize(p.timeline)}
                           </span>
                         </td>
-                        <td className={`${tdMuted} pr-2`}>
-                          <span className="line-clamp-2 max-w-[100px]" title={humanize(q.mortgage_status)}>
-                            {humanize(q.mortgage_status)}
-                          </span>
-                        </td>
+                        {!isMortgageBrokerViewer ? (
+                          <td className={`${tdMuted} pr-2`}>
+                            <span className="line-clamp-2 max-w-[100px]" title={humanize(q.mortgage_status)}>
+                              {humanize(q.mortgage_status)}
+                            </span>
+                          </td>
+                        ) : null}
                         <td className={`${td} whitespace-nowrap pl-0 pr-4 text-right sm:pr-5`}>
                           {budgetDisplay ? (
                             <BudgetCell display={budgetDisplay} />

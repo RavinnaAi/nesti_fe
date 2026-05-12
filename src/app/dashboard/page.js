@@ -318,6 +318,7 @@ export default function DashboardPage() {
         const propertyType = getLeadPropertyTypeDisplay(c);
         const qualification = c?.qualification || {};
         const lawyerQual = qualification?.lawyer || {};
+        const mortgageQual = qualification?.mortgage_broker || {};
         const intent = String(meta.intent || "").trim() || "—";
         const grade = meta.leadGrade || "";
         const sortScore = Number.isFinite(score) && !Number.isNaN(score) ? score : -1;
@@ -331,6 +332,17 @@ export default function DashboardPage() {
           transactionType: qualification?.transaction_type || lawyerQual?.transaction_type || "",
           closingTimeline: qualification?.closing_timeline || lawyerQual?.closing_timeline || "",
           propertyValue: qualification?.property_value || lawyerQual?.property_value || "",
+          mortgageTimeline:
+            qualification?.mortgage_timeline ||
+            mortgageQual?.mortgage_timeline ||
+            c?.property?.timeline ||
+            "",
+          preApprovalStatus:
+            qualification?.pre_approval_status ||
+            mortgageQual?.pre_approval_status ||
+            mortgageQual?.mortgage_status ||
+            "",
+          creditScoreRange: qualification?.credit_score_range || mortgageQual?.credit_score_range || "",
           grade,
           scoreLabel: sortScore >= 0 ? String(score) : "—",
           location: location || "—",
@@ -465,15 +477,15 @@ export default function DashboardPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
+                <div className="relative h-[5rem] w-[5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[6rem] sm:w-[6rem] sm:rounded-2xl">
                   {profileImageUrl && !avatarBroken ? (
                     <Image
                       src={profileImageUrl}
                       alt={avatarAlt}
-                      width={220}
-                      height={220}
+                      width={240}
+                      height={240}
                       className="h-full w-full object-cover object-center"
-                      sizes="(max-width: 768px) 72px, 84px"
+                      sizes="(max-width: 768px) 80px, 96px"
                       priority
                       unoptimized={
                         profileImageUrl.startsWith("data:") || profileImageUrl.startsWith("blob:")

@@ -9,6 +9,7 @@ import {
   getConversationMeta,
   getLeadMatchId,
   getMatchesCount,
+  formatLeadIntakeSlug,
 } from "@/lib/leadsPageUtils";
 
 export default function LeadsListTable({
@@ -21,6 +22,8 @@ export default function LeadsListTable({
   showPropertyMatchesColumn = true,
   /** Agent-focused Type + Intent columns; hidden for lawyers (see `roleShowsLeadsListAgentColumns`). */
   showAgentLeadColumns = true,
+  /** Mortgage broker list Type column (timeline / pre-approval). */
+  showMortgageLeadColumns = false,
 }) {
   const router = useRouter();
   const visibleRowsTarget = Math.max(1, Number(leadsPageSize) || 10);
@@ -28,9 +31,26 @@ export default function LeadsListTable({
   const tableMinClass = (() => {
     if (showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[1060px]";
     if (showAgentLeadColumns && !showPropertyMatchesColumn) return "min-w-[980px]";
+    if (showMortgageLeadColumns && showPropertyMatchesColumn) return "min-w-[980px]";
+    if (showMortgageLeadColumns && !showPropertyMatchesColumn) return "min-w-[900px]";
     if (!showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[940px]";
     return "min-w-[860px]";
   })();
+
+  const formatLabel = (raw) => {
+    const s = String(raw ?? "").trim();
+    if (!s) return "—";
+    const formatted = formatLeadIntakeSlug(s);
+    if (formatted) return formatted;
+    return s.replace(/_/g, " ").replace(/\b\w/g, (ch) => ch.toUpperCase());
+  };
+
+  const mortgageTypeLabel = (conversation) => {
+    const q = conversation?.qualification || {};
+    // Mortgage brokers: keep this column short; show timeline only.
+    const timeline = formatLabel(q.mortgage_timeline || conversation?.property?.timeline || "");
+    return timeline !== "—" ? timeline : "—";
+  };
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none">
@@ -40,6 +60,7 @@ export default function LeadsListTable({
             rows={leadsPageSize}
             showPropertyMatchesColumn={showPropertyMatchesColumn}
             showAgentLeadColumns={showAgentLeadColumns}
+            showMortgageLeadColumns={showMortgageLeadColumns}
           />
         </div>
       ) : leadsQuery.isError ? (
@@ -51,7 +72,11 @@ export default function LeadsListTable({
           <table className={`w-full table-auto ${tableMinClass}`}>
             <thead className="bg-primary/[0.04] border-b border-border">
               <tr className="text-left text-[11px] font-semibold tracking-wide text-text-muted uppercase">
-                {showAgentLeadColumns ? <th className="px-3 py-2">Type</th> : null}
+                {showAgentLeadColumns || showMortgageLeadColumns ? (
+                  <th className="px-3 py-2">
+                    {showMortgageLeadColumns && !showAgentLeadColumns ? "Timeline" : "Type"}
+                  </th>
+                ) : null}
                 <th className="px-3 py-2">Name</th>
                 <th className="px-3 py-2">Email</th>
                 <th className="px-3 py-2">Status</th>
@@ -109,6 +134,12 @@ export default function LeadsListTable({
                           {propertyTypeLabel}
                         </span>
                       </td>
+                    ) : showMortgageLeadColumns ? (
+                      <td className="px-3 py-2.5">
+                        <span className="font-medium text-text-heading line-clamp-2">
+                          {mortgageTypeLabel(conversation)}
+                        </span>
+                      </td>
                     ) : null}
                     <td className="px-3 py-2.5 min-w-[120px]">
                       <span className="line-clamp-2 font-medium text-text-heading">{displayName}</span>
@@ -160,7 +191,7 @@ export default function LeadsListTable({
                   {Array.from({
                     length:
                       7 +
-                      (showAgentLeadColumns ? 2 : 0) +
+                      (showAgentLeadColumns ? 2 : showMortgageLeadColumns ? 1 : 0) +
                       (showPropertyMatchesColumn ? 1 : 0),
                   }).map((__, cellIdx) => (
                     <td key={`leads-empty-cell-${idx}-${cellIdx}`} className="h-11 px-3 py-2.5">

@@ -880,7 +880,11 @@ export default function ChatWidget({
   const showConversationProgress =
     useAgentLeadForm && leadFlowStep === "chat" && Boolean(leadFormContact);
   const showRoleChatProgress =
-    useRolePreflight && resolvedRole !== "lawyer" && leadFlowStep === "chat" && Boolean(leadFormContact);
+    useRolePreflight &&
+    resolvedRole !== "lawyer" &&
+    resolvedRole !== "mortgage_broker" &&
+    leadFlowStep === "chat" &&
+    Boolean(leadFormContact);
 
   const headerSubtitle =
     useAgentLeadForm && leadFlowStep !== "chat"
@@ -892,6 +896,7 @@ export default function ChatWidget({
         })()
       : useRolePreflight && leadFlowStep === "details"
         ? (() => {
+            if (resolvedRole === "mortgage_broker") return "";
             const labels =
               resolvedRole === "lawyer" ? LAWYER_PREFLIGHT_HEADER_LABELS : MORTGAGE_PREFLIGHT_HEADER_LABELS;
             const label = labels[rolePreflightStepIndex] || "";

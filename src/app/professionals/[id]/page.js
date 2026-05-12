@@ -144,7 +144,7 @@ export default function ProfessionalDetailPage() {
 
               <div className="relative flex items-end gap-4 px-5 pb-5 sm:gap-5 sm:px-7 sm:pb-6">
                 <div className="relative z-[1] -mt-8 shrink-0 sm:-mt-10">
-                  <div className="relative flex h-[4.5rem] w-[4.5rem] items-center justify-center overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 text-xl font-bold text-primary-dark shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
+                  <div className="relative flex h-[5rem] w-[5rem] items-center justify-center overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 text-xl font-bold text-primary-dark shadow-md sm:h-[6rem] sm:w-[6rem] sm:rounded-2xl">
                     {personalInfo.profileImage ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img

@@ -9,9 +9,12 @@ export function LeadsPageTableSkeleton({
   rows = 8,
   showPropertyMatchesColumn = true,
   showAgentLeadColumns = true,
+  showMortgageLeadColumns = false,
 }) {
   const headers = [
-    ...(showAgentLeadColumns ? ["Type"] : []),
+    ...(showAgentLeadColumns || showMortgageLeadColumns
+      ? [showMortgageLeadColumns && !showAgentLeadColumns ? "Timeline" : "Type"]
+      : []),
     "Name",
     "Email",
     "Status",
@@ -25,6 +28,8 @@ export function LeadsPageTableSkeleton({
   const minClass = (() => {
     if (showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[1060px]";
     if (showAgentLeadColumns && !showPropertyMatchesColumn) return "min-w-[980px]";
+    if (showMortgageLeadColumns && showPropertyMatchesColumn) return "min-w-[980px]";
+    if (showMortgageLeadColumns && !showPropertyMatchesColumn) return "min-w-[900px]";
     if (!showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[940px]";
     return "min-w-[860px]";
   })();
@@ -43,7 +48,7 @@ export function LeadsPageTableSkeleton({
         <tbody>
           {Array.from({ length: rows }).map((_, i) => (
             <tr key={i} className="border-b border-border/70">
-              {showAgentLeadColumns ? (
+              {showAgentLeadColumns || showMortgageLeadColumns ? (
                 <td className="px-3 py-2.5">
                   <SkeletonBlock className="h-3.5 w-32 max-w-full" />
                 </td>
@@ -91,9 +96,7 @@ export function ReferralsTableSkeleton({ rows = 8, showConsultColumn = true }) {
   const headers = [
     "Lead",
     "Lead type",
-    "Intent",
-    "Property type",
-    "Referral focus",
+    "Details",
     "Lead category",
     "Status",
     ...(showConsultColumn ? ["Consult"] : []),
@@ -120,12 +123,6 @@ export function ReferralsTableSkeleton({ rows = 8, showConsultColumn = true }) {
                   <SkeletonBlock className="h-3 w-3 rounded-full" />
                   <SkeletonBlock className="h-3.5 w-24 max-w-full" />
                 </div>
-              </td>
-              <td className="px-2 py-1.5">
-                <SkeletonBlock className="h-3.5 w-20" />
-              </td>
-              <td className="px-2 py-1.5">
-                <SkeletonBlock className="h-3.5 w-16" />
               </td>
               <td className="px-2 py-1.5">
                 <SkeletonBlock className="h-3.5 w-20" />
@@ -186,20 +183,23 @@ const thClients =
 const tdClients = "px-1.5 py-1 align-middle";
 
 /** Clients list table — matches `/clients` columns. */
-export function ClientsTableSkeleton({ rows = 8 }) {
-  const w = ["w-28", "w-24", "w-16", "w-20", "w-14", "w-16", "w-14", "w-10", "w-8"];
+export function ClientsTableSkeleton({ rows = 8, showMortgageColumn = true }) {
+  const headers = showMortgageColumn
+    ? ["Client", "Email", "Phone", "Address", "Timeline", "Mortgage", "Budget", "Appointment", "Leads"]
+    : ["Client", "Email", "Phone", "Address", "Timeline", "Budget", "Appointment", "Leads"];
+  const w = showMortgageColumn
+    ? ["w-28", "w-24", "w-16", "w-20", "w-14", "w-16", "w-14", "w-14", "w-8"]
+    : ["w-28", "w-24", "w-16", "w-20", "w-14", "w-14", "w-14", "w-8"];
   return (
     <div className="overflow-x-auto" aria-hidden>
       <table className="w-full min-w-[680px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border bg-primary/[0.04]">
-            {["Client", "Email", "Phone", "Location", "Timeline", "Mortgage", "Budget", "Nurture", "Leads"].map(
-              (h) => (
-                <th key={h} className={thClients}>
-                  {h}
-                </th>
-              )
-            )}
+            {headers.map((h) => (
+              <th key={h} className={thClients}>
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
@@ -212,7 +212,7 @@ export function ClientsTableSkeleton({ rows = 8 }) {
                 </div>
               </td>
               {w.slice(1).map((cls, i) => (
-                <td key={i} className={tdClients}>
+                <td key={`${r}-${i}`} className={tdClients}>
                   <SkeletonBlock className={`h-3.5 ${cls}`} />
                 </td>
               ))}
@@ -256,25 +256,65 @@ export function ClientProfileCardSkeleton() {
 }
 
 /** Leads-for-profile sub-table. */
-export function ProfileLeadsTableSkeleton({ rows = 6 }) {
+export function ProfileLeadsTableSkeleton({ rows = 6, variant = "agent" }) {
+  const headers =
+    variant === "mortgage_broker"
+      ? [
+          "Location",
+          "Timeline",
+          "Budget",
+          "Pre-approval",
+          "Credit",
+          "Grade",
+          "Score",
+          "Preferred",
+          "Best time",
+          "Appointment",
+          "Open",
+        ]
+      : variant === "lawyer"
+        ? [
+            "Stage",
+            "Transaction",
+            "Location",
+            "Closing",
+            "Value",
+            "Grade",
+            "Score",
+            "Preferred",
+            "Best time",
+            "Appointment",
+            "Open",
+          ]
+        : [
+            "Intent",
+            "Type",
+            "Location",
+            "Timeline",
+            "Budget",
+            "Grade",
+            "Score",
+            "Preferred",
+            "Best time",
+            "Appointment",
+            "Open",
+          ];
   return (
     <div className="overflow-x-auto px-1" aria-hidden>
       <table className="w-full min-w-[720px] border-collapse text-left text-sm">
         <thead>
           <tr className="border-b border-border text-[10px] font-semibold capitalize tracking-wide text-text-muted">
-            {["Intent", "Type", "Location", "Timeline", "Budget", "Grade", "Score", "Preferred", "Best time", "Nurture", "Open"].map(
-              (h) => (
-                <th key={h} className="px-2 py-1.5">
-                  {h}
-                </th>
-              )
-            )}
+            {headers.map((h) => (
+              <th key={h} className="px-2 py-1.5">
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody className="divide-y divide-border/60">
           {Array.from({ length: rows }).map((_, r) => (
             <tr key={r}>
-              {Array.from({ length: 11 }).map((__, c) => (
+              {Array.from({ length: headers.length }).map((__, c) => (
                 <td key={c} className="px-2 py-2">
                   <SkeletonBlock className="h-3 w-full max-w-[72px]" />
                 </td>
@@ -387,7 +427,7 @@ export function ProfilePageContentSkeleton() {
       <div className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm">
         <SkeletonBlock className="h-28 w-full rounded-none sm:h-32 md:h-36" />
         <div className="flex items-end gap-4 px-5 pb-5 sm:px-7 sm:pb-6">
-          <SkeletonBlock className="-mt-8 h-[4.5rem] w-[4.5rem] shrink-0 rounded-xl border-2 border-white sm:-mt-10 sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl" />
+          <SkeletonBlock className="-mt-8 h-[5rem] w-[5rem] shrink-0 rounded-xl border-2 border-white sm:-mt-10 sm:h-[6rem] sm:w-[6rem] sm:rounded-2xl" />
           <div className="min-w-0 flex-1 space-y-2 pb-0.5">
             <SkeletonBlock className="h-5 w-44 max-w-full" />
             <SkeletonBlock className="h-3.5 w-full max-w-md" />

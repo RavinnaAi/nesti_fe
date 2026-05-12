@@ -696,7 +696,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
               setReferralsOpen(false);
               onCloseMobile?.();
             }}
-            className="group relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary-dark text-[11px] font-bold text-white shadow-[0_3px_12px_rgba(52,199,89,0.35)] ring-2 ring-white transition duration-200 hover:scale-[1.02]"
+            className="group relative grid h-12 w-12 shrink-0 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-primary via-primary to-primary-dark text-[11px] font-bold text-white shadow-[0_3px_12px_rgba(52,199,89,0.35)] ring-2 ring-white transition duration-200 hover:scale-[1.02]"
             title="Personal settings"
           >
             <span className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-70" aria-hidden />

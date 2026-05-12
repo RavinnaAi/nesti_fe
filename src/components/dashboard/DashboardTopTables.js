@@ -16,7 +16,14 @@ const trRow = "border-b border-border/50 transition-colors last:border-b-0 hover
 
 function humanize(value) {
   if (value == null || value === "") return "—";
-  return String(value).replace(/_/g, " ");
+  const raw = String(value).trim();
+  if (/^\d+_\d+$/.test(raw)) {
+    const [a, b] = raw.split("_");
+    return `${a}–${b}`;
+  }
+  const slug = formatLeadIntakeSlug(raw);
+  if (slug) return slug;
+  return raw.replace(/_/g, " ");
 }
 
 function formatLawyerValue(value) {
@@ -53,20 +60,29 @@ function contactPhone(profile) {
   return String(c.phone || "").trim() || null;
 }
 
-function TopLeadsTableSkeleton() {
-  const widths = ["w-24", "w-28", "w-24", "w-28", "w-14", "w-10", "w-20"];
+function TopLeadsTableSkeleton({ variant = "agent" }) {
+  const headers =
+    variant === "mortgage_broker"
+      ? ["Timeline", "Name", "Email", "Pre-approval", "Credit", "Grade", "Score", "Address"]
+      : variant === "lawyer"
+        ? ["Stage", "Name", "Email", "Transaction", "Closing", "Value", "Grade", "Score", "Address"]
+        : ["Type", "Name", "Email", "Intent", "Grade", "Score", "Address"];
+  const widths =
+    variant === "mortgage_broker"
+      ? ["w-24", "w-28", "w-24", "w-24", "w-16", "w-14", "w-10", "w-20"]
+      : variant === "lawyer"
+        ? ["w-24", "w-28", "w-24", "w-28", "w-20", "w-16", "w-14", "w-10", "w-20"]
+        : ["w-24", "w-28", "w-24", "w-28", "w-14", "w-10", "w-20"];
   return (
     <div className="overflow-x-auto -mx-1" aria-hidden>
       <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
         <thead>
           <tr className={theadRow}>
-            <th className={th}>Type</th>
-            <th className={th}>Name</th>
-            <th className={th}>Email</th>
-            <th className={th}>Intent</th>
-            <th className={th}>Grade</th>
-            <th className={`${th} tabular-nums`}>Score</th>
-            <th className={th}>Address</th>
+            {headers.map((h) => (
+              <th key={h} className={h === "Score" ? `${th} tabular-nums` : th}>
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
@@ -126,7 +142,13 @@ export default function DashboardTopTables({
   onSelectLead,
   professionalType = "agent",
 }) {
-  const isLawyer = String(professionalType || "").toLowerCase() === "lawyer";
+  const role = String(professionalType || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
+  const isLawyer = role === "lawyer";
+  const isMortgageBroker = role === "mortgage_broker";
+  const topLeadsVariant = isMortgageBroker ? "mortgage_broker" : isLawyer ? "lawyer" : "agent";
   return (
     <div className="flex flex-col gap-4 md:gap-6">
       <section className="min-w-0 rounded-xl border border-border bg-white p-2.5 sm:p-3 shadow-sm">
@@ -135,7 +157,7 @@ export default function DashboardTopTables({
           Highest lead score in your workspace (same list as charts).
         </p>
         {leadsLoading ? (
-          <TopLeadsTableSkeleton />
+          <TopLeadsTableSkeleton variant={topLeadsVariant} />
         ) : leadsError ? (
           <p className="text-sm text-red-600 py-4">Could not load leads.</p>
         ) : topLeads.length === 0 ? (
@@ -145,10 +167,15 @@ export default function DashboardTopTables({
             <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
               <thead>
                 <tr className={theadRow}>
-                  <th className={th}>{isLawyer ? "Stage" : "Type"}</th>
+                  <th className={th}>
+                    {isMortgageBroker ? "Timeline" : isLawyer ? "Stage" : "Type"}
+                  </th>
                   <th className={th}>Name</th>
                   <th className={th}>Email</th>
-                  <th className={th}>{isLawyer ? "Transaction" : "Intent"}</th>
+                  <th className={th}>
+                    {isMortgageBroker ? "Pre-approval" : isLawyer ? "Transaction" : "Intent"}
+                  </th>
+                  {isMortgageBroker ? <th className={th}>Credit</th> : null}
                   {isLawyer ? <th className={th}>Closing</th> : null}
                   {isLawyer ? <th className={th}>Value</th> : null}
                   <th className={th}>Grade</th>
@@ -164,9 +191,19 @@ export default function DashboardTopTables({
                         type="button"
                         onClick={() => onSelectLead?.(row.id)}
                         className="max-w-[132px] truncate text-left text-[11px] font-semibold capitalize text-text-heading transition hover:text-primary sm:text-xs"
-                        title={String(isLawyer ? row.transactionStage : row.propertyType || "")}
+                        title={String(
+                          isMortgageBroker
+                            ? row.mortgageTimeline
+                            : isLawyer
+                              ? row.transactionStage
+                              : row.propertyType || "",
+                        )}
                       >
-                        {isLawyer ? humanize(row.transactionStage) : row.propertyType || "—"}
+                        {isMortgageBroker
+                          ? humanize(row.mortgageTimeline)
+                          : isLawyer
+                            ? humanize(row.transactionStage)
+                            : row.propertyType || "—"}
                       </button>
                     </td>
                     <td className={tdStrong}>
@@ -183,7 +220,16 @@ export default function DashboardTopTables({
                         <span className="text-text-muted">—</span>
                       )}
                     </td>
-                    <td className={td}>{humanize(isLawyer ? row.transactionType : row.intent)}</td>
+                    <td className={td}>
+                      {humanize(
+                        isMortgageBroker
+                          ? row.preApprovalStatus
+                          : isLawyer
+                            ? row.transactionType
+                            : row.intent,
+                      )}
+                    </td>
+                    {isMortgageBroker ? <td className={td}>{humanize(row.creditScoreRange)}</td> : null}
                     {isLawyer ? <td className={td}>{humanize(row.closingTimeline)}</td> : null}
                     {isLawyer ? <td className={td}>{formatLawyerValue(row.propertyValue)}</td> : null}
                     <td className={`${td} font-semibold`}>{row.grade ? String(row.grade).toUpperCase() : "—"}</td>

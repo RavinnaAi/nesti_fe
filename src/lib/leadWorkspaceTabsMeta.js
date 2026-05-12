@@ -59,7 +59,7 @@ export function roleHidesLeadPropertyMatches(role) {
 
 /** List columns Type + Intent (buyer/seller) are agent-focused; hidden for lawyers. */
 export function roleShowsLeadsListAgentColumns(role) {
-  return normalizedRole(role) !== "lawyer";
+  return normalizedRole(role) === "agent";
 }
 
 function tabsForOrderedSubset(order, labelOverrides = {}) {

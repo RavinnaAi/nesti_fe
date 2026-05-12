@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
@@ -8,6 +8,7 @@ import {
   fetchCalendlyConnectUrl,
   fetchCalendarStatus,
   disconnectCalendly,
+  registerCalendlyWebhook,
 } from "@/lib/calendarClient";
 import { isCalendlyPlanWebhookBlock } from "@/lib/calendlyErrors";
 import {
@@ -23,6 +24,7 @@ export function useCalendlyConnection() {
   const { token } = useAppSelector((s) => s.auth);
   const queryClient = useQueryClient();
   const [connecting, setConnecting] = useState(false);
+  const autoWebhookAttemptedRef = useRef("");
 
   const statusQuery = useQuery({
     queryKey: ["calendar-status", token],
@@ -37,6 +39,42 @@ export function useCalendlyConnection() {
   const webhookError = Boolean(cal?.calendly_webhook_register_error);
   const planBlocked = Boolean(cal && isCalendlyPlanWebhookBlock(cal));
   const allGood = connected && webhookActive && !webhookError;
+
+  const registerWebhookMut = useMutation({
+    mutationFn: () => registerCalendlyWebhook({ token }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["calendar-status", token] });
+    },
+    onError: (e) => {
+      const msg = e?.message || "Calendly webhook registration failed.";
+      toast.error(msg, { toastId: `${CALENDLY_INTEGRATION_TOAST_ID}-webhook` });
+    },
+  });
+
+  useEffect(() => {
+    if (!token) return;
+    if (!connected) {
+      autoWebhookAttemptedRef.current = "";
+      return;
+    }
+    if (allGood || planBlocked) return;
+    // If there is already a stored webhook error, don't hammer Calendly on every mount.
+    if (webhookError) return;
+    if (registerWebhookMut.isPending) return;
+    const key = `${String(token).slice(0, 12)}::${String(cal?.updatedAt || cal?.account_email || "")}`;
+    if (autoWebhookAttemptedRef.current === key) return;
+    autoWebhookAttemptedRef.current = key;
+    registerWebhookMut.mutate();
+  }, [
+    token,
+    connected,
+    allGood,
+    planBlocked,
+    webhookError,
+    cal?.updatedAt,
+    cal?.account_email,
+    registerWebhookMut,
+  ]);
 
   const startCalendlyOAuth = useCallback(async () => {
     setConnecting(true);
@@ -105,5 +143,6 @@ export function useCalendlyConnection() {
     connecting,
     startCalendlyOAuth,
     disconnectMut,
+    registerWebhookMut,
   };
 }

@@ -168,7 +168,7 @@ export default function Header() {
                   onClick={() => setIsProfileOpen((prev) => !prev)}
                   className="flex items-center gap-3 bg-background-light rounded-md hover:shadow-md transition-all"
                 >
-                  <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
+                  <div className="h-12 w-12 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                     {initials}
                   </div>
                 </button>
@@ -424,7 +424,7 @@ export default function Header() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 px-4 py-3 rounded-md bg-background-light border border-border">
-                      <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
+                      <div className="h-12 w-12 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                         {initials}
                       </div>
                       <div className="flex flex-col">
