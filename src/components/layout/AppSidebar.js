@@ -24,6 +24,7 @@ import {
   Handshake,
   Inbox,
   Send,
+  MessageSquare,
 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -38,6 +39,7 @@ const REFERRAL_DIRECTION_ITEMS = [
 const PRIMARY_ITEMS = [
   { id: "dashboard", label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { id: "leads", label: "Leads", href: "/leads", icon: Users },
+  { id: "conversations", label: "Conversations", href: "/conversations", icon: MessageSquare },
   { id: "referrals", label: "Referrals", href: "/referrals?direction=inbound", icon: Handshake },
   { id: "clients", label: "Clients", href: "/clients", icon: UserRound },
   { id: "professionals", label: "Professionals", href: "/professionals?role=agent", icon: Building2 },
@@ -274,7 +276,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const sidebarInner = (
     <aside
       ref={menuRef}
-      className="flex h-screen w-60 min-h-0 flex-col border-r border-border/70 bg-gradient-to-b from-white via-background-light/30 to-background-light shadow-[2px_0_24px_rgba(45,55,72,0.05)] backdrop-blur-sm"
+      className="flex h-screen w-60 min-h-0 flex-col border-r border-primary/25 shadow-[2px_0_24px_rgba(45,55,72,0.05)]"
+      style={{
+        background: "linear-gradient(135deg, #F4FCF6 0%, #E8FAEE 48%, #D8F5E2 100%)",
+      }}
     >
       <div className="relative shrink-0 border-b border-border/50 px-3 py-2.5">
         <div
@@ -686,7 +691,12 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
         </div>
       </div>
 
-      <div className="shrink-0 border-t border-border/60 bg-gradient-to-t from-background-light/70 to-white/95 p-2.5">
+      <div
+        className="shrink-0 border-t border-primary/25 p-2.5"
+        style={{
+          background: "linear-gradient(135deg, #F4FCF6 0%, #E8FAEE 48%, #D8F5E2 100%)",
+        }}
+      >
         <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-white px-2 py-1.5 shadow-sm">
           <Link
             href="/settings?tab=personal"
@@ -728,7 +738,14 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
 
   return (
     <>
-      <div className="hidden lg:block fixed inset-y-0 left-0 z-40">{sidebarInner}</div>
+      <div
+        className="hidden lg:block fixed inset-y-0 left-0 z-40"
+        style={{
+          background: "linear-gradient(135deg, #F4FCF6 0%, #E8FAEE 48%, #D8F5E2 100%)",
+        }}
+      >
+        {sidebarInner}
+      </div>
       <AnimatePresence>
         {isMobileOpen ? (
           <>

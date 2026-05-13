@@ -150,6 +150,11 @@ export const API_ENDPOINTS = {
     icp: withBaseUrl("/api/professionals/icp"),
     uploadImage: withBaseUrl("/api/professionals/upload-image"),
   },
+  proChat: {
+    threads: withBaseUrl("/api/pro-chat/threads"),
+    threadDetail: withBaseUrl((id) => `/api/pro-chat/threads/${id}`),
+    threadMessages: withBaseUrl((id) => `/api/pro-chat/threads/${id}/messages`),
+  },
 };
 
 /**

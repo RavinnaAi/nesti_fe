@@ -1,12 +1,15 @@
 "use client";
 
 import { useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
-import { User, Briefcase } from "lucide-react";
+import { MessageSquare, User, Briefcase } from "lucide-react";
+import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { fetchProfessionalById } from "@/lib/professionalsClient";
+import { createOrGetProChatThread } from "@/lib/proChatClient";
 import PersonalCard from "@/components/profile/PersonalCard";
 import BusinessCard from "@/components/profile/BusinessCard";
 
@@ -34,7 +37,7 @@ function displayName(professional) {
   return joined || "Professional";
 }
 
-function SectionHeader({ icon: Icon, title }) {
+function SectionHeader({ icon: Icon, title, right = null }) {
   return (
     <header className="mb-4 flex items-center gap-2.5">
       <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
@@ -42,15 +45,18 @@ function SectionHeader({ icon: Icon, title }) {
       </div>
       <h2 className="text-xs font-bold uppercase tracking-[0.1em] text-slate-500">{title}</h2>
       <div className="flex-1 border-t border-slate-100" />
+      {right ? <div className="shrink-0">{right}</div> : null}
     </header>
   );
 }
 
 export default function ProfessionalDetailPage() {
   const { isAuthenticated } = useAuthGuard();
-  const token = useAppSelector((state) => state.auth.token);
+  const router = useRouter();
+  const { token, user: authUser } = useAppSelector((state) => state.auth);
   const params = useParams();
   const id = String(params?.id || "").trim();
+  const myUserId = String(authUser?.id || authUser?._id || "").trim();
 
   const query = useQuery({
     queryKey: ["professional-detail", token, id],
@@ -64,6 +70,25 @@ export default function ProfessionalDetailPage() {
   const name = displayName(pro);
   const roleBadgeText = humanizeToken(pro?.professional_type || pro?.role || "").toUpperCase();
   const hasCover = Boolean(pro?.cover_image);
+  const isSelf = Boolean(myUserId && String(pro?.id || "") === String(myUserId));
+
+  const startChat = async () => {
+    try {
+      if (!token || !pro?.id) return;
+      const resp = await createOrGetProChatThread({
+        token,
+        other_user_id: String(pro.id),
+      });
+      const threadId = resp?.thread?.id;
+      if (threadId) {
+        router.push(`/messages/${encodeURIComponent(threadId)}`);
+      } else {
+        throw new Error("Thread not created");
+      }
+    } catch (e) {
+      toast.error(e?.message || "Could not start chat");
+    }
+  };
 
   const personalInfo = {
     fullName: name,
@@ -182,7 +207,22 @@ export default function ProfessionalDetailPage() {
               className="flex flex-col gap-4"
             >
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm shadow-slate-900/[0.05] sm:p-6">
-                <SectionHeader icon={User} title="Contact & role" />
+                <SectionHeader
+                  icon={User}
+                  title="Contact & role"
+                  right={
+                    !isSelf ? (
+                      <button
+                        type="button"
+                        onClick={startChat}
+                        className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.07] px-3 py-1.5 text-[11px] font-semibold text-primary-dark shadow-sm transition hover:border-primary/35 hover:bg-primary/[0.12] active:scale-[0.99]"
+                      >
+                        <MessageSquare size={14} />
+                        Chat
+                      </button>
+                    ) : null
+                  }
+                />
                 <PersonalCard
                   displayFullName={name}
                   personalInfo={personalInfo}

@@ -11,6 +11,7 @@ import BackgroundElements from "@/components/layout/BackgroundElements";
 import CustomToastContainer from "@/components/ui/ToastContainer";
 import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
+import ConversationsBell from "@/components/prochat/ConversationsBell";
 import { CalendarDays, ChevronDown, LogOut, Menu, Settings, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
@@ -121,7 +122,14 @@ export default function AppChrome({ children }) {
           queryClient.invalidateQueries({ queryKey: ["invite-metrics"] });
         }
       })
-      .catch(() => {
+      .catch((err) => {
+        const status = err?.status;
+        const msg = String(err?.message || "");
+        // Self-referral (or bad/expired tokens) should not keep retrying forever.
+        if ([400, 404, 410].includes(Number(status)) || /self\s*referral/i.test(msg)) {
+          clearInviteAttribution();
+          return;
+        }
         inviteFinalizeAttemptedRef.current = false;
       });
   }, [token, isMounted, pathname, queryClient]);
@@ -336,7 +344,7 @@ export default function AppChrome({ children }) {
             onCloseMobile={() => setIsSidebarMobileOpen(false)}
           />
           <div className="flex min-h-screen w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60">
-            <header className="relative z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur sm:px-6">
+            <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur sm:px-6">
               <div className="flex items-center gap-3 min-w-0">
                 <button
                   type="button"
@@ -352,6 +360,7 @@ export default function AppChrome({ children }) {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+                <ConversationsBell />
                 <NotificationsBell />
                 <div className="relative" ref={userMenuRef}>
                   <button
