@@ -177,7 +177,15 @@ export function useWorkspaceSocket(token, queryClient) {
         const title = preview ? `${senderName}: ${preview.slice(0, 90)}` : `New message from ${senderName}`;
         toast.info(title, { autoClose: 6000 });
       }
-      if (threadId && !isThreadStarted) dispatch(incrementUnread({ threadId }));
+      if (threadId && !isThreadStarted) {
+        dispatch(incrementUnread({ threadId }));
+        const senderName =
+          (sender?.full_name && String(sender.full_name).trim()) ||
+          [sender?.first_name, sender?.last_name].filter(Boolean).join(" ").trim() ||
+          "A professional";
+        const preview = String(msg?.body || "").trim() || "Sent an attachment";
+        toast.info(`${senderName}: ${preview.slice(0, 90)}`, { autoClose: 6000 });
+      }
       queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
     };
 
