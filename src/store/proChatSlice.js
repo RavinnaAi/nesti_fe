@@ -59,6 +59,7 @@ const proChatSlice = createSlice({
     pruneUnread: (state, action) => {
       const ids = Array.isArray(action.payload?.threadIds) ? action.payload.threadIds : [];
       const valid = new Set(ids.map((id) => String(id || "").trim()).filter(Boolean));
+      if (valid.size === 0) return;
       const current = state.unreadByThread || {};
       const next = {};
       let changed = false;
