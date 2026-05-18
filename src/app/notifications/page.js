@@ -10,11 +10,51 @@ import {
   fetchNotifications,
   fetchNotificationsUnreadCount,
   markAllNotificationsReadRequest,
+  resolveProChatRejoinRequestFromNotification,
 } from "@/lib/notificationsClient";
 import { useNotificationsUi } from "@/contexts/NotificationsUiContext";
 import { NotificationsListSkeleton } from "@/components/ui/ContentSkeletons";
 
 const PAGE_SIZE = 20;
+
+function rejoinActionMeta(notification) {
+  const action = notification?.action || {};
+  if (String(action?.type || "").trim() !== "prochat_rejoin_request") return null;
+  const threadId = String(action?.thread_id || "").trim();
+  const requesterUserId = String(action?.requester_user_id || "").trim();
+  if (!threadId || !requesterUserId) return null;
+  const requester = action?.requester || null;
+  const status = String(action?.status || "").trim().toLowerCase() || "pending";
+  return { threadId, requesterUserId, requester, status };
+}
+
+function updateRejoinNotificationStatus(notification, { threadId, requesterUserId, status }) {
+  const action = notification?.action || {};
+  if (
+    String(action?.type || "").trim() !== "prochat_rejoin_request" ||
+    String(action?.thread_id || "").trim() !== String(threadId) ||
+    String(action?.requester_user_id || "").trim() !== String(requesterUserId)
+  ) {
+    return notification;
+  }
+  return {
+    ...notification,
+    read_at: notification.read_at || new Date().toISOString(),
+    action: {
+      ...action,
+      status,
+      resolved_at: action.resolved_at || new Date().toISOString(),
+    },
+  };
+}
+
+function updateRejoinStatusCacheValue(value, meta) {
+  if (!value) return value;
+  if (Array.isArray(value.items)) {
+    return { ...value, items: value.items.map((item) => updateRejoinNotificationStatus(item, meta)) };
+  }
+  return updateRejoinNotificationStatus(value, meta);
+}
 
 export default function NotificationsPage() {
   useAuthGuard();
@@ -64,6 +104,28 @@ export default function NotificationsPage() {
   const markAllMutation = useMutation({
     mutationFn: () => markAllNotificationsReadRequest({ token }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
+  const resolveRejoinMutation = useMutation({
+    mutationFn: ({ threadId, requesterUserId, action }) =>
+      resolveProChatRejoinRequestFromNotification({ token, threadId, requesterUserId, action }),
+    onSuccess: (_data, variables) => {
+      const status = variables.action === "approve" ? "approved" : "rejected";
+      const meta = {
+        threadId: variables.threadId,
+        requesterUserId: variables.requesterUserId,
+        status,
+      };
+      queryClient.setQueriesData({ queryKey: ["notifications", "list", token] }, (old) =>
+        updateRejoinStatusCacheValue(old, meta)
+      );
+      queryClient.setQueriesData({ queryKey: ["notifications", "detail", token] }, (old) =>
+        updateRejoinStatusCacheValue(old, meta)
+      );
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-thread"] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
+    },
   });
 
   const unreadTotal = Number(unreadTotalQuery.data ?? 0);
@@ -136,29 +198,130 @@ export default function NotificationsPage() {
               <ul className="divide-y divide-border/70">
                 {items.map((n) => (
                   <li key={n.id}>
-                    <button
-                      type="button"
-                      onClick={() => onRowClick(n)}
-                      className={`flex w-full flex-col gap-1 px-4 py-4 text-left transition hover:bg-background-light/60 ${
-                        n.read_at ? "" : "bg-primary/[0.03]"
-                      }`}
-                    >
-                      <div className="flex flex-wrap items-start justify-between gap-2">
-                        <span className="font-semibold text-text-heading">{n.title}</span>
-                        <span className="text-xs text-text-muted">
-                          {n.created_at
-                            ? new Date(n.created_at).toLocaleString(undefined, {
-                                dateStyle: "medium",
-                                timeStyle: "short",
-                              })
-                            : ""}
-                        </span>
-                      </div>
-                      {n.body ? <p className="line-clamp-2 text-sm text-text-muted">{n.body}</p> : null}
-                      {n.action?.type === "open_lead" ? (
-                        <span className="text-xs font-semibold text-primary">View details →</span>
-                      ) : null}
-                    </button>
+                    {(() => {
+                      const rejoinMeta = rejoinActionMeta(n);
+                      const requesterName =
+                        String(rejoinMeta?.requester?.full_name || "").trim() ||
+                        [rejoinMeta?.requester?.first_name, rejoinMeta?.requester?.last_name]
+                          .filter(Boolean)
+                          .join(" ")
+                          .trim() ||
+                        "Professional";
+                      const requesterImage = String(rejoinMeta?.requester?.profile_image || "").trim();
+                      return (
+                        <div
+                          className={`flex w-full flex-col gap-1 px-4 py-4 text-left transition hover:bg-background-light/60 ${
+                            n.read_at ? "" : "bg-primary/[0.03]"
+                          }`}
+                        >
+                          <button type="button" onClick={() => onRowClick(n)} className="block w-full text-left">
+                            <div className="flex flex-wrap items-start justify-between gap-2">
+                              <span className="font-semibold text-text-heading">{n.title}</span>
+                              <span className="text-xs text-text-muted">
+                                {n.created_at
+                                  ? new Date(n.created_at).toLocaleString(undefined, {
+                                      dateStyle: "medium",
+                                      timeStyle: "short",
+                                    })
+                                  : ""}
+                              </span>
+                            </div>
+                            {n.body ? <p className="line-clamp-2 text-sm text-text-muted">{n.body}</p> : null}
+                          </button>
+                          {rejoinMeta ? (
+                            <div className="mt-1.5 rounded-lg border border-border/70 bg-white/80 p-2.5">
+                              <div className="flex items-center gap-2">
+                                {requesterImage ? (
+                                  // eslint-disable-next-line @next/next/no-img-element
+                                  <img
+                                    src={requesterImage}
+                                    alt=""
+                                    className="h-8 w-8 rounded-lg object-cover ring-1 ring-border/60"
+                                  />
+                                ) : (
+                                  <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-primary/[0.10] text-[10px] font-bold text-primary-dark">
+                                    {requesterName.split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "P"}
+                                  </span>
+                                )}
+                                <div className="min-w-0">
+                                  <div className="truncate text-xs font-semibold text-text-heading">{requesterName}</div>
+                                  <div className="text-[11px] text-text-muted">Requested to rejoin this group</div>
+                                </div>
+                              </div>
+                              <div className="mt-2 flex items-center justify-end gap-2">
+                                {rejoinMeta.status === "pending" ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={resolveRejoinMutation.isPending}
+                                      onClick={() =>
+                                        resolveRejoinMutation.mutate({
+                                          threadId: rejoinMeta.threadId,
+                                          requesterUserId: rejoinMeta.requesterUserId,
+                                          action: "reject",
+                                        })
+                                      }
+                                      className="rounded-md border border-red-200 bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                    >
+                                      Reject
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={resolveRejoinMutation.isPending}
+                                      onClick={() =>
+                                        resolveRejoinMutation.mutate({
+                                          threadId: rejoinMeta.threadId,
+                                          requesterUserId: rejoinMeta.requesterUserId,
+                                          action: "approve",
+                                        })
+                                      }
+                                      className="rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                                    >
+                                      Approve
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span
+                                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                                      rejoinMeta.status === "approved"
+                                        ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                        : "border border-red-200 bg-red-50 text-red-700"
+                                    }`}
+                                  >
+                                    {rejoinMeta.status === "approved" ? "Approved" : "Rejected"}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+                          {n.action?.type === "open_lead" ? (
+                            <button
+                              type="button"
+                              onClick={() => onRowClick(n)}
+                              className="text-left text-xs font-semibold text-primary"
+                            >
+                              View details →
+                            </button>
+                          ) : n.action?.type === "open_prochat_thread" ? (
+                            <button
+                              type="button"
+                              onClick={() => onRowClick(n)}
+                              className="text-left text-xs font-semibold text-primary"
+                            >
+                              Open chat →
+                            </button>
+                          ) : n.action?.type === "open_referral" ? (
+                            <button
+                              type="button"
+                              onClick={() => onRowClick(n)}
+                              className="text-left text-xs font-semibold text-primary"
+                            >
+                              Open referral →
+                            </button>
+                          ) : null}
+                        </div>
+                      );
+                    })()}
                   </li>
                 ))}
               </ul>

@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import ChatWidget from "@/components/chatbot/ChatWidget";
 import { resolveEmbedToken } from "@/lib/chatClient";
-import { ChatbotEmbedPageSkeleton } from "@/components/ui/ContentSkeletons";
 import { normalizeWidgetRole } from "@/lib/chatWidgetRoleUi";
 
 export default function ChatbotByTokenPage() {
@@ -54,7 +53,7 @@ export default function ChatbotByTokenPage() {
   }, [token]);
 
   if (status === "loading") {
-    return <ChatbotEmbedPageSkeleton />;
+    return <div className="min-h-screen bg-background" />;
   }
 
   if (status === "error") {
@@ -78,7 +77,7 @@ export default function ChatbotByTokenPage() {
         title={titleOverride || undefined}
         hostAvatarUrl={hostAvatarUrl}
         hostDisplayName={hostDisplayName}
-        defaultOpen
+        defaultOpen={false}
         allowLauncher
       />
     </div>

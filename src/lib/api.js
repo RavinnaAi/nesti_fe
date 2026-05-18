@@ -152,8 +152,18 @@ export const API_ENDPOINTS = {
   },
   proChat: {
     threads: withBaseUrl("/api/pro-chat/threads"),
+    groups: withBaseUrl("/api/pro-chat/groups"),
+    groupDetail: withBaseUrl((id) => `/api/pro-chat/groups/${id}`),
+    groupDelete: withBaseUrl((id) => `/api/pro-chat/groups/${id}`),
+    groupMembers: withBaseUrl((id) => `/api/pro-chat/groups/${id}/members`),
+    groupMember: withBaseUrl((id, userId) => `/api/pro-chat/groups/${id}/members/${userId}`),
+    groupLeave: withBaseUrl((id) => `/api/pro-chat/groups/${id}/leave`),
+    groupRejoinRequest: withBaseUrl((id) => `/api/pro-chat/groups/${id}/rejoin-request`),
+    groupRejoinRequests: withBaseUrl((id) => `/api/pro-chat/groups/${id}/rejoin-requests`),
+    groupRejoinResolve: withBaseUrl((id, userId, action) => `/api/pro-chat/groups/${id}/rejoin-requests/${userId}/${action}`),
     threadDetail: withBaseUrl((id) => `/api/pro-chat/threads/${id}`),
     threadMessages: withBaseUrl((id) => `/api/pro-chat/threads/${id}/messages`),
+    threadAttachments: withBaseUrl((id) => `/api/pro-chat/threads/${id}/attachments`),
   },
 };
 

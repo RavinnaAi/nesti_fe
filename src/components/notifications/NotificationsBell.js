@@ -10,6 +10,7 @@ import {
   fetchNotifications,
   fetchNotificationsUnreadCount,
   markAllNotificationsReadRequest,
+  resolveProChatRejoinRequestFromNotification,
 } from "@/lib/notificationsClient";
 import { useNotificationsUi } from "@/contexts/NotificationsUiContext";
 
@@ -26,6 +27,45 @@ function formatShortTime(iso) {
     return d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
   }
   return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function rejoinActionMeta(notification) {
+  const action = notification?.action || {};
+  if (String(action?.type || "").trim() !== "prochat_rejoin_request") return null;
+  const threadId = String(action?.thread_id || "").trim();
+  const requesterUserId = String(action?.requester_user_id || "").trim();
+  if (!threadId || !requesterUserId) return null;
+  const requester = action?.requester || null;
+  const status = String(action?.status || "").trim().toLowerCase() || "pending";
+  return { threadId, requesterUserId, requester, status };
+}
+
+function updateRejoinNotificationStatus(notification, { threadId, requesterUserId, status }) {
+  const action = notification?.action || {};
+  if (
+    String(action?.type || "").trim() !== "prochat_rejoin_request" ||
+    String(action?.thread_id || "").trim() !== String(threadId) ||
+    String(action?.requester_user_id || "").trim() !== String(requesterUserId)
+  ) {
+    return notification;
+  }
+  return {
+    ...notification,
+    read_at: notification.read_at || new Date().toISOString(),
+    action: {
+      ...action,
+      status,
+      resolved_at: action.resolved_at || new Date().toISOString(),
+    },
+  };
+}
+
+function updateRejoinStatusCacheValue(value, meta) {
+  if (!value) return value;
+  if (Array.isArray(value.items)) {
+    return { ...value, items: value.items.map((item) => updateRejoinNotificationStatus(item, meta)) };
+  }
+  return updateRejoinNotificationStatus(value, meta);
 }
 
 export default function NotificationsBell() {
@@ -72,6 +112,28 @@ export default function NotificationsBell() {
     mutationFn: () => markAllNotificationsReadRequest({ token }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const resolveRejoinMutation = useMutation({
+    mutationFn: ({ threadId, requesterUserId, action }) =>
+      resolveProChatRejoinRequestFromNotification({ token, threadId, requesterUserId, action }),
+    onSuccess: (_data, variables) => {
+      const status = variables.action === "approve" ? "approved" : "rejected";
+      const meta = {
+        threadId: variables.threadId,
+        requesterUserId: variables.requesterUserId,
+        status,
+      };
+      queryClient.setQueriesData({ queryKey: ["notifications", "list", token] }, (old) =>
+        updateRejoinStatusCacheValue(old, meta)
+      );
+      queryClient.setQueriesData({ queryKey: ["notifications", "detail", token] }, (old) =>
+        updateRejoinStatusCacheValue(old, meta)
+      );
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-thread"] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
     },
   });
 
@@ -155,23 +217,124 @@ export default function NotificationsBell() {
             <ul className="divide-y divide-border/60">
               {items.map((n) => (
                 <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => openItem(n)}
-                    className={`w-full px-3 py-2.5 text-left transition hover:bg-background-light/80 ${
-                      n.read_at ? "opacity-75" : "bg-primary/[0.04]"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-[13px] font-semibold leading-snug text-text-heading line-clamp-2">
-                        {n.title}
-                      </span>
-                      <span className="shrink-0 text-[10px] text-text-muted">{formatShortTime(n.created_at)}</span>
-                    </div>
-                    {n.body ? (
-                      <p className="mt-0.5 line-clamp-2 text-[11px] text-text-muted">{n.body}</p>
-                    ) : null}
-                  </button>
+                  {(() => {
+                    const rejoinMeta = rejoinActionMeta(n);
+                    const requesterName =
+                      String(rejoinMeta?.requester?.full_name || "").trim() ||
+                      [rejoinMeta?.requester?.first_name, rejoinMeta?.requester?.last_name]
+                        .filter(Boolean)
+                        .join(" ")
+                        .trim() ||
+                      "Professional";
+                    const requesterImage = String(rejoinMeta?.requester?.profile_image || "").trim();
+                    return (
+                      <div
+                        className={`w-full px-3 py-2.5 text-left transition hover:bg-background-light/80 ${
+                          n.read_at ? "opacity-75" : "bg-primary/[0.04]"
+                        }`}
+                      >
+                        <button type="button" onClick={() => openItem(n)} className="block w-full text-left">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-[13px] font-semibold leading-snug text-text-heading line-clamp-2">
+                              {n.title}
+                            </span>
+                            <span className="shrink-0 text-[10px] text-text-muted">{formatShortTime(n.created_at)}</span>
+                          </div>
+                          {n.body ? (
+                            <p className="mt-0.5 line-clamp-2 text-[11px] text-text-muted">{n.body}</p>
+                          ) : null}
+                        </button>
+                        {rejoinMeta ? (
+                          <div className="mt-1.5 rounded-md border border-border/70 bg-white/85 p-2">
+                            <div className="flex items-center gap-2">
+                              {requesterImage ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img
+                                  src={requesterImage}
+                                  alt=""
+                                  className="h-7 w-7 rounded-md object-cover ring-1 ring-border/60"
+                                />
+                              ) : (
+                                <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary/[0.10] text-[10px] font-bold text-primary-dark">
+                                  {requesterName.split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "P"}
+                                </span>
+                              )}
+                              <span className="min-w-0 truncate text-[11px] font-semibold text-text-heading">{requesterName}</span>
+                            </div>
+                            <div className="mt-2 flex items-center justify-end gap-1.5">
+                              {rejoinMeta.status === "pending" ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    disabled={resolveRejoinMutation.isPending}
+                                    onClick={() =>
+                                      resolveRejoinMutation.mutate({
+                                        threadId: rejoinMeta.threadId,
+                                        requesterUserId: rejoinMeta.requesterUserId,
+                                        action: "reject",
+                                      })
+                                    }
+                                    className="rounded border border-red-200 bg-red-50 px-2 py-1 text-[10px] font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+                                  >
+                                    Reject
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={resolveRejoinMutation.isPending}
+                                    onClick={() =>
+                                      resolveRejoinMutation.mutate({
+                                        threadId: rejoinMeta.threadId,
+                                        requesterUserId: rejoinMeta.requesterUserId,
+                                        action: "approve",
+                                      })
+                                    }
+                                    className="rounded border border-emerald-200 bg-emerald-50 px-2 py-1 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+                                  >
+                                    Approve
+                                  </button>
+                                </>
+                              ) : (
+                                <span
+                                  className={`rounded px-2 py-1 text-[10px] font-semibold ${
+                                    rejoinMeta.status === "approved"
+                                      ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border border-red-200 bg-red-50 text-red-700"
+                                  }`}
+                                >
+                                  {rejoinMeta.status === "approved" ? "Approved" : "Rejected"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+                        {n.action?.type === "open_prochat_thread" ? (
+                          <button
+                            type="button"
+                            onClick={() => openItem(n)}
+                            className="mt-1 block text-[11px] font-semibold text-primary"
+                          >
+                            Open chat →
+                          </button>
+                        ) : n.action?.type === "open_lead" ? (
+                          <button
+                            type="button"
+                            onClick={() => openItem(n)}
+                            className="mt-1 block text-[11px] font-semibold text-primary"
+                          >
+                            View details →
+                          </button>
+                        ) : n.action?.type === "open_referral" ? (
+                          <button
+                            type="button"
+                            onClick={() => openItem(n)}
+                            className="mt-1 block text-[11px] font-semibold text-primary"
+                          >
+                            Open referral →
+                          </button>
+                        ) : null}
+                      </div>
+                    );
+                  })()}
                 </li>
               ))}
             </ul>

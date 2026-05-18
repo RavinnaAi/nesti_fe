@@ -247,8 +247,6 @@ export function getMatchesCount(conversation) {
 export function getConsultationListCell(row) {
   const appt = String(row?.appointment_status ?? "").toLowerCase();
   const nurture = Boolean(row?.nurture_consultation_booked);
-  const st = String(row?.status ?? "").toLowerCase();
-  const pipeBooked = st === "consult_booked" || st === "showing_booked";
   if (appt === "canceled") {
     return {
       label: "Canceled",
@@ -256,9 +254,8 @@ export function getConsultationListCell(row) {
       className: "bg-amber-50 text-amber-800 border-amber-200",
     };
   }
-  if (appt === "booked" || nurture || pipeBooked) {
+  if (appt === "booked" || nurture) {
     const bits = [];
-    if (pipeBooked) bits.push("pipeline consult/showing");
     if (appt === "booked") bits.push("Calendly or resolved booking");
     if (nurture) bits.push("nurture email meeting");
     return {

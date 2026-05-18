@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Loader2, X } from "lucide-react";
 import { useAppSelector } from "@/store";
-import { fetchNotificationById, markNotificationReadRequest } from "@/lib/notificationsClient";
+import {
+  fetchNotificationById,
+  markNotificationReadRequest,
+  resolveProChatRejoinRequestFromNotification,
+} from "@/lib/notificationsClient";
 
 function normalizeLeadId(value) {
   const raw = String(value || "").trim();
@@ -29,6 +33,20 @@ function severityStyles(sev) {
     return "border-red-200 bg-red-50 text-red-800";
   if (s === "high") return "border-amber-200 bg-amber-50 text-amber-900";
   return "border-border bg-background-light/80 text-text-heading";
+}
+
+function rejoinActionMeta(display) {
+  const action = display?.action || {};
+  if (String(action?.type || "").trim() !== "prochat_rejoin_request") return null;
+  const threadId = String(action?.thread_id || "").trim();
+  const requesterUserId = String(action?.requester_user_id || "").trim();
+  if (!threadId || !requesterUserId) return null;
+  return {
+    threadId,
+    requesterUserId,
+    requester: action?.requester || null,
+    status: String(action?.status || "").trim().toLowerCase() || "pending",
+  };
 }
 
 function MetaItem({ label, value }) {
@@ -76,12 +94,22 @@ export default function NotificationDetailModal({ notification, onClose }) {
       queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
     },
   });
-
+  const { mutate: markRead } = markReadMutation;
+  const resolveRejoinMutation = useMutation({
+    mutationFn: ({ threadId, requesterUserId, action }) =>
+      resolveProChatRejoinRequestFromNotification({ token, threadId, requesterUserId, action }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-thread"] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
+      onClose();
+    },
+  });
   useEffect(() => {
     if (!detail?.id || detail.read_at || markReadAttemptedRef.current) return;
     markReadAttemptedRef.current = true;
     const nid = String(detail.id);
-    markReadMutation.mutate(
+    markRead(
       { nid },
       {
         onError: () => {
@@ -89,7 +117,7 @@ export default function NotificationDetailModal({ notification, onClose }) {
         },
       }
     );
-  }, [detail?.id, detail?.read_at]);
+  }, [detail?.id, detail?.read_at, markRead]);
 
   useEffect(() => {
     if (!notification) return;
@@ -126,6 +154,18 @@ export default function NotificationDetailModal({ notification, onClose }) {
         return `/referrals/${encodeURIComponent(rid)}?direction=${encodeURIComponent(d)}`;
       })()
     : null;
+
+  const openProChatThreadId =
+    display?.action?.type === "open_prochat_thread" && String(display?.action?.thread_id || "").trim()
+      ? String(display.action.thread_id).trim()
+      : null;
+  const rejoinMeta = rejoinActionMeta(display);
+  const isPendingRejoinRequest = rejoinMeta?.status === "pending";
+  const requesterName =
+    String(rejoinMeta?.requester?.full_name || "").trim() ||
+    [rejoinMeta?.requester?.first_name, rejoinMeta?.requester?.last_name].filter(Boolean).join(" ").trim() ||
+    "Professional";
+  const requesterImage = String(rejoinMeta?.requester?.profile_image || "").trim();
 
   const created =
     display?.created_at &&
@@ -247,6 +287,48 @@ export default function NotificationDetailModal({ notification, onClose }) {
                 ) : null}
               </div>
             ) : null}
+            {rejoinMeta ? (
+              <div className="mt-4 rounded-xl border border-border bg-background-light/50 p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-wide text-text-muted">
+                  Rejoin request
+                </p>
+                <div className="mt-2 flex items-center gap-2">
+                  {requesterImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={requesterImage}
+                      alt=""
+                      className="h-9 w-9 rounded-lg object-cover ring-1 ring-border/60"
+                    />
+                  ) : (
+                    <span className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary/[0.10] text-[10px] font-bold text-primary-dark">
+                      {requesterName.split(/\s+/).slice(0, 2).map((x) => x[0]?.toUpperCase()).join("") || "P"}
+                    </span>
+                  )}
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-text-heading">{requesterName}</p>
+                    <p className="text-xs text-text-muted">Requested to rejoin this group</p>
+                  </div>
+                </div>
+                <div className="mt-3 flex justify-end">
+                  <span
+                    className={`rounded-md px-2.5 py-1 text-xs font-semibold ${
+                      rejoinMeta.status === "approved"
+                        ? "border border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : rejoinMeta.status === "rejected"
+                          ? "border border-red-200 bg-red-50 text-red-700"
+                          : "border border-amber-200 bg-amber-50 text-amber-700"
+                    }`}
+                  >
+                    {rejoinMeta.status === "approved"
+                      ? "Approved"
+                      : rejoinMeta.status === "rejected"
+                        ? "Rejected"
+                        : "Pending"}
+                  </span>
+                </div>
+              </div>
+            ) : null}
           </>
         )}
 
@@ -281,6 +363,50 @@ export default function NotificationDetailModal({ notification, onClose }) {
             >
               Open referral
             </button>
+          ) : null}
+          {openProChatThreadId && !isLoading && !isError ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(`/messages/${encodeURIComponent(openProChatThreadId)}`);
+              }}
+              className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:brightness-95"
+            >
+              Open chat
+            </button>
+          ) : null}
+          {isPendingRejoinRequest && !isLoading && !isError ? (
+            <>
+              <button
+                type="button"
+                disabled={resolveRejoinMutation.isPending}
+                onClick={() =>
+                  void resolveRejoinMutation.mutate({
+                    threadId: rejoinMeta.threadId,
+                    requesterUserId: rejoinMeta.requesterUserId,
+                    action: "reject",
+                  })
+                }
+                className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-60"
+              >
+                {resolveRejoinMutation.isPending ? "Processing..." : "Reject"}
+              </button>
+              <button
+                type="button"
+                disabled={resolveRejoinMutation.isPending}
+                onClick={() =>
+                  void resolveRejoinMutation.mutate({
+                    threadId: rejoinMeta.threadId,
+                    requesterUserId: rejoinMeta.requesterUserId,
+                    action: "approve",
+                  })
+                }
+                className="rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-60"
+              >
+                {resolveRejoinMutation.isPending ? "Processing..." : "Approve"}
+              </button>
+            </>
           ) : null}
         </div>
       </div>

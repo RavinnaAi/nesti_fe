@@ -61,10 +61,6 @@ const nextConfig = {
     NEXT_PUBLIC_SOCKET_ORIGIN: process.env.NEXT_PUBLIC_SOCKET_ORIGIN,
     NEXT_PUBLIC_WS_ORIGIN: process.env.NEXT_PUBLIC_WS_ORIGIN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXTAUTH_URL:
-      process.env.NEXTAUTH_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000",
   },
 
   async headers() {

@@ -1,7 +1,5 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
 import { Suspense, useEffect, useState } from "react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import SettingsAppointmentsCalendar from "@/components/settings/SettingsAppointmentsCalendar";

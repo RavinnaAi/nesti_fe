@@ -1,13 +1,21 @@
 "use client";
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 import { Provider as ReduxProvider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { store } from "@/store";
 import WorkspaceSocketBridge from "@/components/realtime/WorkspaceSocketBridge";
 import { NotificationsUiProvider } from "@/contexts/NotificationsUiContext";
+
+const ReactQueryDevtools = dynamic(
+  () =>
+    import("@tanstack/react-query-devtools").then(
+      (mod) => mod.ReactQueryDevtools
+    ),
+  { ssr: false }
+);
 
 export default function Providers({ children }) {
   const [queryClient] = useState(
@@ -26,6 +34,7 @@ export default function Providers({ children }) {
 
   const googleClientId =
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
+  const isDev = process.env.NODE_ENV === "development";
 
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
@@ -34,7 +43,7 @@ export default function Providers({ children }) {
           <NotificationsUiProvider>
             <WorkspaceSocketBridge>{children}</WorkspaceSocketBridge>
           </NotificationsUiProvider>
-          <ReactQueryDevtools initialIsOpen={false} />
+          {isDev ? <ReactQueryDevtools initialIsOpen={false} /> : null}
         </QueryClientProvider>
       </ReduxProvider>
     </GoogleOAuthProvider>

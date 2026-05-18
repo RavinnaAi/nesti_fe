@@ -382,7 +382,10 @@ export default function DashboardAppointmentsCalendar({
     staleTime: 60_000,
   });
 
-  const bookings = Array.isArray(query.data?.bookings) ? query.data.bookings : [];
+  const bookings = useMemo(
+    () => (Array.isArray(query.data?.bookings) ? query.data.bookings : []),
+    [query.data?.bookings]
+  );
 
   const byDay = useMemo(() => {
     const map = new Map();

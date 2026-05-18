@@ -147,7 +147,6 @@ export default function AgentLeadOnboarding({
   const isBuy = chosenIntent === "buy";
   const rawStepIndex = PRE_CHAT_STEPS.indexOf(step);
   const barStepIndex = rawStepIndex >= 0 ? rawStepIndex : 0;
-  const stepNum = rawStepIndex >= 0 ? rawStepIndex + 1 : 1;
   const showBack = step !== "intent";
 
   const footer = (primaryLabel, primaryAction, primaryIsStart = false) => (
@@ -195,7 +194,7 @@ export default function AgentLeadOnboarding({
         <p className="text-sm font-bold text-text-heading text-center leading-snug">
           What brings you here today?
         </p>
-        <p className="text-[11px] text-text-muted text-center mt-1 mb-5">Step {stepNum} of {PRE_CHAT_STEPS.length} · {LEAD_STEP_LABELS.intent}</p>
+        <div className="mb-5" />
         <div className="flex gap-3">
           <button
             type="button"
@@ -238,7 +237,7 @@ export default function AgentLeadOnboarding({
     );
   }
 
-  const scrollBody = (title, subtitle, children) => (
+  const scrollBody = (title, children) => (
     <div className="flex-1 px-5 pb-4 pt-2 bg-background-light flex flex-col min-h-0">
       <div className="mb-3 shrink-0 w-full">
         <StepSegmentBar steps={ONBOARDING_BAR_STEPS} activeIndex={barStepIndex} />
@@ -247,9 +246,6 @@ export default function AgentLeadOnboarding({
         {title}
         {chosenIntent ? <IntentBadge isBuy={isBuy} /> : null}
       </div>
-      <p className="text-[11px] text-text-muted mb-3">
-        Step {stepNum} of {PRE_CHAT_STEPS.length} · {subtitle}
-      </p>
       <div className="flex-1 min-h-0 overflow-y-auto pr-1 pb-2">
         <div className="grid grid-cols-2 gap-x-3 gap-y-3 text-left">{children}</div>
         {validationError ? (
@@ -265,7 +261,6 @@ export default function AgentLeadOnboarding({
   if (step === "contact") {
     return scrollBody(
       "Personal information",
-      LEAD_STEP_LABELS.contact,
       <>
         <div className={sectionCls}>Contact</div>
         <div className="col-span-2 space-y-2.5">
@@ -313,7 +308,6 @@ export default function AgentLeadOnboarding({
   if (step === "property") {
     return scrollBody(
       isBuy ? "What are you looking for?" : "Your listing",
-      LEAD_STEP_LABELS.property,
       isBuy ? (
         <>
           <div className={sectionCls}>Property requirements</div>
@@ -502,7 +496,6 @@ export default function AgentLeadOnboarding({
   if (step === "qualify") {
     return scrollBody(
       "A few more questions",
-      LEAD_STEP_LABELS.qualify,
       <>
         <div className={sectionCls}>Qualification</div>
         <div className={pairGridCls}>
@@ -584,7 +577,6 @@ export default function AgentLeadOnboarding({
   if (step === "reach") {
     return scrollBody(
       "Almost there",
-      LEAD_STEP_LABELS.reach,
       <>
         <div className={sectionCls}>Contact preferences</div>
         <div className={pairGridCls}>

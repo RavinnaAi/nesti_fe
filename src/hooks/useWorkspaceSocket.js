@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
 import { getSocketOrigin } from "@/lib/api";
@@ -20,6 +20,7 @@ import { incrementUnread } from "@/store/proChatSlice";
  */
 export function useWorkspaceSocket(token, queryClient) {
   const pathname = usePathname() || "";
+  const router = useRouter();
   const dispatch = useAppDispatch();
   const myUserId = useAppSelector((s) => s.auth.user?.id || s.auth.user?._id || "");
   useEffect(() => {
@@ -48,8 +49,47 @@ export function useWorkspaceSocket(token, queryClient) {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     };
 
+    const actionHref = (action) => {
+      const type = String(action?.type || "").trim();
+      if (!type) return null;
+      if (type === "open_prochat_thread") {
+        const tid = String(action?.thread_id || "").trim();
+        return tid ? `/messages/${encodeURIComponent(tid)}` : null;
+      }
+      if (type === "open_lead") {
+        const lid = String(action?.lead_match_id || "").trim();
+        return lid ? `/leads/${encodeURIComponent(lid)}` : null;
+      }
+      if (type === "open_referral") {
+        const rid = String(action?.referral_id || "").trim();
+        const dir = String(action?.direction || "inbound").trim().toLowerCase();
+        const d = dir === "outbound" ? "outbound" : "inbound";
+        return rid
+          ? `/referrals/${encodeURIComponent(rid)}?direction=${encodeURIComponent(d)}`
+          : null;
+      }
+      return null;
+    };
+
+    const actionLabel = (action) => {
+      const type = String(action?.type || "").trim();
+      if (type === "open_prochat_thread") return "Open chat";
+      if (type === "open_lead") return "Open lead";
+      if (type === "open_referral") return "Open referral";
+      return "Open";
+    };
+
     const onNotify = (payload) => {
       refreshNotifications();
+      const action = payload?.action || {};
+      if (String(action?.type || "").trim() === "open_prochat_thread") {
+        const threadId = String(action?.thread_id || "").trim();
+        queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
+        queryClient.invalidateQueries({ queryKey: ["prochat-thread"] });
+        if (threadId) {
+          queryClient.invalidateQueries({ queryKey: ["prochat-messages"] });
+        }
+      }
       queryClient.invalidateQueries({
         queryKey: ["leads"],
         refetchType: "all",
@@ -62,8 +102,36 @@ export function useWorkspaceSocket(token, queryClient) {
       queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
 
       const title = payload?.title;
+      const href = actionHref(payload?.action);
+      if (href && pathname && href === pathname) {
+        return;
+      }
       if (title && typeof title === "string") {
-        toast.info(title, { autoClose: 6000 });
+        if (!href) {
+          toast.info(title, { autoClose: 6000 });
+          return;
+        }
+        toast.info(
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="truncate font-semibold">{title}</div>
+              {payload?.body ? (
+                <div className="mt-0.5 line-clamp-2 text-[12px] opacity-80">{String(payload.body)}</div>
+              ) : null}
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-md bg-primary px-2.5 py-1.5 text-[12px] font-semibold text-white hover:bg-primary-dark"
+              onClick={() => {
+                toast.dismiss();
+                router.push(href);
+              }}
+            >
+              {actionLabel(payload?.action)}
+            </button>
+          </div>,
+          { autoClose: 9000, closeOnClick: false }
+        );
       }
     };
 
@@ -93,16 +161,22 @@ export function useWorkspaceSocket(token, queryClient) {
       if (myUserId && senderId && String(senderId) === String(myUserId)) {
         return; // don't notify for your own actions
       }
-      const senderName =
-        (sender?.full_name && String(sender.full_name).trim()) ||
-        [sender?.first_name, sender?.last_name].filter(Boolean).join(" ").trim() ||
-        "A professional";
-      const preview = String(msg?.body || "").trim();
-      const title = preview ? `${senderName}: ${preview.slice(0, 90)}` : `New message from ${senderName}`;
-      toast.info(title, { autoClose: 6000 });
       // A brand-new thread may emit a "thread_started" inbox event so the receiver sees a toast
       // even before the first real message. That should NOT count as an unread message.
-      const isThreadStarted = kind === "thread_started" || messageId.startsWith("thread:");
+      const isThreadStarted =
+        kind === "thread_started" ||
+        kind === "group_created" ||
+        messageId.startsWith("thread:") ||
+        messageId.startsWith("group:");
+      if (isThreadStarted) {
+        const senderName =
+          (sender?.full_name && String(sender.full_name).trim()) ||
+          [sender?.first_name, sender?.last_name].filter(Boolean).join(" ").trim() ||
+          "A professional";
+        const preview = String(msg?.body || "").trim();
+        const title = preview ? `${senderName}: ${preview.slice(0, 90)}` : `New message from ${senderName}`;
+        toast.info(title, { autoClose: 6000 });
+      }
       if (threadId && !isThreadStarted) dispatch(incrementUnread({ threadId }));
       queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
     };
@@ -138,5 +212,5 @@ export function useWorkspaceSocket(token, queryClient) {
       socket.off("disconnect");
       socket.disconnect();
     };
-  }, [token, queryClient, pathname, dispatch, myUserId]);
+  }, [token, queryClient, pathname, dispatch, myUserId, router]);
 }

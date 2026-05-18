@@ -2,51 +2,44 @@
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { io } from "socket.io-client";
 import { toast } from "react-toastify";
-import { ArrowLeft, Send } from "lucide-react";
+import {
+  ArrowLeft,
+  Loader2,
+  LogOut,
+  Settings2,
+} from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { getSocketOrigin } from "@/lib/api";
-import { fetchProChatThreadById, fetchProChatThreadMessages } from "@/lib/proChatClient";
+import {
+  addProChatGroupMembers,
+  deleteProChatGroupThread,
+  fetchProChatGroupRejoinRequests,
+  fetchProChatThreadById,
+  fetchProChatThreadMessages,
+  leaveProChatGroup,
+  removeProChatGroupMember,
+  requestProChatGroupRejoin,
+  resolveProChatGroupRejoinRequest,
+  updateProChatGroupThread,
+  uploadProChatThreadAttachment,
+} from "@/lib/proChatClient";
 import { clearUnread } from "@/store/proChatSlice";
-
-function displayName(u) {
-  if (!u) return "Professional";
-  const full = String(u.full_name || "").trim();
-  if (full) return full;
-  return [u.first_name, u.last_name].filter(Boolean).join(" ").trim() || u.email || "Professional";
-}
-
-function initialsFor(u) {
-  const name = displayName(u);
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]?.toUpperCase())
-    .join("") || "U";
-}
-
-function displayRole(u) {
-  const raw = String(u?.role || "").trim();
-  if (!raw) return "Professional";
-  return raw
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/\b\w/g, (c) => c.toUpperCase());
-}
-
-function safeUuid() {
-  try {
-    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
-  } catch {
-    // ignore
-  }
-  return `m_${Date.now()}_${Math.random().toString(16).slice(2)}`;
-}
+import { fetchProfessionals } from "@/lib/professionalsClient";
+import GroupAvatarStack from "@/components/prochat/thread/GroupAvatarStack";
+import GroupSettingsModal from "@/components/prochat/thread/GroupSettingsModal";
+import ThreadMessagesList from "@/components/prochat/thread/ThreadMessagesList";
+import ThreadComposer from "@/components/prochat/thread/ThreadComposer";
+import {
+  displayName,
+  displayRole,
+  initialsFor,
+  safeUuid,
+  validateProChatAttachmentLimits,
+} from "@/components/prochat/thread/proChatThreadUtils";
 
 export default function ProMessagesThreadPage() {
   const { isAuthenticated } = useAuthGuard();
@@ -54,6 +47,7 @@ export default function ProMessagesThreadPage() {
   const params = useParams();
   const threadId = String(params?.threadId || "").trim();
   const dispatch = useAppDispatch();
+  const queryClient = useQueryClient();
   const { token, user: authUser } = useAppSelector((s) => s.auth);
   const myUserId = String(authUser?.id || authUser?._id || "").trim();
 
@@ -61,6 +55,7 @@ export default function ProMessagesThreadPage() {
     queryKey: ["prochat-thread", token, threadId],
     enabled: Boolean(token && threadId),
     queryFn: () => fetchProChatThreadById({ token, id: threadId }),
+    refetchOnWindowFocus: true,
   });
 
   const messagesQuery = useQuery({
@@ -69,9 +64,251 @@ export default function ProMessagesThreadPage() {
     queryFn: () => fetchProChatThreadMessages({ token, id: threadId, page: 1, limit: 50 }),
   });
 
+  const thread = threadQuery.data?.thread || null;
+  const isGroup = String(thread?.thread_type || "dm") === "group";
+  const isGroupCreator = Boolean(isGroup && myUserId && String(thread?.created_by || "") === String(myUserId));
+  const canReply = Boolean(thread?.can_reply !== false);
+  const rejoinRequestStatus = String(thread?.rejoin_request_status || "").trim();
   const otherUser = threadQuery.data?.other_user || null;
-  const headerTitle = useMemo(() => displayName(otherUser), [otherUser]);
-  const headerSubtitle = useMemo(() => displayRole(otherUser), [otherUser]);
+  const members = useMemo(
+    () => (Array.isArray(threadQuery.data?.members) ? threadQuery.data.members : []),
+    [threadQuery.data?.members]
+  );
+  const membersById = useMemo(() => {
+    const m = new Map();
+    for (const u of members) {
+      const id = String(u?.id || "").trim();
+      if (id) m.set(id, u);
+    }
+    return m;
+  }, [members]);
+  const participantIdSet = useMemo(() => {
+    const ids = Array.isArray(thread?.participants) ? thread.participants.map((p) => String(p)) : [];
+    return new Set(ids.filter(Boolean));
+  }, [thread?.participants]);
+
+  const headerTitle = useMemo(() => {
+    if (isGroup) return String(thread?.title || "").trim() || "Group chat";
+    return displayName(otherUser);
+  }, [isGroup, thread?.title, otherUser]);
+
+  const headerSubtitle = useMemo(() => {
+    if (isGroup) {
+      const n = Number(thread?.member_count || thread?.participants?.length || members.length || 0);
+      return `${Number.isFinite(n) && n > 0 ? n : members.length} members`;
+    }
+    return displayRole(otherUser);
+  }, [isGroup, thread?.member_count, thread?.participants, members.length, otherUser]);
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [settingsTab, setSettingsTab] = useState("members"); // members | add
+  const [titleDraft, setTitleDraft] = useState("");
+  const [memberSearch, setMemberSearch] = useState("");
+  const [selectedAdd, setSelectedAdd] = useState(() => new Map()); // id -> professional
+  const [saving, setSaving] = useState(false);
+
+  const fileInputRef = useRef(null);
+  const [draftAttachments, setDraftAttachments] = useState([]); // Cloudinary metadata objects
+  const [uploadingAttachments, setUploadingAttachments] = useState([]); // { id, name, mime, bytes, status }
+
+  useEffect(() => {
+    if (!settingsOpen) return;
+    setSettingsTab("members");
+    setTitleDraft(String(thread?.title || "").trim());
+    setMemberSearch("");
+    setSelectedAdd(new Map());
+  }, [settingsOpen, thread?.title]);
+
+  // If user isn't the creator, never allow landing on the "Add members" tab
+  // (still keeps Members + Leave available).
+  useEffect(() => {
+    if (!settingsOpen) return;
+    if (!isGroupCreator && settingsTab === "add") {
+      setSettingsTab("members");
+    }
+  }, [settingsOpen, isGroupCreator, settingsTab]);
+
+  const profQuery = useQuery({
+    queryKey: ["prochat-group-add-search", token, memberSearch],
+    enabled: Boolean(token) && settingsOpen && isGroup,
+    queryFn: () => fetchProfessionals({ token, search: memberSearch, page: 1, limit: 12 }),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+  });
+  const profItems = Array.isArray(profQuery.data?.items) ? profQuery.data.items : [];
+  const rejoinRequestsQuery = useQuery({
+    queryKey: ["prochat-group-rejoin-requests", token, threadId],
+    enabled: Boolean(token && threadId && isGroup && isGroupCreator),
+    queryFn: () => fetchProChatGroupRejoinRequests({ token, id: threadId }),
+    staleTime: 10_000,
+    refetchOnWindowFocus: false,
+  });
+  const rejoinRequests = Array.isArray(rejoinRequestsQuery.data?.items)
+    ? rejoinRequestsQuery.data.items
+    : [];
+
+  const toggleAddSelect = (p) => {
+    const id = String(p?.id || "").trim();
+    if (!id) return;
+    setSelectedAdd((prev) => {
+      const next = new Map(prev);
+      if (next.has(id)) next.delete(id);
+      else next.set(id, p);
+      return next;
+    });
+  };
+
+  const selectedAddIds = useMemo(() => Array.from(selectedAdd.keys()), [selectedAdd]);
+
+  const refreshThread = () => {
+    queryClient.invalidateQueries({ queryKey: ["prochat-thread", token, threadId] });
+    queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
+  };
+
+  const saveTitle = async () => {
+    if (!token || !threadId) return;
+    if (!isGroupCreator) {
+      toast.error("You are not authorized to rename this group.");
+      return;
+    }
+    try {
+      setSaving(true);
+      await updateProChatGroupThread({ token, id: threadId, title: titleDraft });
+      refreshThread();
+      toast.success("Group updated");
+    } catch (e) {
+      const status = e?.status;
+      if (Number(status) === 403) {
+        toast.error("You are not authorized to rename this group.");
+      } else {
+        toast.error(e?.message || "Could not update group");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addMembers = async () => {
+    if (!token || !threadId) return;
+    if (selectedAddIds.length < 1) return;
+    if (!isGroupCreator) {
+      toast.error("You are not authorized to add members to this group.");
+      return;
+    }
+    try {
+      setSaving(true);
+      await addProChatGroupMembers({ token, id: threadId, participant_ids: selectedAddIds });
+      setSelectedAdd(new Map());
+      setMemberSearch("");
+      setSettingsTab("members");
+      refreshThread();
+      toast.success("Members added");
+    } catch (e) {
+      const msg = e?.message || "Could not add members";
+      const status = e?.status;
+      if (Number(status) === 403) {
+        toast.error("You are not authorized to add members to this group.");
+      } else {
+        toast.error(status ? `${msg} (${status})` : msg);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeMember = async (userId) => {
+    if (!token || !threadId) return;
+    if (!isGroupCreator) {
+      toast.error("You are not authorized to remove members from this group.");
+      return;
+    }
+    try {
+      setSaving(true);
+      await removeProChatGroupMember({ token, id: threadId, userId });
+      refreshThread();
+      toast.success("Member removed");
+    } catch (e) {
+      const status = e?.status;
+      if (Number(status) === 403) {
+        toast.error("You are not authorized to remove members from this group.");
+      } else {
+        toast.error(e?.message || "Could not remove member");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const leaveGroup = async () => {
+    if (!token || !threadId) return;
+    try {
+      setSaving(true);
+      await leaveProChatGroup({ token, id: threadId });
+      toast.success("You left the group");
+      refreshThread();
+      queryClient.invalidateQueries({ queryKey: ["prochat-group-rejoin-requests", token, threadId] });
+    } catch (e) {
+      toast.error(e?.message || "Could not leave group");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deleteGroup = async () => {
+    if (!token || !threadId) return;
+    if (!isGroupCreator) {
+      toast.error("Only the group creator can delete this group.");
+      return;
+    }
+    try {
+      setSaving(true);
+      await deleteProChatGroupThread({ token, id: threadId });
+      toast.success("Group deleted");
+      queryClient.removeQueries({ queryKey: ["prochat-thread", token, threadId] });
+      queryClient.removeQueries({ queryKey: ["prochat-messages", token, threadId] });
+      queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
+      setSettingsOpen(false);
+      router.push("/conversations");
+    } catch (e) {
+      const status = e?.status;
+      if (Number(status) === 403) {
+        toast.error("Only the group creator can delete this group.");
+      } else {
+        toast.error(e?.message || "Could not delete group");
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const requestRejoin = async () => {
+    if (!token || !threadId) return;
+    try {
+      setSaving(true);
+      await requestProChatGroupRejoin({ token, id: threadId });
+      toast.success("Rejoin request sent to the group creator.");
+      refreshThread();
+    } catch (e) {
+      toast.error(e?.message || "Could not send rejoin request");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resolveRejoinRequest = async (userId, action) => {
+    if (!token || !threadId || !userId) return;
+    try {
+      setSaving(true);
+      await resolveProChatGroupRejoinRequest({ token, id: threadId, userId, action });
+      toast.success(action === "approve" ? "Rejoin request approved." : "Rejoin request rejected.");
+      refreshThread();
+      queryClient.invalidateQueries({ queryKey: ["prochat-group-rejoin-requests", token, threadId] });
+    } catch (e) {
+      toast.error(e?.message || "Could not resolve request");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const [draft, setDraft] = useState("");
   const [liveMessages, setLiveMessages] = useState([]);
@@ -188,7 +425,7 @@ export default function ProMessagesThreadPage() {
       socket.disconnect();
       socketRef.current = null;
     };
-  }, [token, threadId]);
+  }, [token, threadId, myUserId]);
 
   const emitTyping = (isTyping) => {
     const socket = socketRef.current;
@@ -212,20 +449,38 @@ export default function ProMessagesThreadPage() {
   };
 
   const sendMessage = async () => {
+    if (!canReply) {
+      toast.info("You cannot reply in this group until your rejoin request is approved.");
+      return;
+    }
     const text = String(draft || "").trim();
-    if (!text) return;
+    const atts = Array.isArray(draftAttachments) ? draftAttachments : [];
+    const hasUploads = Array.isArray(uploadingAttachments) && uploadingAttachments.length > 0;
+    if (hasUploads) {
+      toast.info("Please wait for attachments to finish uploading.");
+      return;
+    }
+    if (!text && atts.length < 1) return;
+    const attachmentLimit = validateProChatAttachmentLimits(atts);
+    if (!attachmentLimit.ok) {
+      toast.error(attachmentLimit.message);
+      return;
+    }
     const socket = socketRef.current;
     if (!socket || !socket.connected) {
       toast.error("Chat not connected yet. Try again.");
       return;
     }
     const client_id = safeUuid();
+    const prevAtts = atts;
     setDraft("");
+    setDraftAttachments([]);
     requestAnimationFrame(() => autosizeComposer());
-    socket.emit("prochat:send", { thread_id: threadId, body: text, client_id }, (ack) => {
+    socket.emit("prochat:send", { thread_id: threadId, body: text, client_id, attachments: prevAtts }, (ack) => {
       if (!ack?.success) {
         toast.error(ack?.message || "Could not send message");
         setDraft(text);
+        setDraftAttachments(prevAtts);
         return;
       }
       const m = ack?.message;
@@ -241,45 +496,107 @@ export default function ProMessagesThreadPage() {
 
   if (!isAuthenticated) return null;
 
+  const settingsModal = (
+    <GroupSettingsModal
+      open={settingsOpen}
+      isGroup={isGroup}
+      isGroupCreator={isGroupCreator}
+      saving={saving}
+      titleDraft={titleDraft}
+      setTitleDraft={setTitleDraft}
+      settingsTab={settingsTab}
+      setSettingsTab={setSettingsTab}
+      memberSearch={memberSearch}
+      setMemberSearch={setMemberSearch}
+      profQuery={profQuery}
+      profItems={profItems}
+      selectedAdd={selectedAdd}
+      selectedAddIds={selectedAddIds}
+      participantIdSet={participantIdSet}
+      membersById={membersById}
+      members={members}
+      myUserId={myUserId}
+      onClose={() => setSettingsOpen(false)}
+      onSaveTitle={saveTitle}
+      onToggleAddSelect={toggleAddSelect}
+      onAddMembers={addMembers}
+      onRemoveMember={removeMember}
+      onLeaveGroup={leaveGroup}
+            onDeleteGroup={deleteGroup}
+      rejoinRequests={rejoinRequests}
+      onResolveRejoinRequest={resolveRejoinRequest}
+    />
+  );
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="flex items-center justify-between gap-3 border-b border-border/70 bg-white/90 px-3 py-2.5 shadow-sm backdrop-blur sm:px-4">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading shadow-sm transition hover:bg-background-light"
-        >
-          <ArrowLeft size={14} />
-          Back
-        </button>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-start gap-2">
-            {otherUser?.profile_image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={otherUser.profile_image}
-                alt=""
-                className="h-9 w-9 rounded-xl object-cover ring-1 ring-border/60"
-              />
-            ) : (
-              <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/[0.10] text-xs font-bold text-primary-dark ring-1 ring-primary/15">
-                {initialsFor(otherUser)}
-              </span>
-            )}
-            <div className="min-w-0">
-              <div className="truncate text-sm font-semibold text-text-heading">{headerTitle}</div>
-              <div className="text-[11px] text-text-muted">
-                {headerSubtitle}
+      <div className="fixed left-0 right-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 border-b border-border/70 bg-white/95 shadow-sm backdrop-blur lg:left-60">
+        <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-6">
+          <button
+            type="button"
+            onClick={() => router.back()}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading shadow-sm transition hover:bg-background-light"
+          >
+            <ArrowLeft size={14} />
+            Back
+          </button>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center justify-start gap-2">
+              {isGroup ? (
+                <GroupAvatarStack members={members} />
+              ) : otherUser?.profile_image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={otherUser.profile_image}
+                  alt=""
+                  className="h-9 w-9 rounded-xl object-cover ring-1 ring-border/60"
+                />
+              ) : (
+                <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/[0.10] text-xs font-bold text-primary-dark ring-1 ring-primary/15">
+                  {initialsFor(otherUser)}
+                </span>
+              )}
+              <div className="min-w-0">
+                <div className="truncate text-sm font-semibold text-text-heading">{headerTitle}</div>
+                <div className="text-[11px] text-text-muted">
+                  {headerSubtitle}
+                </div>
               </div>
             </div>
           </div>
+          <div className="flex items-center justify-end">
+            <div className="flex items-center gap-2">
+              {isGroup && canReply && !isGroupCreator ? (
+                <button
+                  type="button"
+                  onClick={() => void leaveGroup()}
+                  disabled={saving}
+                  className="inline-flex h-9 items-center gap-1.5 rounded-xl border border-red-200 bg-white px-2.5 text-xs font-bold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                  aria-label="Leave group"
+                >
+                  <LogOut size={14} />
+                  Leave
+                </button>
+              ) : null}
+              {isGroup && isGroupCreator ? (
+                <button
+                  type="button"
+                  onClick={() => setSettingsOpen(true)}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border bg-white text-text-muted shadow-sm transition hover:bg-background-light hover:text-text-heading"
+                  aria-label="Group settings"
+                >
+                  <Settings2 size={16} />
+                </button>
+              ) : null}
+              {!isGroup && <span aria-hidden />}
+            </div>
+          </div>
         </div>
-        <div className="w-[74px]" aria-hidden />
       </div>
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto px-3 py-4 pb-44 sm:px-6 sm:pb-52"
+        className="min-h-0 flex-1 overflow-y-auto px-3 pb-44 pt-[136px] sm:px-6 sm:pb-52 sm:pt-[140px]"
       >
         {threadQuery.isLoading || messagesQuery.isLoading ? (
           <p className="py-6 text-center text-xs text-text-muted">Loading messages…</p>
@@ -288,50 +605,18 @@ export default function ProMessagesThreadPage() {
             {threadQuery.error?.message || "Could not load this chat."}
           </p>
         ) : messages.length === 0 ? (
-          <p className="py-6 text-center text-xs text-text-muted">No messages yet. Say hello.</p>
+          <div className="py-6 text-center text-xs text-text-muted">
+            {!canReply && isGroup ? "You left this group. Request rejoin to send messages." : "No messages yet. Say hello."}
+          </div>
         ) : (
           <div className="flex w-full flex-col gap-3">
-            {messages.map((m) => {
-              const mine = myUserId && String(m.sender_user_id) === String(myUserId);
-              return (
-                <div key={m.id} className={`flex w-full ${mine ? "justify-end" : "justify-start"}`}>
-                  <div className={`flex max-w-[min(760px,92%)] items-end gap-2 ${mine ? "flex-row-reverse" : ""}`}>
-                    {!mine ? (
-                      <div className="hidden shrink-0 sm:block">
-                        {otherUser?.profile_image ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={otherUser.profile_image}
-                            alt=""
-                            className="h-8 w-8 rounded-full object-cover shadow-sm ring-2 ring-white"
-                          />
-                        ) : (
-                          <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary/[0.10] text-[10px] font-bold text-primary-dark shadow-sm ring-2 ring-white">
-                            {initialsFor(otherUser)}
-                          </span>
-                        )}
-                      </div>
-                    ) : null}
-                    <div className={`flex min-w-0 flex-col ${mine ? "items-end" : "items-start"}`}>
-                    <div
-                      className={`rounded-2xl px-4 py-2.5 text-sm shadow-sm ring-1 ${
-                        mine
-                          ? "bg-gradient-to-br from-primary to-primary-dark text-white ring-primary/20 rounded-br-md"
-                          : "bg-white text-text-heading ring-border/70 rounded-bl-md"
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
-                    </div>
-                    <div className={`mt-1 px-1 text-[10px] ${mine ? "text-text-muted" : "text-text-muted"}`}>
-                      {m.created_at
-                        ? new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                        : ""}
-                    </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
+            <ThreadMessagesList
+              messages={messages}
+              myUserId={myUserId}
+              isGroup={isGroup}
+              membersById={membersById}
+              otherUser={otherUser}
+            />
             <div ref={bottomRef} />
           </div>
         )}
@@ -339,12 +624,29 @@ export default function ProMessagesThreadPage() {
 
       <div className="fixed left-0 right-0 z-40 px-3 sm:px-6 lg:left-60 bottom-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="w-full rounded-2xl border border-border/70 bg-white/95 p-3 shadow-[0_12px_50px_rgba(15,23,42,0.10)] backdrop-blur sm:p-4">
+          {isGroup && !canReply ? (
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-border/70 bg-background-light/70 px-3 py-2">
+              <div className="text-xs text-text-muted">
+                {rejoinRequestStatus === "pending"
+                  ? "Rejoin request pending approval from group creator."
+                  : "You left this group and cannot reply right now."}
+              </div>
+              <button
+                type="button"
+                onClick={() => void requestRejoin()}
+                disabled={saving || rejoinRequestStatus === "pending"}
+                className="inline-flex h-8 items-center rounded-lg border border-primary/20 bg-primary/[0.06] px-3 text-xs font-bold text-primary-dark transition hover:bg-primary/[0.10] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {rejoinRequestStatus === "pending" ? "Requested" : "Request rejoin"}
+              </button>
+            </div>
+          ) : null}
           {otherTyping ? (
             <div className="mb-2 flex items-center gap-2 text-xs text-text-muted">
               <span className="inline-flex h-6 w-6 items-center justify-center rounded-lg bg-primary/[0.10] text-[10px] font-bold text-primary-dark ring-1 ring-primary/15">
-                {initialsFor(otherUser)}
+                {isGroup ? "…" : initialsFor(otherUser)}
               </span>
-              <span className="truncate">{headerTitle} is typing</span>
+              <span className="truncate">{isGroup ? "Someone is typing" : `${headerTitle} is typing`}</span>
               <span className="inline-flex items-center gap-1">
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-text-muted/60 animate-bounce" />
                 <span className="inline-block h-1.5 w-1.5 rounded-full bg-text-muted/60 animate-bounce [animation-delay:120ms]" />
@@ -353,45 +655,29 @@ export default function ProMessagesThreadPage() {
             </div>
           ) : null}
 
-          <div className="relative w-full">
-            <textarea
-              ref={composerRef}
-              value={draft}
-              onChange={(e) => {
-                const next = e.target.value;
-                setDraft(next);
-                autosizeComposer();
-                const now = Date.now();
-                // throttle typing "true" to avoid spamming
-                if (now - lastTypingSentAt.current > 700) {
-                  lastTypingSentAt.current = now;
-                  emitTyping(true);
-                }
-                if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-                typingTimeoutRef.current = setTimeout(() => emitTyping(false), 1100);
-              }}
-              rows={1}
-              placeholder="Type a message…"
-              className="min-h-[52px] w-full resize-none rounded-2xl border border-border bg-white px-4 py-3.5 pr-14 text-sm text-text-heading shadow-sm outline-none transition focus:border-primary/50 focus:ring-2 focus:ring-primary/20"
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault();
-                  void sendMessage();
-                }
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => void sendMessage()}
-              disabled={!draft.trim()}
-              aria-label="Send message"
-              className="absolute right-2 bottom-2 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Send size={16} />
-            </button>
-          </div>
+          <ThreadComposer
+            token={token}
+            threadId={threadId}
+            draft={draft}
+            setDraft={setDraft}
+            composerRef={composerRef}
+            fileInputRef={fileInputRef}
+            draftAttachments={draftAttachments}
+            setDraftAttachments={setDraftAttachments}
+            uploadingAttachments={uploadingAttachments}
+            setUploadingAttachments={setUploadingAttachments}
+            onUploadAttachment={uploadProChatThreadAttachment}
+            onSendMessage={sendMessage}
+            onEmitTyping={emitTyping}
+            typingTimeoutRef={typingTimeoutRef}
+            lastTypingSentAt={lastTypingSentAt}
+            autosizeComposer={autosizeComposer}
+            toast={toast}
+            disabled={!canReply}
+          />
         </div>
       </div>
+      {settingsModal}
     </div>
   );
 }

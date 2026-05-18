@@ -169,15 +169,23 @@ export default function AppChrome({ children }) {
           "/checkout",
         ]
       : [
-          // Dev-only warmup for known slow tabs: compile these in background.
+          // Dev-only warmup: precompile common routes in background without
+          // launching all routes at once (keeps CPU spikes lower).
+          "/dashboard",
+          "/leads",
+          "/calendar",
+          "/conversations",
+          "/referrals?direction=inbound",
+          "/clients",
           "/professionals?role=agent",
           "/analytics",
           "/nurture-logs",
-          "/checkout",
+          "/settings",
         ];
 
     const prefetchAll = () => {
       hrefs.forEach((href, idx) => {
+        if (href === pathname) return;
         const run = () => {
           try {
             router.prefetch(href);
@@ -186,8 +194,8 @@ export default function AppChrome({ children }) {
           }
         };
         if (!isProd) {
-          // Stagger in dev to avoid compile storms.
-          setTimeout(run, 500 + idx * 900);
+          // Wider staggering in dev avoids compile storms while still warming routes.
+          setTimeout(run, 700 + idx * 1200);
           return;
         }
         try {
@@ -204,7 +212,7 @@ export default function AppChrome({ children }) {
     }
     const timer = setTimeout(prefetchAll, 0);
     return () => clearTimeout(timer);
-  }, [isMounted, token, isPublicAuthPage, router]);
+  }, [isMounted, token, isPublicAuthPage, router, pathname]);
 
   const displayName = useMemo(() => {
     if (!isMounted) return "";

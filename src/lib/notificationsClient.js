@@ -41,3 +41,19 @@ export async function markAllNotificationsReadRequest({ token }) {
     token,
   });
 }
+
+export async function resolveProChatRejoinRequestFromNotification({
+  token,
+  threadId,
+  requesterUserId,
+  action,
+}) {
+  const safeAction = action === "approve" ? "approve" : "reject";
+  return apiClient({
+    url: API_ENDPOINTS?.proChat?.groupRejoinResolve
+      ? API_ENDPOINTS.proChat.groupRejoinResolve(threadId, requesterUserId, safeAction)
+      : `/api/pro-chat/groups/${threadId}/rejoin-requests/${requesterUserId}/${safeAction}`,
+    method: "POST",
+    token,
+  });
+}

@@ -56,9 +56,31 @@ const proChatSlice = createSlice({
     hydrateUnread: (state) => {
       state.unreadByThread = readPersisted();
     },
+    pruneUnread: (state, action) => {
+      const ids = Array.isArray(action.payload?.threadIds) ? action.payload.threadIds : [];
+      const valid = new Set(ids.map((id) => String(id || "").trim()).filter(Boolean));
+      const current = state.unreadByThread || {};
+      const next = {};
+      let changed = false;
+      for (const [key, value] of Object.entries(current)) {
+        if (!valid.has(String(key))) {
+          changed = true;
+          continue;
+        }
+        const n = Number(value || 0);
+        if (!Number.isFinite(n) || n <= 0) {
+          changed = true;
+          continue;
+        }
+        next[key] = Math.min(Math.floor(n), 999);
+      }
+      if (!changed) return;
+      state.unreadByThread = next;
+      persist(next);
+    },
   },
 });
 
-export const { incrementUnread, clearUnread, clearAllUnread, hydrateUnread } = proChatSlice.actions;
+export const { incrementUnread, clearUnread, clearAllUnread, hydrateUnread, pruneUnread } = proChatSlice.actions;
 export default proChatSlice.reducer;
 

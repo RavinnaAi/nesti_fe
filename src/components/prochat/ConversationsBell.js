@@ -3,11 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { useQuery } from "@tanstack/react-query";
-import { MessageSquare, Loader2, X } from "lucide-react";
+import { MessageSquare, Loader2, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { fetchMyProChatThreads } from "@/lib/proChatClient";
-import { clearUnread } from "@/store/proChatSlice";
+import { clearUnread, pruneUnread } from "@/store/proChatSlice";
 
 function formatShortTime(iso) {
   if (!iso) return "";
@@ -41,6 +41,54 @@ function initialsFor(u) {
   );
 }
 
+function initialsForTitle(title) {
+  const s = String(title || "").trim();
+  if (!s) return "G";
+  const parts = s.split(/\s+/).filter(Boolean);
+  return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "G";
+}
+
+function GroupAvatarMini({ title, members_preview }) {
+  const items = Array.isArray(members_preview) ? members_preview.filter(Boolean).slice(0, 3) : [];
+  const base = 36; // h-9
+  // Tighter overlap to keep the popover list aligned.
+  const step = 8;
+  const w = base + Math.max(items.length - 1, 0) * step;
+  if (items.length === 0) {
+    return (
+      <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-xs font-extrabold text-white shadow-sm ring-1 ring-primary/30">
+        {initialsForTitle(title)}
+      </span>
+    );
+  }
+  return (
+    <span className="relative mt-0.5 inline-block h-9" style={{ width: `${w}px` }}>
+      {items.map((u, idx) => {
+        const left = idx * step;
+        const z = 10 - idx;
+        return u?.profile_image ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            key={String(u?.id || idx)}
+            src={u.profile_image}
+            alt=""
+            className="absolute top-0 h-9 w-9 rounded-xl object-cover ring-2 ring-white"
+            style={{ left, zIndex: z }}
+          />
+        ) : (
+          <span
+            key={String(u?.id || idx)}
+            className="absolute top-0 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary text-xs font-extrabold text-white ring-2 ring-white"
+            style={{ left, zIndex: z }}
+          >
+            {initialsFor(u)}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
 export default function ConversationsBell() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -50,11 +98,6 @@ export default function ConversationsBell() {
   const buttonRef = useRef(null);
   const panelRef = useRef(null);
   const [panelPos, setPanelPos] = useState(null);
-
-  const unreadTotal = useMemo(
-    () => Object.values(unreadByThread).reduce((sum, n) => sum + Number(n || 0), 0),
-    [unreadByThread],
-  );
 
   const updatePanelPosition = useCallback(() => {
     const el = buttonRef.current;
@@ -68,7 +111,7 @@ export default function ConversationsBell() {
 
   const listQuery = useQuery({
     queryKey: ["prochat-threads", token],
-    enabled: Boolean(token) && open,
+    enabled: Boolean(token),
     queryFn: () => fetchMyProChatThreads({ token }),
     staleTime: 15_000,
     gcTime: 1000 * 60 * 10,
@@ -108,9 +151,31 @@ export default function ConversationsBell() {
     });
   };
 
-  if (!token) return null;
+  const items = useMemo(
+    () => (Array.isArray(listQuery.data?.items) ? listQuery.data.items : []),
+    [listQuery.data?.items],
+  );
+  const validThreadIds = useMemo(
+    () => items.map((t) => String(t?.id || "").trim()).filter(Boolean),
+    [items],
+  );
+  const validIdSet = useMemo(() => new Set(validThreadIds), [validThreadIds]);
 
-  const items = Array.isArray(listQuery.data?.items) ? listQuery.data.items : [];
+  useEffect(() => {
+    if (!listQuery.isSuccess) return;
+    dispatch(pruneUnread({ threadIds: validThreadIds }));
+  }, [dispatch, listQuery.isSuccess, validThreadIds]);
+
+  const unreadTotal = useMemo(
+    () =>
+      Object.entries(unreadByThread).reduce((sum, [threadId, n]) => {
+        if (validIdSet.size > 0 && !validIdSet.has(String(threadId))) return sum;
+        return sum + Number(n || 0);
+      }, 0),
+    [unreadByThread, validIdSet],
+  );
+
+  if (!token) return null;
 
   const panel =
     open && panelPos ? (
@@ -141,10 +206,13 @@ export default function ConversationsBell() {
             <ul className="divide-y divide-border/60">
               {items.map((t) => {
                 const tid = String(t.id || "").trim();
+                const isGroup = String(t.thread_type || "dm") === "group";
                 const other = t.other_user || null;
                 const unread = Number(unreadByThread?.[tid] || 0);
                 const lastTime = t.last_message_at || t.updated_at;
                 const preview = String(t.last_message_text || "").trim();
+                const title = isGroup ? (String(t.title || "").trim() || "Group chat") : displayName(other);
+                const subtitle = isGroup ? `${Number(t.member_count || 0)} members` : "";
                 return (
                   <li key={tid}>
                     <button
@@ -157,24 +225,29 @@ export default function ConversationsBell() {
                       className="w-full px-3 py-2.5 text-left transition hover:bg-background-light/80"
                     >
                       <div className="flex items-start gap-2.5">
-                        {other?.profile_image ? (
+                        {!isGroup && other?.profile_image ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img
                             src={other.profile_image}
                             alt=""
                             className="mt-0.5 h-9 w-9 rounded-xl object-cover ring-1 ring-border/60"
                           />
-                        ) : (
+                        ) : !isGroup ? (
                           <span className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/[0.10] text-xs font-bold text-primary-dark ring-1 ring-primary/15">
                             {initialsFor(other)}
                           </span>
+                        ) : (
+                          <GroupAvatarMini title={title} members_preview={t.members_preview} />
                         )}
                         <div className="min-w-0 flex-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <div className="truncate text-[13px] font-semibold text-text-heading">
-                                {displayName(other)}
+                                {title}
                               </div>
+                              {subtitle ? (
+                                <div className="mt-0.5 line-clamp-1 text-[11px] text-text-muted">{subtitle}</div>
+                              ) : null}
                               <div className="mt-0.5 line-clamp-1 text-[11px] text-text-muted">
                                 {preview || "No messages yet"}
                               </div>
