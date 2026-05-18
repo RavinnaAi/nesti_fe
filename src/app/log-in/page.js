@@ -1,7 +1,7 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -10,16 +10,37 @@ import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import FormField from "@/components/auth/FormField";
 import PasswordField from "@/components/auth/PasswordField";
 import SubmitButton from "@/components/auth/SubmitButton";
-import Divider from "@/components/auth/Divider";
-import GoogleButton from "@/components/auth/GoogleButton";
 import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
-import { toast } from "react-toastify";
-import { useLogin, useGoogleLogin as useGoogleAuth } from "@/hooks/useAuthApi";
-import { useGoogleLogin } from "@react-oauth/google";
+import { useLogin } from "@/hooks/useAuthApi";
+import { useAppSelector } from "@/store";
+import { getInviteAttribution, saveInviteAttribution } from "@/lib/inviteAttributionStorage";
 
 export default function LoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const token = useAppSelector((state) => state.auth.token);
+  const [inviteToken, setInviteToken] = useState("");
+
+  // Logged-in users belong in the app — do not wipe session on mount (that broke reload flows).
+  useEffect(() => {
+    if (token) router.replace("/dashboard");
+  }, [token, router]);
+
+  useEffect(() => {
+    const fromQuery =
+      String(searchParams?.get("invite") || searchParams?.get("ref") || "").trim();
+    if (fromQuery) {
+      setInviteToken(fromQuery);
+      saveInviteAttribution(fromQuery, {
+        sourceChannel: String(searchParams?.get("channel") || "direct"),
+        landingPath: typeof window !== "undefined" ? window.location.pathname : "/log-in",
+      });
+      return;
+    }
+    const persisted = getInviteAttribution();
+    if (persisted?.token) setInviteToken(String(persisted.token).trim());
+  }, [searchParams]);
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
     email: "",
@@ -27,25 +48,7 @@ export default function LoginPage() {
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const loginMutation = useLogin();
-  const googleLoginMutation = useGoogleAuth();
-
-  const googleLogin = useGoogleLogin({
-    flow: "implicit",
-    onSuccess: (tokenResponse) => {
-      googleLoginMutation.mutate(
-        {
-          token: tokenResponse.access_token,
-          token_type: "access_token",
-        },
-        {
-          onSuccess: () => router.push("/dashboard"),
-        }
-      );
-    },
-    onError: () => toast.error("Google login failed. Please try again."),
-  });
-  const isSubmitting =
-    loginMutation.isLoading || googleLoginMutation.isLoading;
+  const isSubmitting = loginMutation.isLoading;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -76,15 +79,12 @@ export default function LoginPage() {
       await loginMutation.mutateAsync({
         email: form.email.trim(),
         password: form.password,
+        invite_token: inviteToken || undefined,
       });
       router.push("/dashboard");
     } catch (err) {
       console.error("Login error:", err);
     }
-  };
-
-  const handleGoogleLogin = () => {
-    googleLogin();
   };
 
   return (
@@ -126,7 +126,6 @@ export default function LoginPage() {
             autoComplete="current-password"
           />
 
-          {/* Forgot Password Link */}
           <div className="text-right">
             <Link
               href="/forgot-password"
@@ -141,16 +140,6 @@ export default function LoginPage() {
           <div className="flex flex-col space-y-3 pt-2">
             <SubmitButton loading={isSubmitting}>Sign In</SubmitButton>
           </div>
-
-          <Divider />
-
-          {/* Google Login Button */}
-          <GoogleButton
-            onClick={handleGoogleLogin}
-            loading={googleLoginMutation.isLoading}
-          >
-            Sign in with Google
-          </GoogleButton>
         </form>
 
         <AuthFooter

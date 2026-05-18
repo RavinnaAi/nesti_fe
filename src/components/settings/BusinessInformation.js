@@ -1,8 +1,16 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { X } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState, useCallback, useRef } from "react";
+import {
+  Briefcase,
+  Clock,
+  BarChart3,
+  Target,
+  BookOpen,
+  CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import SubmitButton from "@/components/auth/SubmitButton";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useSaveBusinessInfo } from "@/hooks/useProfileApi";
@@ -46,7 +54,19 @@ const preferredClientsList = [
   "Quick Closers",
 ];
 
-export default function BusinessInformation() {
+const SUB_TABS = [
+  { id: "basics", label: "Basics", icon: Briefcase },
+  { id: "experience", label: "Experience", icon: Clock },
+  { id: "style", label: "Style & Metrics", icon: BarChart3 },
+  {
+    id: "audience",
+    label: "Audience & expertise",
+    icon: Target,
+  },
+  { id: "story", label: "Story", icon: BookOpen },
+];
+
+export default function BusinessInformation({ onSaveSuccess } = {}) {
   const dispatch = useAppDispatch();
   const storedBusiness = useAppSelector((state) => state.profile.businessInfo);
   const [focusedField, setFocusedField] = useState("");
@@ -68,9 +88,6 @@ export default function BusinessInformation() {
     salesApproach: "",
     energyStyle: "",
     personalityTag: "",
-    // transactionsThisYear: "",
-    // careerTransactions: "",
-    // clientRating: "",
     awards: "",
     testimonial: "",
     targetNeighborhoods: "",
@@ -82,21 +99,20 @@ export default function BusinessInformation() {
   const [communicationChannels, setCommunicationChannels] = useState([]);
   const [preferredClients, setPreferredClients] = useState([]);
   const saveBusinessInfo = useSaveBusinessInfo();
-  const [showModal, setShowModal] = useState(false);
-  const [activeStep, setActiveStep] = useState(0);
+  const [activeSubTab, setActiveSubTab] = useState("basics");
+  const formRef = useRef(form);
+  formRef.current = form;
+  const websiteLocationSaveTimerRef = useRef(null);
 
   const hydrateFromStore = useCallback(() => {
     if (storedBusiness) {
       setForm((prev) => ({ ...prev, ...storedBusiness }));
-      if (Array.isArray(storedBusiness.specializations)) {
+      if (Array.isArray(storedBusiness.specializations))
         setSpecializations(storedBusiness.specializations);
-      }
-      if (Array.isArray(storedBusiness.communicationChannels)) {
+      if (Array.isArray(storedBusiness.communicationChannels))
         setCommunicationChannels(storedBusiness.communicationChannels);
-      }
-      if (Array.isArray(storedBusiness.preferredClients)) {
+      if (Array.isArray(storedBusiness.preferredClients))
         setPreferredClients(storedBusiness.preferredClients);
-      }
     } else {
       setForm((prev) => ({ ...prev }));
       setSpecializations([]);
@@ -111,9 +127,32 @@ export default function BusinessInformation() {
     );
   };
 
+  const scheduleWebsiteLocationAutosave = useCallback(() => {
+    if (websiteLocationSaveTimerRef.current) {
+      clearTimeout(websiteLocationSaveTimerRef.current);
+    }
+    websiteLocationSaveTimerRef.current = setTimeout(async () => {
+      websiteLocationSaveTimerRef.current = null;
+      const { website, location, companyName } = formRef.current;
+      try {
+        await saveBusinessInfo.mutateAsync({
+          company_name: String(companyName || "").trim(),
+          website: website || "",
+          location: location || "",
+          silent: true,
+        });
+      } catch {
+        /* toast via hook */
+      }
+    }, 650);
+  }, [saveBusinessInfo]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((prev) => ({ ...prev, [name]: value }));
+    if (name === "website" || name === "location" || name === "companyName") {
+      scheduleWebsiteLocationAutosave();
+    }
   };
 
   const handleSelectChange = (name, val) => {
@@ -124,245 +163,255 @@ export default function BusinessInformation() {
     hydrateFromStore();
   }, [hydrateFromStore]);
 
+  useEffect(() => {
+    return () => {
+      if (websiteLocationSaveTimerRef.current) {
+        clearTimeout(websiteLocationSaveTimerRef.current);
+      }
+    };
+  }, []);
+
+  /** Experience, Style & metrics, Audience & expertise, Story — does not touch basics fields. */
+  const buildRestPayload = () => ({
+    company_name: String(form.companyName || "").trim(),
+    website: form.website || "",
+    location: form.location || "",
+    target_neighborhoods: form.targetNeighborhoods || "",
+    experience: form.experience || "",
+    license_number: form.licenseNumber || "",
+    social_media: form.socialMedia || "",
+    transaction_volume: form.transactionVolume || "",
+    avg_sale_price: form.avgSalePrice || "",
+    response_time: form.responseTime || "",
+    availability: form.availability || "",
+    support_level: form.supportLevel || "",
+    negotiation_style: form.negotiationStyle || "",
+    sales_approach: form.salesApproach || "",
+    energy_style: form.energyStyle || "",
+    personality_tag: form.personalityTag || "",
+    awards: form.awards || "",
+    specializations,
+    communication_channels: communicationChannels,
+    preferred_clients: preferredClients,
+    bio: form.testimonial || "",
+  });
+
   const handleSubmit = async (e) => {
     if (e?.preventDefault) e.preventDefault();
     setLoading(true);
     try {
-      const { transactionsThisYear, careerTransactions, clientRating, ...rest } = form;
-      const payload = {
-        ...rest,
-        specializations,
-        communicationChannels,
-        preferredClients,
-      };
-      await saveBusinessInfo.mutateAsync(payload);
-      dispatch(setBusinessInfo(payload));
-      setShowModal(false);
-    } catch (err) {
-      console.error("Business info update error:", err);
-      // toast handled in hook
+      await saveBusinessInfo.mutateAsync(buildRestPayload());
+      dispatch(
+        setBusinessInfo({
+          ...form,
+          specializations,
+          communicationChannels,
+          preferredClients,
+        })
+      );
+      await onSaveSuccess?.();
+    } catch {
+      /* error surfaced via toast in useSaveBusinessInfo hook */
     } finally {
       setLoading(false);
     }
   };
 
-  const steps = [
-    {
-      title: "Basics",
-      description: "What should we know about your professional basics?",
-      Component: BasicsStep,
-    },
-    {
-      title: "Experience",
-      description: "Tell us about your experience and activity levels.",
-      Component: ExperienceStep,
-    },
-    {
-      title: "Style & Metrics",
-      description: "How do you operate and perform?",
-      Component: StyleMetricsStep,
-    },
-    {
-      title: "Specializations",
-      description: "What do you specialize in?",
-      Component: PreferencesStep,
-      props: { mode: "specializations" },
-    },
-    {
-      title: "Communication",
-      description: "How should clients reach you?",
-      Component: PreferencesStep,
-      props: { mode: "communication" },
-    },
-    {
-      title: "Ideal Clients",
-      description: "Who are your ideal clients?",
-      Component: PreferencesStep,
-      props: { mode: "clients" },
-    },
-    {
-      title: "Story",
-      description: "Share a testimonial or quick win.",
-      Component: PreferencesStep,
-      props: { mode: "testimonial" },
-    },
-  ];
-
-  const StepComponent = steps[activeStep]?.Component;
-  const stepProps = steps[activeStep]?.props || {};
-
-  const handleNext = () => {
-    const { transactionsThisYear, careerTransactions, clientRating, ...rest } = form;
-    const payload = {
-      ...rest,
-      specializations,
-      communicationChannels,
-      preferredClients,
-    };
-    dispatch(setBusinessInfo(payload));
-    setActiveStep((prev) => Math.min(prev + 1, steps.length - 1));
+  const sharedProps = {
+    form,
+    focusedField,
+    setFocusedField,
+    handleChange,
+    handleSelectChange,
+    specializations,
+    communicationChannels,
+    preferredClients,
+    toggleFromList,
+    setSpecializations,
+    setCommunicationChannels,
+    setPreferredClients,
+    specializationsList,
+    communicationList,
+    preferredClientsList,
   };
 
-  const handleBack = () => {
-    setActiveStep((prev) => Math.max(prev - 1, 0));
+  const currentIdx = SUB_TABS.findIndex((t) => t.id === activeSubTab);
+
+  const goNext = () => {
+    dispatch(
+      setBusinessInfo({
+        ...form,
+        specializations,
+        communicationChannels,
+        preferredClients,
+      })
+    );
+    const nextIdx = Math.min(currentIdx + 1, SUB_TABS.length - 1);
+    setActiveSubTab(SUB_TABS[nextIdx].id);
   };
 
-  const openModal = () => setShowModal(true);
-  const closeModal = () => {
-    setShowModal(false);
-    setActiveStep(0);
-    hydrateFromStore();
+  const goBack = () => {
+    const prevIdx = Math.max(currentIdx - 1, 0);
+    setActiveSubTab(SUB_TABS[prevIdx].id);
+  };
+
+  const renderSubContent = () => {
+    switch (activeSubTab) {
+      case "basics":
+        return (
+          <div className="w-full min-w-0">
+            <BasicsStep {...sharedProps} />
+          </div>
+        );
+      case "experience":
+        return (
+          <div className="w-full min-w-0">
+            <ExperienceStep {...sharedProps} />
+          </div>
+        );
+      case "style":
+        return (
+          <div className="w-full min-w-0">
+            <StyleMetricsStep {...sharedProps} />
+          </div>
+        );
+      case "audience":
+        return (
+          <div className="w-full min-w-0">
+            <PreferencesStep {...sharedProps} mode="audience" />
+          </div>
+        );
+      case "story":
+        return (
+          <div className="w-full min-w-0">
+            <PreferencesStep {...sharedProps} mode="testimonial" />
+          </div>
+        );
+      default:
+        return (
+          <div className="w-full min-w-0">
+            <BasicsStep {...sharedProps} />
+          </div>
+        );
+    }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white shadow-sm flex w-max items-center justify-center">
-        {/* <div>
-          <div className="text-lg font-semibold text-text-heading">
-            Business Information
-          </div>
-          <div className="text-sm text-text-muted">
-            Keep your professional details up to date.
-          </div>
-        </div> */}
-        <button
-          type="button"
-          onClick={openModal}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
-        >
-          Add / Edit Information
-        </button>
+    <div className="w-full min-w-0 space-y-4" style={{ width: "100%" }}>
+      {/* ── Header + step badge ── */}
+      <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-bold text-text-heading">Business Information</h2>
+          <p className="mt-0.5 text-xs text-text-muted">Keep your professional details up to date.</p>
+        </div>
+        <span className="inline-flex items-center self-start rounded-md bg-primary/10 px-2 py-1 text-[10px] font-semibold text-primary-dark">
+          Step {currentIdx + 1} / {SUB_TABS.length}
+        </span>
       </div>
 
-      <AnimatePresence>
-        {showModal ? (
-          <motion.div
-            key="biz-modal"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.96, y: 12 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.96, y: 12 }}
-              transition={{ duration: 0.18 }}
-              className="w-full max-w-5xl h-[70vh] flex flex-col rounded-md bg-white shadow-2xl border border-border overflow-hidden"
+      {/* ── Progress bar ── */}
+      <div className="grid w-full min-w-0 grid-cols-5 gap-0.5" style={{ width: "100%" }}>
+        {SUB_TABS.map((tab, idx) => {
+          const isPast = idx < currentIdx;
+          const isCurrent = idx === currentIdx;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSubTab(tab.id)}
+              className="group w-full"
+              aria-label={tab.label}
             >
-              <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-primary-light/20">
-                <div>
-                  <div className="text-xs uppercase tracking-wide text-text-muted">
-                    Step {activeStep + 1} of {steps.length}
-                  </div>
-                  <div className="text-lg font-semibold text-text-heading">
-                    {steps[activeStep].title}
-                  </div>
-                  <div className="text-sm text-text-muted">
-                    {steps[activeStep].description}
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="p-2 rounded-md hover:bg-primary-dark transition text-text-heading hover:text-white"
-                  aria-label="Close"
-                >
-                  <X size={18} />
-                </button>
-              </div>
+              <div
+                className={`h-1 rounded-full transition-all ${
+                  isCurrent
+                    ? "bg-primary"
+                    : isPast
+                    ? "bg-primary/40"
+                    : "bg-border"
+                } group-hover:bg-primary/60`}
+              />
+            </button>
+          );
+        })}
+      </div>
 
-              <div className="p-6 space-y-4 flex-1 overflow-y-auto">
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={`step-${activeStep}`}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    transition={{ duration: 0.2 }}
-                    className="space-y-4"
-                  >
-                    {StepComponent ? (
-                      <StepComponent
-                        form={form}
-                        focusedField={focusedField}
-                        setFocusedField={setFocusedField}
-                        handleChange={handleChange}
-                        handleSelectChange={handleSelectChange}
-                        specializations={specializations}
-                        communicationChannels={communicationChannels}
-                        preferredClients={preferredClients}
-                        toggleFromList={toggleFromList}
-                        setSpecializations={setSpecializations}
-                        setCommunicationChannels={setCommunicationChannels}
-                        setPreferredClients={setPreferredClients}
-                        specializationsList={specializationsList}
-                        communicationList={communicationList}
-                        preferredClientsList={preferredClientsList}
-                        {...stepProps}
-                      />
-                    ) : null}
-                  </motion.div>
-                </AnimatePresence>
-              </div>
+      {/* ── Sub-tabs row ── */}
+      <div className="flex w-full min-w-0 flex-wrap gap-1.5">
+        {SUB_TABS.map((tab, idx) => {
+          const Icon = tab.icon;
+          const isActive = activeSubTab === tab.id;
+          const isPast = idx < currentIdx;
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setActiveSubTab(tab.id)}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-semibold transition-all ${
+                isActive
+                  ? "bg-primary text-white shadow-sm"
+                  : isPast
+                  ? "bg-primary/10 text-primary-dark"
+                  : "bg-background-light text-text-muted hover:text-text-heading hover:bg-primary/5"
+              }`}
+            >
+              {isPast && !isActive ? (
+                <CheckCircle2 size={11} className="shrink-0" />
+              ) : (
+                <Icon size={11} className="shrink-0" />
+              )}
+              <span className="hidden sm:inline">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
 
-              <div className="flex items-center justify-between px-6 py-4 border-t border-border bg-primary-light/20">
-                <div className="flex items-center gap-2 text-xs text-text-muted">
-                  <span className="h-2 w-2 rounded-md bg-primary" />
-                  Progress autosaves after each step.
-                </div>
-                <div className="flex gap-3">
-                  {activeStep > 0 && (
-                    // <button
-                    //   type="button"
-                    //   onClick={handleBack}
-                    //   className="px-4 py-2 rounded-lg border border-primary text-sm font-semibold text-text-heading hover:border-primary hover:brightness-95 shadow-sm transition"
-                    // >
-                    //   Back
-                    // </button>
-                    <motion.button
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={handleBack}
-                      className={`h-auto w-auto px-5 py-2 hover:bg-gradient-to-r hover:text-white hover:from-primary hover:to-primary-dark !bg-transparent rounded-md border border-primary-dark flex flex-col justify-center items-center cursor-pointer text-primary-dark font-semibold hover:shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 `}
-                    >
-                      Back
-                    </motion.button>
-                  )}
-                  {activeStep < steps.length - 1 ? (
-                    // <button
-                    //   type="button"
-                    //   onClick={handleNext}
-                    //   className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
-                    // >
-                    //   Next
-                    // </button>
-                    <motion.button
-                      whileHover={{ scale: 1.02, y: -2 }}
-                      whileTap={{ scale: 0.98 }}
-                      type="button"
-                      onClick={handleNext}
-                      className={`h-auto w-auto !py-2 px-5 bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 `}
-                    >
-                      Next
-                    </motion.button>
-                  ) : (
-                    <SubmitButton
-                      loading={loading}
-                      onClick={handleSubmit}
-                      type="button"
-                      className="!w-auto px-6 py-2 rounded-md bg-primary !h-auto text-white text-sm font-semibold shadow-sm hover:brightness-95 transition"
-                    >
-                      Save changes
-                    </SubmitButton>
-                  )}
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      {/* ── Content area (fixed min-height for consistency) ── */}
+      <div className="min-h-[280px] w-full min-w-0 max-w-none" style={{ width: "100%" }}>
+        <div className="block w-full min-w-0 max-w-none" style={{ width: "100%" }}>
+          {renderSubContent()}
+        </div>
+      </div>
+
+      {/* ── Footer navigation ── */}
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3.5">
+        <div>
+          {currentIdx > 0 ? (
+            <button
+              type="button"
+              onClick={goBack}
+              className="inline-flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-[11px] font-semibold text-text-heading transition hover:border-primary hover:text-primary"
+            >
+              <ChevronLeft size={14} />
+              Back
+            </button>
+          ) : (
+            <span />
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {currentIdx < SUB_TABS.length - 1 ? (
+            <button
+              type="button"
+              onClick={goNext}
+              className="inline-flex items-center gap-1.5 rounded-md bg-primary px-3.5 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95"
+            >
+              Next
+              <ChevronRight size={14} />
+            </button>
+          ) : (
+            <SubmitButton
+              loading={loading}
+              onClick={handleSubmit}
+              type="button"
+              className="!h-auto !w-auto rounded-md bg-primary px-4 py-1.5 text-[11px] font-semibold text-white shadow-sm transition hover:brightness-95"
+            >
+              Save changes
+            </SubmitButton>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

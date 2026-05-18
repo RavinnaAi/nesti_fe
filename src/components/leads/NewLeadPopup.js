@@ -111,7 +111,9 @@ export default function NewLeadPopup({ lead, onClose, onView }) {
                     >
                         <div className="text-lg font-semibold">{lead.name || "A new visitor"}</div>
                         <div className={`text-sm ${secondary}`}>
-                            {lead.intent ? `Interested in ${lead.intent}` : "Just started a conversation"}
+                            {lead.intent && lead.intent !== "unspecified"
+                              ? `Interested in ${lead.intent}`
+                              : "Just started a conversation"}
                         </div>
                     </motion.div>
 

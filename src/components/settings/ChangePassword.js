@@ -63,52 +63,57 @@ export default function ChangePassword() {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
-      <PasswordField
-        label="Current Password"
-        name="currentPassword"
-        value={form.currentPassword}
-        onChange={handleChange}
-        onFocus={() => setFocusedField("currentPassword")}
-        onBlur={() => setFocusedField("")}
-        placeholder="Enter current password"
-        focusedField={focusedField}
-        autoComplete="current-password"
-        required
-      />
+    <div className="w-full">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-lg space-y-3"
+      >
+        <PasswordField
+          label="Current Password"
+          name="currentPassword"
+          value={form.currentPassword}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("currentPassword")}
+          onBlur={() => setFocusedField("")}
+          placeholder="Enter current password"
+          focusedField={focusedField}
+          autoComplete="current-password"
+          required
+        />
 
-      <PasswordField
-        label="New Password"
-        name="newPassword"
-        value={form.newPassword}
-        onChange={handleChange}
-        onFocus={() => setFocusedField("newPassword")}
-        onBlur={() => setFocusedField("")}
-        placeholder="Enter new password"
-        focusedField={focusedField}
-        autoComplete="new-password"
-        required
-        showStrengthIndicator
-        passwordStrength={passwordStrength}
-        passwordRequirements={passwordRequirements}
-      />
+        <PasswordField
+          label="New Password"
+          name="newPassword"
+          value={form.newPassword}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("newPassword")}
+          onBlur={() => setFocusedField("")}
+          placeholder="Enter new password"
+          focusedField={focusedField}
+          autoComplete="new-password"
+          required
+          showStrengthIndicator
+          passwordStrength={passwordStrength}
+          passwordRequirements={passwordRequirements}
+        />
 
-      <PasswordField
-        label="Confirm Password"
-        name="confirmPassword"
-        value={form.confirmPassword}
-        onChange={handleChange}
-        onFocus={() => setFocusedField("confirmPassword")}
-        onBlur={() => setFocusedField("")}
-        placeholder="Confirm new password"
-        focusedField={focusedField}
-        autoComplete="new-password"
-        required
-      />
+        <PasswordField
+          label="Confirm Password"
+          name="confirmPassword"
+          value={form.confirmPassword}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("confirmPassword")}
+          onBlur={() => setFocusedField("")}
+          placeholder="Confirm new password"
+          focusedField={focusedField}
+          autoComplete="new-password"
+          required
+        />
 
-      <div className="pt-2">
-        <SubmitButton loading={loading}>Update password</SubmitButton>
-      </div>
-    </form>
+        <div className="pt-2">
+          <SubmitButton loading={loading}>Update password</SubmitButton>
+        </div>
+      </form>
+    </div>
   );
 }

@@ -1,10 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { toast } from "react-toastify";
 import { Mail, ArrowLeft } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
 import AuthHeader from "@/components/auth/AuthHeader";
@@ -26,6 +25,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
   const [fieldErrors, setFieldErrors] = useState({});
   const forgotPasswordMutation = useForgotPassword();
+  const isSubmittingRef = useRef(false);
   const isSubmitting = loader || forgotPasswordMutation.isLoading;
 
   const validate = () => {
@@ -43,41 +43,21 @@ export default function ForgotPasswordPage() {
     const errs = validate();
     setFieldErrors(errs);
     if (Object.keys(errs).length > 0) return;
+    if (isSubmittingRef.current || forgotPasswordMutation.isLoading) return;
+    isSubmittingRef.current = true;
 
     setLoader(true);
     try {
       await forgotPasswordMutation.mutateAsync(email);
-      dispatch(setResetEmail(email.toLowerCase().trim()));
-
-      setEmailSent(true);
-      toast.success(
-        "Password reset instructions have been sent to your email.",
-        {
-          position: "top-right",
-          autoClose: 5000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-        }
-      );
-
-      // Redirect to OTP verification page after a short delay
-      // setTimeout(() => {
-      router.push("/verify-reset-otp");
-      // }, 2000);
+      const normalizedEmail = email.toLowerCase().trim();
+      dispatch(setResetEmail(normalizedEmail));
+      router.push(`/verify-reset-otp?email=${encodeURIComponent(normalizedEmail)}`);
     } catch (error) {
       console.error("Forgot password error:", error);
-      toast.error("Something went wrong. Please try again.", {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      // Error toast: useForgotPassword onError already notifies the user.
     } finally {
       setLoader(false);
+      isSubmittingRef.current = false;
     }
   };
 

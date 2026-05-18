@@ -5,21 +5,43 @@ import { createSlice } from "@reduxjs/toolkit";
 const STORAGE_KEY = "nesti_auth_state";
 const TWO_DAYS_MS = 1000 * 60 * 60 * 24 * 2;
 
+/**
+ * Auth is persisted in localStorage (not sessionStorage) so new tabs opened from links
+ * (e.g. target="_blank") share the same session. sessionStorage is per-tab only.
+ */
+function readRawPersistedAuth() {
+  if (typeof window === "undefined") return null;
+  try {
+    let raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) {
+      raw = sessionStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        localStorage.setItem(STORAGE_KEY, raw);
+        sessionStorage.removeItem(STORAGE_KEY);
+      }
+    }
+    return raw;
+  } catch {
+    return null;
+  }
+}
+
 const emptyState = {
   user: null,
   token: null,
   resetEmail: null,
-  resetOtp: null,
+  resetToken: null,
   expiresAt: null,
 };
 
 const loadState = () => {
   if (typeof window === "undefined") return emptyState;
   try {
-    const stored = sessionStorage.getItem(STORAGE_KEY);
+    const stored = readRawPersistedAuth();
     if (!stored) return emptyState;
     const parsed = JSON.parse(stored);
     if (parsed?.expiresAt && Date.now() > parsed.expiresAt) {
+      localStorage.removeItem(STORAGE_KEY);
       sessionStorage.removeItem(STORAGE_KEY);
       return emptyState;
     }
@@ -38,16 +60,15 @@ const initialState = {
 const persistState = (state) => {
   if (typeof window === "undefined") return;
   try {
-    sessionStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        user: state.user,
-        token: state.token,
-        resetEmail: state.resetEmail,
-        resetOtp: state.resetOtp,
-        expiresAt: state.expiresAt,
-      })
-    );
+    const payload = JSON.stringify({
+      user: state.user,
+      token: state.token,
+      resetEmail: state.resetEmail,
+      resetToken: state.resetToken,
+      expiresAt: state.expiresAt,
+    });
+    localStorage.setItem(STORAGE_KEY, payload);
+    sessionStorage.removeItem(STORAGE_KEY);
   } catch (error) {
     console.error("Error saving auth state:", error);
   }
@@ -71,9 +92,10 @@ const authSlice = createSlice({
       state.user = null;
       state.token = null;
       state.resetEmail = null;
-      state.resetOtp = null;
+      state.resetToken = null;
       state.expiresAt = null;
       if (typeof window !== "undefined") {
+        localStorage.removeItem(STORAGE_KEY);
         sessionStorage.removeItem(STORAGE_KEY);
       }
     },
@@ -85,12 +107,12 @@ const authSlice = createSlice({
       state.resetEmail = null;
       persistState(state);
     },
-    setResetOtp: (state, action) => {
-      state.resetOtp = action.payload || null;
+    setResetToken: (state, action) => {
+      state.resetToken = action.payload || null;
       persistState(state);
     },
-    clearResetOtp: (state) => {
-      state.resetOtp = null;
+    clearResetToken: (state) => {
+      state.resetToken = null;
       persistState(state);
     },
   },
@@ -102,7 +124,7 @@ export const {
   logout,
   setResetEmail,
   clearResetEmail,
-  setResetOtp,
-  clearResetOtp,
+  setResetToken,
+  clearResetToken,
 } = authSlice.actions;
 export default authSlice.reducer;

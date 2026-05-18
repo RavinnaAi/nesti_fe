@@ -6,16 +6,21 @@ import { setSelectedPlan } from "@/store/selectedPlanSlice";
 import { setPlans } from "@/store/pricingSlice";
 import { updateProfile } from "@/store/authSlice";
 import { useRouter, useSearchParams } from "next/navigation";
+import dynamic from "next/dynamic";
 import { useStrapiQuery } from "@/lib/strapi";
 import { motion, AnimatePresence } from "framer-motion";
-import { X, Check, Building, Mail, User, Send, CreditCard, Plus, Loader2, Trash2 } from "lucide-react";
+import { X, Check, Building, Mail, User, Send, CreditCard, Plus, Loader2 } from "lucide-react";
 import FormField from "@/components/auth/FormField";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { ACCOUNT_STATUS, SUBSCRIPTION_PLAN } from "@/constants/features";
 import { usePaymentMethods } from "@/hooks/useBillingApi";
-import StripeProvider from "@/components/checkout/StripeProvider";
-import PaymentForm from "@/components/checkout/PaymentForm";
+const StripeProvider = dynamic(() => import("@/components/checkout/StripeProvider"), {
+  ssr: false,
+});
+const PaymentForm = dynamic(() => import("@/components/checkout/PaymentForm"), {
+  ssr: false,
+});
 
 export default function SubscriptionInfo() {
   const dispatch = useAppDispatch();
@@ -325,9 +330,6 @@ export default function SubscriptionInfo() {
                       </div>
                     </div>
                   </div>
-                  {/* <button className="text-text-muted hover:text-red-500 transition-colors">
-                  <Trash2 size={14} />
-                </button> */}
                 </div>
               ))}
             </div>

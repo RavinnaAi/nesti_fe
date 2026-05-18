@@ -1,128 +1,132 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { AnimatePresence } from "framer-motion";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Filter, RefreshCw, CheckCircle2, XCircle, Users, DollarSign, Scale, Info } from "lucide-react";
 import { toast } from "react-toastify";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useRecordLeadView } from "@/hooks/useRecordLeadView";
 import { useAppSelector } from "@/store";
 import {
-  fetchConversations,
-  fetchConversationMessages,
   fetchReferrals,
   createReferral,
   updateReferral,
   sendNurtureEmail,
   fetchNurtureLogs,
-  runMortgageCalculator,
-  runClosingCalculator,
-  fetchCalculatorRuns,
+  postNurtureDraft,
+  postNurtureRefine,
+  postNurturePreview,
 } from "@/lib/chatClient";
-import LeadListItem from "@/components/leads/LeadListItem";
-import MessageBubble from "@/components/leads/MessageBubble";
-import LeadActionSection from "@/components/leads/LeadActionSection";
-import LeadScoreCard from "@/components/leads/LeadScoreCard";
-import SelectDropdown from "@/components/ui/SelectDropdown";
-import LeadMetaModal from "@/components/leads/LeadMetaModal";
-import LeadActionPopup from "@/components/leads/LeadActionPopup";
+import {
+  fetchLeads,
+  fetchLeadById,
+  fetchLeadConversation,
+  fetchLeadPropertyMatches,
+  deleteLeadById,
+  patchLead,
+} from "@/lib/leadsClient";
+import { cancelCalendlyAppointment } from "@/lib/calendarClient";
+import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
+import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
+import {
+  roleHidesLeadPropertyMatches,
+  roleShowsLeadsListAgentColumns,
+} from "@/lib/leadWorkspaceTabsMeta";
+import LeadsListHeader from "@/components/leads/LeadsListHeader";
+import LeadsListFiltersBar from "@/components/leads/LeadsListFiltersBar";
+import LeadsListTable from "@/components/leads/LeadsListTable";
+import LeadsListPagination from "@/components/leads/LeadsListPagination";
+import ReferralsDataTable, {
+  leadsPipelineReferralDetailHref,
+  normalizeReferralRows,
+} from "@/components/referrals/ReferralsDataTable";
+import LeadsWorkspacePanels from "@/components/leads/LeadsWorkspacePanels";
+import DeleteLeadConfirmModal from "@/components/leads/DeleteLeadConfirmModal";
+import { useLeadsListFilters } from "@/hooks/useLeadsListFilters";
+import {
+  extractMessageMeta,
+  getActionConversationId,
+  getConversationMeta,
+  getLeadMatchId,
+  matchesSearch,
+  normalizeList,
+} from "@/lib/leadsPageUtils";
+import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
-const normalizeList = (data) => {
-  if (!data) return [];
-  if (Array.isArray(data)) return data;
-  if (Array.isArray(data?.data)) return data.data;
-  if (Array.isArray(data?.items)) return data.items;
-  return [];
-};
-
-const getConversationId = (conversation) =>
-  conversation?.id || conversation?.conversation_id || conversation?.conversationId;
-
-const getConversationMeta = (conversation) => {
-  // Check for matched status in multiple possible fields
-  let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
-  if (isMatched === null) {
-    const matchStatus = conversation?.match_status;
-    if (matchStatus === "matched" || matchStatus === true) {
-      isMatched = true;
-    } else {
-      isMatched = conversation?.meta?.is_matched ??
-        conversation?.meta?.matched ??
-        conversation?.metadata?.is_matched ??
-        conversation?.metadata?.matched ??
-        null;
-    }
-  }
-
-  return {
-    intent:
-      conversation?.intent ||
-      conversation?.lead_intent ||
-      conversation?.intent_label ||
-      "Unknown",
-    leadScore: conversation?.lead_score ?? conversation?.leadScore ?? "—",
-    leadGrade: conversation?.lead_grade ?? conversation?.leadGrade ?? "—",
-    channel: conversation?.channel || conversation?.source || "web",
-    qualified: conversation?.is_qualified ?? conversation?.isQualified ?? false,
-    isMatched,
+function stripListingBulletRows(text) {
+  const raw = String(text || "");
+  if (!raw.trim()) return "";
+  const lines = raw.replace(/\r\n/g, "\n").split("\n");
+  const out = [];
+  const isListingBullet = (value) => {
+    const s = String(value || "").trim().replace(/^_+/, "").trim();
+    if (!/^[-*]\s+/.test(s)) return false;
+    const lower = s.toLowerCase();
+    return /\$[\d,]/.test(s) || /bed|bath|budget|stretch|area match|property type|match/i.test(lower);
   };
-};
+  let i = 0;
+  while (i < lines.length) {
+    const line = String(lines[i] || "").trim();
+    if (/^matched options include\s*:/i.test(line)) {
+      i += 1;
+      while (i < lines.length && (!String(lines[i] || "").trim() || isListingBullet(lines[i]))) i += 1;
+      continue;
+    }
+    if (isListingBullet(line)) {
+      i += 1;
+      continue;
+    }
+    out.push(lines[i]);
+    i += 1;
+  }
+  return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
+}
 
-const matchesSearch = (conversation, term) => {
-  if (!term) return true;
-  const needle = term.toLowerCase();
-  const haystack = [
-    conversation?.name,
-    conversation?.visitor_name,
-    conversation?.visitorName,
-    conversation?.email,
-    conversation?.visitor_email,
-    conversation?.visitorEmail,
-    conversation?.phone,
-    conversation?.visitor_phone,
-    conversation?.visitorPhone,
-    conversation?.city,
-    conversation?.location,
-    conversation?.visitor_id,
-    conversation?.visitorId,
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
-  return haystack.includes(needle);
-};
-
-const extractMeta = (value) => {
-  if (!value) return {};
-  return value?.meta || value?.metadata || value?.data?.meta || {};
-};
-
-const extractMessageMeta = (message) => {
-  if (!message) return {};
-  return message?.meta || message?.message_meta || message?.metadata || message?.data?.meta || {};
-};
-
-const formatMetaEntries = (meta) => {
-  if (!meta || typeof meta !== "object") return [];
-  return Object.entries(meta).filter(([, value]) => value !== undefined && value !== null);
-};
-
-export default function LeadsPage() {
+function LeadsPageContent() {
   const { isAuthenticated } = useAuthGuard();
-  const { token } = useAppSelector((state) => state.auth);
+  const router = useRouter();
+  const { token, user: authUser } = useAppSelector((state) => state.auth);
+  const userRole = authUser?.role || "agent";
+  const roleFilteredTabs = useMemo(() => getLeadWorkspaceTabsForRole(userRole), [userRole]);
+  const showPropertyMatchesColumn = !roleHidesLeadPropertyMatches(userRole);
+  const showAgentLeadColumns = roleShowsLeadsListAgentColumns(userRole);
+  const showMortgageLeadColumns = String(userRole || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_") === "mortgage_broker";
   const queryClient = useQueryClient();
-  const [selectedId, setSelectedId] = useState("");
+  const searchParams = useSearchParams();
+  const leadFromUrl = String(searchParams.get("lead") || "").trim();
+  const pageFromUrl = Number(searchParams.get("page") || "1");
+  const [hydrated, setHydrated] = useState(false);
+  const [selectedLeadId, setSelectedLeadId] = useState("");
+  const [currentPage, setCurrentPage] = useState(Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1);
   const [searchTerm, setSearchTerm] = useState("");
   const [intentFilter, setIntentFilter] = useState("");
-  const [gradeFilter, setGradeFilter] = useState("");
-  const [channelFilter, setChannelFilter] = useState("");
-  const [matchFilter, setMatchFilter] = useState("");
-  const [metaModal, setMetaModal] = useState(null); // { title, data }
+  const [appointmentFilter, setAppointmentFilter] = useState("all");
+  const appointmentFilterBoot = useRef(true);
+  const {
+    status: statusFromUrl,
+    pipeline: pipelineFromUrl,
+    referral: pipelineReferralIdFromUrl,
+    filterLabel,
+    toLeadWorkspace,
+    toListPage,
+  } = useLeadsListFilters();
+  const isReferralsPipeline = pipelineFromUrl === "referrals";
+  const dynamicRowsPerPage = useDynamicTablePageSize({
+    minRows: 10,
+    maxRows: 24,
+    rowHeight: 44,
+    reserveHeight: 240,
+  });
+  const leadsRowsPerPage = Math.max(10, dynamicRowsPerPage - 1);
+  const [activeTab, setActiveTab] = useState("lead_profile");
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const [referralForm, setReferralForm] = useState({
-    target_vertical: "realtor",
+    professional_role: "",
     target_user_id: "",
-    status: "new",
     notes: "",
   });
   const [activeReferralId, setActiveReferralId] = useState("");
@@ -131,60 +135,192 @@ export default function LeadsPage() {
     to_email: "",
     subject: "",
     body: "",
-    template_key: "",
+    refine_instruction: "",
+    goal: "",
+    tone: "",
+    include_property_cards: true,
   });
-  const [mortgageForm, setMortgageForm] = useState({
-    price: "",
-    down_payment: "",
-    annual_rate: "",
-    amort_years: "",
+
+  /** Legacy `/leads?pipeline=referrals&referral=` bookmarks -> dedicated referral page. */
+  useEffect(() => {
+    if (!isReferralsPipeline) return;
+    const rid = String(pipelineReferralIdFromUrl || "").trim();
+    if (!rid) return;
+    router.replace(leadsPipelineReferralDetailHref(rid, currentPage));
+  }, [isReferralsPipeline, pipelineReferralIdFromUrl, currentPage, router]);
+
+  useEffect(() => {
+    setActiveTab("lead_profile");
+  }, [selectedLeadId]);
+
+  useEffect(() => {
+    if (isReferralsPipeline) setSelectedLeadId("");
+  }, [isReferralsPipeline]);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    const incomingPage = Number(searchParams.get("page") || "1");
+    if (Number.isFinite(incomingPage) && incomingPage > 0 && incomingPage !== currentPage) {
+      setCurrentPage(incomingPage);
+    }
+  }, [searchParams, currentPage]);
+
+  useEffect(() => {
+    if (!leadFromUrl) return;
+    const pageNum = Number.isFinite(pageFromUrl) && pageFromUrl > 0 ? pageFromUrl : 1;
+    const qs = new URLSearchParams();
+    qs.set("page", String(pageNum));
+    const st = String(searchParams.get("status") || "").trim();
+    const pl = String(searchParams.get("pipeline") || "").trim();
+    if (st) qs.set("status", st);
+    if (pl) qs.set("pipeline", pl);
+    router.replace(`/leads/${encodeURIComponent(leadFromUrl)}?${qs.toString()}`);
+  }, [leadFromUrl, pageFromUrl, router, searchParams]);
+
+  useEffect(() => {
+    if (appointmentFilterBoot.current) {
+      appointmentFilterBoot.current = false;
+      return;
+    }
+    setCurrentPage(1);
+  }, [appointmentFilter]);
+
+  const leadsQuery = useQuery({
+    queryKey: [
+      "leads",
+      token,
+      currentPage,
+      leadsRowsPerPage,
+      appointmentFilter,
+      statusFromUrl,
+      pipelineFromUrl,
+    ],
+    enabled: Boolean(token) && !isReferralsPipeline,
+    queryFn: () =>
+      fetchLeads({
+        token,
+        page: currentPage,
+        limit: leadsRowsPerPage,
+        ...(appointmentFilter && appointmentFilter !== "all" ? { appointment: appointmentFilter } : {}),
+        ...(statusFromUrl ? { status: statusFromUrl } : {}),
+        ...(!statusFromUrl && pipelineFromUrl ? { pipeline: pipelineFromUrl } : {}),
+      }),
   });
-  const [closingForm, setClosingForm] = useState({ price: "" });
 
-  // Popup visibility state - resets when a new lead is selected
-  const [showAdvicePopup, setShowAdvicePopup] = useState(false);
-
-  // Reset popup when selection changes
-  // We use useEffect to watch selectedId 
-  // (or can just rely on the effect below if we want strict sync)
-
-  const conversationsQuery = useQuery({
-    queryKey: ["chat-conversations", token],
-    enabled: Boolean(token),
-    queryFn: () => fetchConversations({ token }),
+  const referralsPipelineQuery = useQuery({
+    queryKey: ["leads-pipeline-referrals", token, currentPage, leadsRowsPerPage],
+    enabled: Boolean(token && isReferralsPipeline),
+    queryFn: () =>
+      fetchReferrals({
+        token,
+        direction: "inbound",
+        page: currentPage,
+        limit: leadsRowsPerPage,
+        status: "accepted",
+      }),
   });
+
+  const referralPipelineRows = useMemo(() => {
+    if (!isReferralsPipeline) return [];
+    return normalizeReferralRows(referralsPipelineQuery.data);
+  }, [isReferralsPipeline, referralsPipelineQuery.data]);
+
+  const referralsPipelinePagination = useMemo(() => {
+    const p = referralsPipelineQuery.data?.pagination || {};
+    const current = Number(p.current_page || p.page || currentPage || 1);
+    const totalPages = Number(p.total_pages || p.totalPages || 1);
+    const total = Number(p.total || 0);
+    const hasPrev = typeof p.has_prev_page === "boolean" ? p.has_prev_page : current > 1;
+    const hasNext =
+      typeof p.has_next_page === "boolean" ? p.has_next_page : Number.isFinite(totalPages) && current < totalPages;
+    return { current, totalPages, total, hasPrev, hasNext };
+  }, [referralsPipelineQuery.data, currentPage]);
+
+  const leadsPagination = useMemo(() => {
+    const p = leadsQuery.data?.pagination || leadsQuery.data?.data?.pagination || {};
+    const current = Number(p.current_page || p.page || currentPage || 1);
+    const totalPages = Number(p.total_pages || p.totalPages || 1);
+    const total = Number(p.total || 0);
+    const hasPrev = typeof p.has_prev_page === "boolean" ? p.has_prev_page : current > 1;
+    const hasNext =
+      typeof p.has_next_page === "boolean"
+        ? p.has_next_page
+        : Number.isFinite(totalPages)
+          ? current < totalPages
+          : false;
+    return { current, totalPages, total, hasPrev, hasNext };
+  }, [leadsQuery.data, currentPage]);
+
+  const leadRows = useMemo(() => {
+    const raw = leadsQuery.data?.leads;
+    if (Array.isArray(raw)) return raw;
+    return normalizeList(leadsQuery.data);
+  }, [leadsQuery.data]);
 
   const conversations = useMemo(
-    () => normalizeList(conversationsQuery.data),
-    [conversationsQuery.data]
+    () => leadRows.map((row) => leadApiRowToConversationShape(row)).filter(Boolean),
+    [leadRows]
   );
 
   const filteredConversations = useMemo(() => {
     return conversations.filter((conversation) => {
       const meta = getConversationMeta(conversation);
-      if (intentFilter && String(meta.intent) !== intentFilter) return false;
-      if (gradeFilter && String(meta.leadGrade) !== gradeFilter) return false;
-      if (channelFilter && String(meta.channel) !== channelFilter) return false;
-      if (matchFilter === "matched" && meta.isMatched !== true) return false;
-      if (matchFilter === "mismatched" && meta.isMatched !== false) return false;
+      const intent = String(meta.intent || "").trim().toLowerCase();
+      if (showAgentLeadColumns && intentFilter && intent !== intentFilter) return false;
       return matchesSearch(conversation, searchTerm);
     });
-  }, [conversations, intentFilter, gradeFilter, channelFilter, matchFilter, searchTerm]);
+  }, [conversations, intentFilter, searchTerm, showAgentLeadColumns]);
 
-  const selectedConversation = useMemo(
-    () => conversations.find((conversation) => getConversationId(conversation) === selectedId),
-    [conversations, selectedId]
-  );
-
-  const messagesQuery = useQuery({
-    queryKey: ["chat-messages", token, selectedId],
-    enabled: Boolean(token && selectedId),
-    queryFn: () => fetchConversationMessages({ token, conversationId: selectedId }),
+  const leadDetailQuery = useQuery({
+    queryKey: ["lead-detail", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId),
+    queryFn: () => fetchLeadById({ token, id: selectedLeadId }),
   });
 
-  const messages = useMemo(() => normalizeList(messagesQuery.data), [messagesQuery.data]);
+  useRecordLeadView(selectedLeadId, { token, enabled: Boolean(selectedLeadId) });
 
-  const conversationMeta = useMemo(() => extractMeta(selectedConversation), [selectedConversation]);
+  const selectedConversation = useMemo(() => {
+    const base = conversations.find((c) => String(getLeadMatchId(c)) === String(selectedLeadId));
+    const detailLead = leadDetailQuery.data?.lead;
+    if (!base && !detailLead) return null;
+    const merged = detailLead ? { ...(base || {}), ...detailLead } : base;
+    return leadApiRowToConversationShape(merged);
+  }, [conversations, selectedLeadId, leadDetailQuery.data]);
+
+  const actionConversationId = getActionConversationId(selectedConversation);
+  const leadDetail = leadDetailQuery.data?.lead || null;
+
+  const messagesQuery = useQuery({
+    queryKey: ["lead-conversation", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId),
+    queryFn: () =>
+      fetchLeadConversation({ token, leadId: selectedLeadId, page: 1, limit: 200 }),
+  });
+
+  const messages = useMemo(() => {
+    const raw = messagesQuery.data?.messages;
+    if (Array.isArray(raw)) return raw;
+    return normalizeList(messagesQuery.data);
+  }, [messagesQuery.data]);
+
+  const propertyMatchesQuery = useQuery({
+    queryKey: ["lead-property-matches", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId && activeTab === "property_matches"),
+    queryFn: () =>
+      fetchLeadPropertyMatches({ token, leadId: selectedLeadId, page: 1, limit: 100 }),
+  });
+
+  const propertyMatches = useMemo(() => {
+    const d = propertyMatchesQuery.data;
+    const raw = d?.property_matches ?? d?.propertyMatches;
+    if (Array.isArray(raw)) return raw;
+    if (Array.isArray(d)) return d;
+    return normalizeList(d);
+  }, [propertyMatchesQuery.data]);
+
   const messageMeta = useMemo(() => {
     const latestWithMeta = [...messages].reverse().find((msg) => {
       const meta = extractMessageMeta(msg);
@@ -201,50 +337,66 @@ export default function LeadsPage() {
 
   const referrals = useMemo(() => normalizeList(referralsQuery.data), [referralsQuery.data]);
   const conversationReferrals = useMemo(() => {
-    if (!selectedId) return referrals;
+    if (!actionConversationId) return referrals;
     return referrals.filter(
-      (ref) => String(ref?.conversation_id || ref?.conversationId || "") === String(selectedId)
+      (ref) =>
+        String(ref?.conversation_id || ref?.conversationId || "") ===
+        String(actionConversationId)
     );
-  }, [referrals, selectedId]);
+  }, [referrals, actionConversationId]);
 
   const nurtureLogsQuery = useQuery({
-    queryKey: ["chat-nurture-logs", token],
-    enabled: Boolean(token),
-    queryFn: () => fetchNurtureLogs({ token }),
+    queryKey: ["chat-nurture-logs", token, selectedLeadId],
+    enabled: Boolean(token && selectedLeadId),
+    queryFn: () => fetchNurtureLogs({ token, leadMatchId: selectedLeadId }),
   });
 
   const nurtureLogs = useMemo(() => normalizeList(nurtureLogsQuery.data), [nurtureLogsQuery.data]);
 
-  const mortgageRunsQuery = useQuery({
-    queryKey: ["chat-calculators", token, "mortgage"],
-    enabled: Boolean(token),
-    queryFn: () => fetchCalculatorRuns({ token, type: "mortgage" }),
-  });
+  const nurtureSuggestedEmail = useMemo(() => {
+    const c = leadDetailQuery.data?.lead?.contact;
+    const fromLead =
+      c?.email || c?.canonical_email || selectedConversation?.email || selectedConversation?.visitor_email || "";
+    return String(fromLead || "").trim();
+  }, [leadDetailQuery.data?.lead, selectedConversation]);
 
-  const closingRunsQuery = useQuery({
-    queryKey: ["chat-calculators", token, "closing"],
-    enabled: Boolean(token),
-    queryFn: () => fetchCalculatorRuns({ token, type: "closing" }),
-  });
+  useEffect(() => {
+    if (!selectedLeadId) return;
+    setNurtureForm((prev) => ({
+      ...prev,
+      subject: "",
+      body: "",
+      refine_instruction: "",
+      to_email: "",
+    }));
+  }, [selectedLeadId]);
 
-  const mortgageRuns = useMemo(
-    () => normalizeList(mortgageRunsQuery.data),
-    [mortgageRunsQuery.data]
-  );
-  const closingRuns = useMemo(() => normalizeList(closingRunsQuery.data), [closingRunsQuery.data]);
+  useEffect(() => {
+    if (!selectedLeadId || !nurtureSuggestedEmail) return;
+    setNurtureForm((prev) => {
+      if (prev.to_email.trim()) return prev;
+      return { ...prev, to_email: nurtureSuggestedEmail };
+    });
+  }, [selectedLeadId, nurtureSuggestedEmail]);
 
   const createReferralMutation = useMutation({
     mutationFn: () =>
       createReferral({
         token,
         payload: {
-          ...referralForm,
-          conversation_id: selectedId || undefined,
+          target_vertical: referralForm.professional_role,
+          target_user_id: referralForm.target_user_id,
+          conversation_id: actionConversationId || undefined,
+          notes: referralForm.notes || "",
         },
       }),
     onSuccess: () => {
       toast.success("Referral created");
-      setReferralForm((prev) => ({ ...prev, notes: "" }));
+      setReferralForm({
+        professional_role: "",
+        target_user_id: "",
+        notes: "",
+      });
       queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
     },
     onError: (err) => toast.error(err?.message || "Failed to create referral"),
@@ -265,548 +417,310 @@ export default function LeadsPage() {
     onError: (err) => toast.error(err?.message || "Failed to update referral"),
   });
 
+  const nurtureDraftMutation = useMutation({
+    mutationFn: () =>
+      postNurtureDraft({
+        token,
+        payload: {
+          lead_match_id: selectedLeadId,
+          goal: nurtureForm.goal?.trim() || undefined,
+          tone: nurtureForm.tone?.trim() || undefined,
+        },
+      }),
+    onSuccess: (data) => {
+      const d = data?.draft;
+      if (d) {
+        setNurtureForm((prev) => ({
+          ...prev,
+          subject: d.subject ?? prev.subject,
+          body: stripListingBulletRows(d.body_text ?? prev.body),
+        }));
+      }
+      toast.success("Draft ready. Review and send.");
+    },
+    onError: (err) => toast.error(err?.message || "Could not generate draft"),
+  });
+
+  const nurtureRefineMutation = useMutation({
+    mutationFn: () =>
+      postNurtureRefine({
+        token,
+        payload: {
+          lead_match_id: selectedLeadId,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          instruction: nurtureForm.refine_instruction.trim(),
+        },
+      }),
+    onSuccess: (data) => {
+      const d = data?.draft;
+      if (d) {
+        setNurtureForm((prev) => ({
+          ...prev,
+          subject: d.subject ?? prev.subject,
+          body: stripListingBulletRows(d.body_text ?? prev.body),
+          refine_instruction: "",
+        }));
+      }
+      toast.success("Refined.");
+    },
+    onError: (err) => toast.error(err?.message || "Could not refine email"),
+  });
+
   const nurtureMutation = useMutation({
     mutationFn: () =>
       sendNurtureEmail({
         token,
         payload: {
-          ...nurtureForm,
-          conversation_id: selectedId || undefined,
+          lead_match_id: selectedLeadId,
+          conversation_id: actionConversationId || undefined,
+          to_email: nurtureForm.to_email?.trim() || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
         },
       }),
     onSuccess: () => {
       toast.success("Nurture email sent");
-      setNurtureForm({ to_email: "", subject: "", body: "", template_key: "" });
-      queryClient.invalidateQueries({ queryKey: ["chat-nurture-logs"] });
+      setNurtureForm((prev) => ({
+        ...prev,
+        subject: "",
+        body: "",
+        refine_instruction: "",
+      }));
+      queryClient.invalidateQueries({ queryKey: ["chat-nurture-logs", token, selectedLeadId] });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail", token, selectedLeadId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
   });
 
-  const mortgageMutation = useMutation({
+  const nurturePreviewMutation = useMutation({
     mutationFn: () =>
-      runMortgageCalculator({
+      postNurturePreview({
         token,
         payload: {
-          ...mortgageForm,
-          conversation_id: selectedId || undefined,
+          lead_match_id: selectedLeadId,
+          conversation_id: actionConversationId || undefined,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
         },
       }),
-    onSuccess: () => {
-      toast.success("Mortgage calculator run saved");
-      queryClient.invalidateQueries({ queryKey: ["chat-calculators", token, "mortgage"] });
-    },
-    onError: (err) => toast.error(err?.message || "Failed to run mortgage calculator"),
+    onError: (err) => toast.error(err?.message || "Failed to build email preview"),
   });
 
-  const closingMutation = useMutation({
-    mutationFn: () =>
-      runClosingCalculator({
-        token,
-        payload: {
-          ...closingForm,
-          conversation_id: selectedId || undefined,
-        },
-      }),
+  const cancelCalendlyMutation = useMutation({
+    mutationFn: () => cancelCalendlyAppointment({ token, leadMatchId: selectedLeadId }),
     onSuccess: () => {
-      toast.success("Closing cost run saved");
-      queryClient.invalidateQueries({ queryKey: ["chat-calculators", token, "closing"] });
+      toast.success("Appointment canceled in Calendly.");
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail", token, selectedLeadId] });
     },
-    onError: (err) => toast.error(err?.message || "Failed to run closing cost calculator"),
+    onError: (err) => toast.error(err?.message || "Could not cancel appointment"),
   });
 
-  const intents = useMemo(() => {
-    const values = new Set();
-    conversations.forEach((conversation) => values.add(String(getConversationMeta(conversation).intent)));
-    return Array.from(values).filter(Boolean);
-  }, [conversations]);
+  const patchLeadMutation = useMutation({
+    mutationFn: (payload) => patchLead({ token, id: selectedLeadId, ...payload }),
+    onSuccess: (data) => {
+      toast.success("Lead updated");
+      const id = selectedLeadId;
+      if (id && data?.lead) {
+        queryClient.setQueryData(["lead-detail", token, id], (prev) => ({
+          ...(prev && typeof prev === "object" ? prev : {}),
+          success: true,
+          lead: data.lead,
+          conversation_id:
+            data.conversation_id != null ? data.conversation_id : prev?.conversation_id ?? null,
+        }));
+      }
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+    },
+    onError: (err) => toast.error(err?.message || "Could not update lead"),
+  });
 
-  const grades = useMemo(() => {
-    const values = new Set();
-    conversations.forEach((conversation) => values.add(String(getConversationMeta(conversation).leadGrade)));
-    return Array.from(values).filter(Boolean);
-  }, [conversations]);
+  const deleteLeadMutation = useMutation({
+    mutationFn: () => deleteLeadById({ token, id: selectedLeadId }),
+    onSuccess: () => {
+      const deletedLeadId = String(selectedLeadId);
+      toast.success("Lead deleted successfully");
+      setShowDeleteConfirm(false);
+      setSelectedLeadId("");
+      queryClient.invalidateQueries({ queryKey: ["leads", token], refetchType: "all" });
+      queryClient.removeQueries({ queryKey: ["lead-detail", token, deletedLeadId] });
+      queryClient.removeQueries({ queryKey: ["lead-conversation", token, deletedLeadId] });
+      queryClient.removeQueries({ queryKey: ["lead-property-matches", token, deletedLeadId] });
+    },
+    onError: (err) => toast.error(err?.message || "Failed to delete lead"),
+  });
 
-  const channels = useMemo(() => {
-    const values = new Set();
-    conversations.forEach((conversation) => values.add(String(getConversationMeta(conversation).channel)));
-    return Array.from(values).filter(Boolean);
-  }, [conversations]);
+  const handleDeleteLead = () => {
+    if (!selectedLeadId || deleteLeadMutation.isPending) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDeleteLead = () => {
+    if (!selectedLeadId || deleteLeadMutation.isPending) return;
+    deleteLeadMutation.mutate();
+  };
+
+  const goPrevPage = () => {
+    const source = isReferralsPipeline ? referralsPipelinePagination : leadsPagination;
+    const nextPage = Math.max(1, source.current - 1);
+    setCurrentPage(nextPage);
+    const opts = { page: nextPage };
+    router.push(toListPage(opts));
+  };
+
+  const goNextPage = () => {
+    const source = isReferralsPipeline ? referralsPipelinePagination : leadsPagination;
+    const nextPage = source.current + 1;
+    setCurrentPage(nextPage);
+    const opts = { page: nextPage };
+    router.push(toListPage(opts));
+  };
+
+  if (!hydrated) {
+    return <div className="min-h-[calc(100vh-4rem)] flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+  }
 
   if (!isAuthenticated) return null;
 
+  const lockViewportForList = !selectedLeadId;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
-      <div className="max-w-7xl mx-auto px-6 py-10 space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-text-heading">Leads</h1>
-            <p className="text-sm text-text-muted">
-              Manage conversations, referrals, nurtures, and calculators.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => conversationsQuery.refetch()}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-primary border border-primary/30 rounded-md px-3 py-2 hover:bg-primary/5 transition"
-          >
-            <RefreshCw size={14} /> Refresh
-          </button>
-        </div>
+    <div
+      className={`flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10 ${
+        lockViewportForList ? "h-[calc(100vh-4rem)] overflow-hidden" : "min-h-[calc(100vh-4rem)]"
+      }`}
+    >
+      <div className="flex h-full w-full flex-col gap-5 px-5 py-5 md:px-6 md:py-6">
+        <LeadsListHeader filterLabel={filterLabel}>
+          {!isReferralsPipeline ? (
+            <LeadsListFiltersBar
+              searchTerm={searchTerm}
+              onSearchTermChange={setSearchTerm}
+              intentFilter={intentFilter}
+              onIntentFilterChange={setIntentFilter}
+              appointmentFilter={appointmentFilter}
+              onAppointmentFilterChange={setAppointmentFilter}
+              showIntentFilter={showAgentLeadColumns}
+              searchPlaceholder={
+                showAgentLeadColumns
+                  ? "Search by property type, name, phone, city..."
+                  : "Search by name, phone, city, email..."
+              }
+            />
+          ) : null}
+        </LeadsListHeader>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          <div className="lg:col-span-4 space-y-4">
-            <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-3">
-              <div className="flex items-center gap-2 text-xs text-text-muted">
-                <Filter size={14} />
-                Filter leads
-              </div>
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by name, email, phone, city..."
-                className="w-full h-10 rounded-md border border-border/60 bg-background-light/50 px-3 text-sm focus:outline-none"
+        <div className="flex min-h-0 flex-1 flex-col gap-4">
+          {isReferralsPipeline ? (
+            <>
+              <ReferralsDataTable
+                rows={referralPipelineRows}
+                isLoading={referralsPipelineQuery.isLoading}
+                isError={referralsPipelineQuery.isError}
+                errorMessage={referralsPipelineQuery.error?.message}
+                direction="inbound"
+                getDetailHref={(id) => leadsPipelineReferralDetailHref(id, currentPage)}
+                heading="Accepted referrals"
+                hint="Opens `/leads/referrals/...` (under Leads, not the Referrals inbox). Use back there to return to this list."
+                emptyMessage="No accepted referrals in your pipeline yet."
+                rowsPerPage={leadsRowsPerPage}
               />
-              <div className="flex align-middle flex-wrap gap-2">
-                <SelectDropdown
-                  placeholder="Intent"
-                  value={intentFilter}
-                  onChange={setIntentFilter}
-                  options={[
-                    { value: "", label: "All Intents" },
-                    ...intents.map((intent) => ({ value: intent, label: intent })),
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
-                <SelectDropdown
-                  placeholder="Grade"
-                  value={gradeFilter}
-                  onChange={setGradeFilter}
-                  options={[
-                    { value: "", label: "All Grades" },
-                    ...grades.map((grade) => ({ value: grade, label: grade })),
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
-                <SelectDropdown
-                  placeholder="Channel"
-                  value={channelFilter}
-                  onChange={setChannelFilter}
-                  options={[
-                    { value: "", label: "All Channels" },
-                    ...channels.map((channel) => ({ value: channel, label: channel })),
-                  ]}
-                  className="!w-auto"
-                  size="small"
-                />
-                <SelectDropdown
-                  placeholder="Match Status"
-                  value={matchFilter}
-                  onChange={setMatchFilter}
-                  options={[
-                    { value: "", label: "All Leads" },
-                    { value: "matched", label: "Matched" },
-                    { value: "mismatched", label: "Mismatched" },
-                  ]}
-                  className="!w-auto"
-                  size="small"
+              <LeadsListPagination
+                leadsQuery={referralsPipelineQuery}
+                leadsPagination={referralsPipelinePagination}
+                onPrev={goPrevPage}
+                onNext={goNextPage}
+                resourceLabel="referrals"
+              />
+            </>
+          ) : (
+            <>
+              <div className="min-h-0 flex-1">
+                <LeadsListTable
+                  leadsQuery={leadsQuery}
+                  filteredConversations={filteredConversations}
+                  selectedLeadId={selectedLeadId}
+                  toLeadWorkspace={toLeadWorkspace}
+                leadsPageSize={leadsRowsPerPage}
+                  showPropertyMatchesColumn={showPropertyMatchesColumn}
+                  showAgentLeadColumns={showAgentLeadColumns}
+                  showMortgageLeadColumns={showMortgageLeadColumns}
                 />
               </div>
-            </div>
 
-            <div className="space-y-3">
-              {conversationsQuery.isLoading ? (
-                <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-                  Loading conversations...
-                </div>
-              ) : conversationsQuery.isError ? (
-                <div className="rounded-md border border-border bg-white p-4 text-sm text-red-600">
-                  Failed to load conversations.
-                </div>
-              ) : filteredConversations.length === 0 ? (
-                <div className="rounded-md border border-border bg-white p-4 text-sm text-text-muted">
-                  No conversations found.
-                </div>
-              ) : (
-                filteredConversations.map((conversation) => {
-                  const id = getConversationId(conversation);
-                  return (
-                    <LeadListItem
-                      key={id}
-                      conversation={conversation}
-                      active={id === selectedId}
-                      onSelect={(newId) => {
-                        setSelectedId(newId);
-                        setShowAdvicePopup(true); // Show popup when selecting a lead
-                      }}
-                    />
-                  );
-                })
-              )}
-            </div>
-          </div>
+              <LeadsListPagination
+                leadsQuery={leadsQuery}
+                leadsPagination={leadsPagination}
+                onPrev={goPrevPage}
+                onNext={goNextPage}
+              />
+            </>
+          )}
 
-          <div className="lg:col-span-8 space-y-6">
-            <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
-              <div>
-                <div className="text-sm font-semibold text-text-heading">Conversation</div>
-                <p className="text-xs text-text-muted">
-                  {selectedConversation ? "Latest messages and lead metadata" : "Select a lead to view messages"}
-                </p>
-              </div>
-              {selectedConversation && (
-                <LeadScoreCard
-                  score={getConversationMeta(selectedConversation).leadScore}
-                  grade={getConversationMeta(selectedConversation).leadGrade}
-                  breakdown={{
-                    timeline: (messageMeta?.ai_metadata?.score_updates?.timeline_score ?? extractMeta(selectedConversation).timeline_score) || 0,
-                    budget: (messageMeta?.ai_metadata?.score_updates?.budget_score ?? extractMeta(selectedConversation).budget_score) || 0,
-                    engagement: (messageMeta?.ai_metadata?.score_updates?.engagement_score ?? extractMeta(selectedConversation).engagement_score) || 0
-                  }}
-                  reasons={extractMeta(selectedConversation).lead_reasons || extractMeta(selectedConversation).all_reasons || []}
-                />
-              )}
-
-
-
-              {selectedConversation ? (
-                <>
-                  <div className="flex flex-wrap items-center gap-2 text-xs">
-                    {getConversationMeta(selectedConversation).isMatched === true ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 font-semibold shadow-sm">
-                        <CheckCircle2 size={14} />
-                        Matched Lead
-                      </span>
-                    ) : getConversationMeta(selectedConversation).isMatched === false ? (
-                      <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 font-semibold shadow-sm">
-                        <XCircle size={14} />
-                        Mismatched Lead
-                      </span>
-                    ) : null}
-                    {Object.entries(getConversationMeta(selectedConversation))
-                      .filter(([key]) => key !== "isMatched" && getConversationMeta(selectedConversation)[key] !== "—")
-                      .map(([key, value]) => (
-                        <span
-                          key={key}
-                          className="flex align-middle items-center gap-1"
-                        >
-                          <span className="text-text-muted font-normal ">{String(key).replace(/_/g, ' ')}:</span>
-                          <span className="px-3 py-1 rounded bg-primary/80 border border-primary/20  text-white font-medium">{String(value).replace(/_/g, ' ')}</span>
-                        </span>
-                      ))}
-                  </div>
-                  {formatMetaEntries(conversationMeta).length > 0 ? (
-                    <div className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/10">
-                      <div className="text-xs font-bold text-text-heading flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                        Conversation Metadata
-                      </div>
-                      <button
-                        onClick={() => setMetaModal({ title: "Conversation Metadata", data: conversationMeta })}
-                        className="p-1.5 rounded-md bg-white border border-primary/20 text-primary hover:bg-primary/5 transition-colors shadow-sm"
-                      >
-                        <Info size={14} />
-                      </button>
-                    </div>
-                  ) : null}
-                  {formatMetaEntries(messageMeta).length > 0 ? (
-                    <div className="flex items-center justify-between p-3 rounded-md bg-indigo-50 border border-indigo-100/50">
-                      <div className="text-xs font-bold text-indigo-700/80 flex items-center gap-2">
-                        <div className="w-1.5 h-1.5 rounded-full bg-indigo-500" />
-                        Latest AI Message Insights
-                      </div>
-                      <button
-                        onClick={() => setMetaModal({ title: "Latest AI Message Insights", data: messageMeta })}
-                        className="p-1.5 rounded-md bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors shadow-sm"
-                      >
-                        <Info size={14} />
-                      </button>
-                    </div>
-                  ) : null}
-                  <div className="h-[360px] overflow-y-auto rounded-md border border-border/60 bg-background-light/40 p-4 space-y-3">
-                    {messagesQuery.isLoading ? (
-                      <div className="text-sm text-text-muted">Loading messages...</div>
-                    ) : messagesQuery.isError ? (
-                      <div className="text-sm text-red-600">Failed to load messages.</div>
-                    ) : messages.length === 0 ? (
-                      <div className="text-sm text-text-muted">No messages yet.</div>
-                    ) : (
-                      messages.map((message, index) => (
-                        <MessageBubble key={`${index}-${message?.id || "msg"}`} message={message} />
-                      ))
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-sm text-text-muted">Choose a lead to load the conversation.</div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <LeadActionSection
-                title="Referrals"
-                subtitle="Connect this lead to another professional."
-              >
-                <div className="grid grid-cols-2 gap-2">
-                  <SelectDropdown
-                    placeholder="Select vertical"
-                    value={referralForm.target_vertical}
-                    onChange={(value) =>
-                      setReferralForm((prev) => ({ ...prev, target_vertical: value }))
-                    }
-                    options={[
-                      { value: "realtor", label: "Realtor", icon: Users },
-                      { value: "mortgage", label: "Mortgage Broker", icon: DollarSign },
-                      { value: "lawyer", label: "Real Estate Lawyer", icon: Scale },
-                    ]}
-                    size="small"
-                  />
-                  <input
-                    type="text"
-                    value={referralForm.target_user_id}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, target_user_id: event.target.value }))
-                    }
-                    placeholder="Target user id"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="text"
-                    value={referralForm.status}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, status: event.target.value }))
-                    }
-                    placeholder="Status"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="text"
-                    value={referralForm.notes}
-                    onChange={(event) =>
-                      setReferralForm((prev) => ({ ...prev, notes: event.target.value }))
-                    }
-                    placeholder="Notes"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => createReferralMutation.mutate()}
-                  disabled={!selectedId || createReferralMutation.isLoading}
-                  className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
-                >
-                  {createReferralMutation.isLoading ? "Saving..." : "Create referral"}
-                </button>
-                <div className="space-y-2 text-xs">
-                  {conversationReferrals.length === 0 ? (
-                    <div className="text-text-muted">No referrals yet.</div>
-                  ) : (
-                    conversationReferrals.map((referral) => (
-                      <button
-                        key={referral?.id}
-                        type="button"
-                        onClick={() => setActiveReferralId(String(referral?.id))}
-                        className={`w-full text-left rounded-md border px-3 py-2 ${String(referral?.id) === String(activeReferralId)
-                          ? "border-primary bg-primary/5"
-                          : "border-border"
-                          }`}
-                      >
-                        <div className="font-semibold text-text-heading">
-                          {referral?.target_vertical || "Referral"}
-                        </div>
-                        <div className="text-text-muted">
-                          Status: {referral?.status || "—"}
-                        </div>
-                      </button>
-                    ))
-                  )}
-                </div>
-                {activeReferralId ? (
-                  <div className="space-y-2">
-                    <input
-                      type="text"
-                      value={referralUpdate.status}
-                      onChange={(event) =>
-                        setReferralUpdate((prev) => ({ ...prev, status: event.target.value }))
-                      }
-                      placeholder="Update status"
-                      className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                    />
-                    <input
-                      type="text"
-                      value={referralUpdate.notes}
-                      onChange={(event) =>
-                        setReferralUpdate((prev) => ({ ...prev, notes: event.target.value }))
-                      }
-                      placeholder="Update notes"
-                      className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => updateReferralMutation.mutate()}
-                      disabled={updateReferralMutation.isLoading}
-                      className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-                    >
-                      {updateReferralMutation.isLoading ? "Updating..." : "Update referral"}
-                    </button>
-                  </div>
-                ) : null}
-              </LeadActionSection>
-
-              <LeadActionSection
-                title="Nurture email"
-                subtitle="Send a nurture message and log it for this conversation."
-              >
-                <div className="space-y-2">
-                  <input
-                    type="email"
-                    value={nurtureForm.to_email}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, to_email: event.target.value }))
-                    }
-                    placeholder="Recipient email"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <input
-                    type="text"
-                    value={nurtureForm.subject}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, subject: event.target.value }))
-                    }
-                    placeholder="Subject"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <textarea
-                    rows={3}
-                    value={nurtureForm.body}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, body: event.target.value }))
-                    }
-                    placeholder="Message body"
-                    className="rounded-md border border-border px-2 py-2 text-xs w-full"
-                  />
-                  <input
-                    type="text"
-                    value={nurtureForm.template_key}
-                    onChange={(event) =>
-                      setNurtureForm((prev) => ({ ...prev, template_key: event.target.value }))
-                    }
-                    placeholder="Template key (optional)"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => nurtureMutation.mutate()}
-                    disabled={!selectedId || nurtureMutation.isLoading}
-                    className="w-full h-9 rounded-md bg-primary text-white text-xs font-semibold disabled:opacity-50"
-                  >
-                    {nurtureMutation.isLoading ? "Sending..." : "Send nurture"}
-                  </button>
-                  <div className="text-xs text-text-muted">
-                    {nurtureLogs.length ? `Logs: ${nurtureLogs.length}` : "No nurture logs yet."}
-                  </div>
-                </div>
-              </LeadActionSection>
-
-              <LeadActionSection title="Mortgage calculator" subtitle="Log a mortgage estimate.">
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="number"
-                    value={mortgageForm.price}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, price: event.target.value }))
-                    }
-                    placeholder="Price"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={mortgageForm.down_payment}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, down_payment: event.target.value }))
-                    }
-                    placeholder="Down payment"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={mortgageForm.annual_rate}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, annual_rate: event.target.value }))
-                    }
-                    placeholder="Annual rate %"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                  <input
-                    type="number"
-                    value={mortgageForm.amort_years}
-                    onChange={(event) =>
-                      setMortgageForm((prev) => ({ ...prev, amort_years: event.target.value }))
-                    }
-                    placeholder="Amort years"
-                    className="h-9 rounded-md border border-border px-2 text-xs"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => mortgageMutation.mutate()}
-                  disabled={!selectedId || mortgageMutation.isLoading}
-                  className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-                >
-                  {mortgageMutation.isLoading ? "Running..." : "Run mortgage"}
-                </button>
-                <div className="text-xs text-text-muted">
-                  {mortgageRuns.length ? `Runs: ${mortgageRuns.length}` : "No mortgage runs yet."}
-                </div>
-              </LeadActionSection>
-
-              <LeadActionSection title="Closing cost" subtitle="Log a closing cost estimate.">
-                <div className="space-y-2">
-                  <input
-                    type="number"
-                    value={closingForm.price}
-                    onChange={(event) =>
-                      setClosingForm((prev) => ({ ...prev, price: event.target.value }))
-                    }
-                    placeholder="Price"
-                    className="h-9 rounded-md border border-border px-2 text-xs w-full"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => closingMutation.mutate()}
-                    disabled={!selectedId || closingMutation.isLoading}
-                    className="w-full h-9 rounded-md border border-primary text-primary text-xs font-semibold disabled:opacity-50"
-                  >
-                    {closingMutation.isLoading ? "Running..." : "Run closing cost"}
-                  </button>
-                  <div className="text-xs text-text-muted">
-                    {closingRuns.length ? `Runs: ${closingRuns.length}` : "No closing runs yet."}
-                  </div>
-                </div>
-              </LeadActionSection>
-            </div>
-          </div>
+          {selectedLeadId && !isReferralsPipeline ? (
+            <LeadsWorkspacePanels
+              token={token}
+              activeTab={activeTab}
+              onActiveTabChange={setActiveTab}
+              roleFilteredTabs={roleFilteredTabs}
+              selectedLeadId={selectedLeadId}
+              selectedConversation={selectedConversation}
+              leadDetail={leadDetail}
+              messageMeta={messageMeta}
+              messages={messages}
+              messagesQuery={messagesQuery}
+              propertyMatches={propertyMatches}
+              propertyMatchesQuery={propertyMatchesQuery}
+              cancelCalendlyMutation={cancelCalendlyMutation}
+              patchLeadMutation={patchLeadMutation}
+              statusFromUrl={statusFromUrl}
+              pipelineFromUrl={pipelineFromUrl}
+              referralForm={referralForm}
+              setReferralForm={setReferralForm}
+              createReferralMutation={createReferralMutation}
+              activeReferralId={activeReferralId}
+              setActiveReferralId={setActiveReferralId}
+              referralUpdate={referralUpdate}
+              setReferralUpdate={setReferralUpdate}
+              updateReferralMutation={updateReferralMutation}
+              actionConversationId={actionConversationId}
+              conversationReferrals={conversationReferrals}
+              nurtureForm={nurtureForm}
+              setNurtureForm={setNurtureForm}
+              nurtureMutation={nurtureMutation}
+              nurturePreviewMutation={nurturePreviewMutation}
+              nurtureDraftMutation={nurtureDraftMutation}
+              nurtureRefineMutation={nurtureRefineMutation}
+              nurtureLogs={nurtureLogs}
+              nurtureLogsLoading={nurtureLogsQuery.isLoading}
+              deleteLeadMutation={deleteLeadMutation}
+              onDeleteClick={handleDeleteLead}
+            />
+          ) : null}
         </div>
       </div>
-      <AnimatePresence>
-        {metaModal && (
-          <LeadMetaModal
-            title={metaModal.title}
-            meta={metaModal.data}
-            onClose={() => setMetaModal(null)}
-          />
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {selectedConversation && showAdvicePopup && messageMeta?.ai_metadata && (
-          <LeadActionPopup
-            aiMetadata={messageMeta.ai_metadata}
-            onClose={() => setShowAdvicePopup(false)}
-          />
-        )}
-      </AnimatePresence>
+
+      <DeleteLeadConfirmModal
+        open={showDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDeleteLead}
+        isPending={deleteLeadMutation.isPending}
+      />
     </div>
+  );
+}
+
+export default function LeadsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />
+      }
+    >
+      <LeadsPageContent />
+    </Suspense>
   );
 }

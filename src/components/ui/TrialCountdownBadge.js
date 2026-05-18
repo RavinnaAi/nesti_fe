@@ -4,12 +4,11 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppSelector } from "@/store";
 import { ACCOUNT_STATUS } from "@/constants/features";
 
-function getRemainingMs(trialEndsAt) {
+function getRemainingMs(trialEndsAt, currentTime = Date.now()) {
   if (!trialEndsAt) return 0;
   try {
     const end = new Date(trialEndsAt).getTime();
-    const now = Date.now();
-    return Math.max(0, end - now);
+    return Math.max(0, end - currentTime);
   } catch {
     return 0;
   }
@@ -34,6 +33,7 @@ function formatRemaining(ms) {
 
 export default function TrialCountdownBadge() {
   const user = useAppSelector((state) => state.auth.user);
+  const [isMounted, setIsMounted] = useState(false);
   const [now, setNow] = useState(Date.now());
 
   const accountStatus =
@@ -42,7 +42,11 @@ export default function TrialCountdownBadge() {
 
   const trialEndsAt = user?.trialEndsAt || user?.trial_ends_at;
 
-  const remainingMs = useMemo(() => getRemainingMs(trialEndsAt), [trialEndsAt, now]);
+  const remainingMs = useMemo(() => getRemainingMs(trialEndsAt, now), [trialEndsAt, now]);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   useEffect(() => {
     if (accountStatus !== ACCOUNT_STATUS.FREE_TRIAL) return;
@@ -50,22 +54,18 @@ export default function TrialCountdownBadge() {
     return () => clearInterval(id);
   }, [accountStatus]);
 
+  if (!isMounted) return null;
   if (!user) return null;
+  /** Lawyers use the same workspace without this fixed pill (avoids clutter with chat/embed). */
+  if (String(user?.role || "").toLowerCase() === "lawyer") return null;
   if (accountStatus !== ACCOUNT_STATUS.FREE_TRIAL) return null;
   if (!trialEndsAt) return null;
   if (remainingMs <= 0) return null;
 
+  /* lg:left clears fixed sidebar (w-60) + gap so Sign out stays clickable */
   return (
-    <div
-      style={{
-        position: "fixed",
-        left: "16px",
-        bottom: "16px",
-        zIndex: 40,
-      }}
-      className="pointer-events-none"
-    >
-      <div className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-slate-900/90 text-white px-4 py-2 shadow-lg text-xs font-medium">
+    <div className="pointer-events-none fixed bottom-4 left-4 z-30 max-w-[min(calc(100vw-2rem),24rem)] lg:left-[calc(15rem+1rem)]">
+      <div className="pointer-events-auto inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-slate-900/90 px-3 py-2 text-xs font-medium text-white shadow-lg sm:px-4">
         <span className="inline-flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
         <span>Free trial</span>
         <span className="text-amber-200 font-semibold">{formatRemaining(remainingMs)}</span>

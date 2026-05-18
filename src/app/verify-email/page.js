@@ -18,6 +18,7 @@ import AuthLayout from "@/components/auth/AuthLayout";
 import AuthHeader from "@/components/auth/AuthHeader";
 import { useSignupFlow } from "@/hooks/useSignupFlow";
 import { useVerifyEmail, useResendVerification } from "@/hooks/useAuthApi";
+import { useAppSelector } from "@/store";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -30,18 +31,31 @@ export default function VerifyEmailPage() {
   const [email, setEmail] = useState("");
 
   const otpInputRefs = useRef([]);
-  const { getEmail, clearSignupData } = useSignupFlow();
+  const isVerifyingRef = useRef(false); // prevents duplicate submissions
+  const {
+    getEmail,
+    getVerificationToken,
+    getInviteToken,
+    saveSignupData,
+    clearSignupData,
+  } = useSignupFlow();
   const verifyEmailMutation = useVerifyEmail();
   const resendMutation = useResendVerification();
-  const verifying = verifyEmailMutation.isLoading;
+  const verifying = verifyEmailMutation.isPending || verifyEmailMutation.isLoading;
+  const token = useAppSelector((state) => state.auth.token);
+
+  // Once token lands in Redux (set by useVerifyEmail onSuccess), navigate to dashboard
+  useEffect(() => {
+    if (token && verificationStatus === "success") {
+      router.push("/dashboard");
+    }
+  }, [token, verificationStatus, router]);
 
   useEffect(() => {
     const storedEmail = getEmail();
     if (storedEmail) {
       setEmail(storedEmail);
     } else {
-      // If no email found, redirect to signup
-      // toast.error("Please sign up first.");
       router.push("/sign-up");
     }
   }, [getEmail, router]);
@@ -50,6 +64,9 @@ export default function VerifyEmailPage() {
   const isOtpComplete = () => getOtpString().length === 5;
 
   const handleVerifyOTP = async () => {
+    // Guard against duplicate calls (blur + form submit firing together)
+    if (isVerifyingRef.current) return;
+
     const code = getOtpString();
 
     if (!email) {
@@ -61,25 +78,32 @@ export default function VerifyEmailPage() {
       return;
     }
 
+    isVerifyingRef.current = true;
     setVerificationStatus("idle");
     setErrorMessage("");
 
     try {
+      const verificationToken = getVerificationToken();
       await verifyEmailMutation.mutateAsync({
-        email,
-        token: code,
+        otp: code,
+        verificationToken,
+        invite_token: getInviteToken() || undefined,
       });
-      setVerificationStatus("success");
-      // Clear signup data after successful verification
       clearSignupData();
-
-      // Redirect to login after a moment
-      router.push("/log-in");
+      setVerificationStatus("success"); // triggers the useEffect above to navigate
     } catch (error) {
+      const msg = error?.message || "Verification failed. Please try again.";
+      // If already verified (duplicate key), treat as success and send to login
+      if (msg.toLowerCase().includes("already verified")) {
+        toast.info("Account already verified. Please log in.");
+        clearSignupData();
+        router.push("/log-in");
+        return;
+      }
       setVerificationStatus("error");
-      setErrorMessage(
-        error?.message || "Verification failed. Please try again."
-      );
+      setErrorMessage(msg);
+    } finally {
+      isVerifyingRef.current = false;
     }
   };
 
@@ -91,7 +115,18 @@ export default function VerifyEmailPage() {
 
     setResendSuccess(false);
     try {
-      await resendMutation.mutateAsync(email);
+      const verificationToken = getVerificationToken();
+      const data = await resendMutation.mutateAsync({
+        email,
+        verificationToken,
+      });
+      if (data?.verificationToken) {
+        saveSignupData({
+          email,
+          verificationToken: data.verificationToken,
+          inviteToken: getInviteToken() || null,
+        });
+      }
       setResendSuccess(true);
     } catch (error) {
       // errors handled via mutation toast
@@ -112,8 +147,8 @@ export default function VerifyEmailPage() {
   };
 
   const handleOTPBlur = (index) => {
-    // Only verify if it's the last input (index 4) and all OTP digits are complete
-    if (index === 4 && isOtpComplete() && !verifying) {
+    // Only trigger on the last digit, only when complete, never if already in-flight
+    if (index === 4 && isOtpComplete() && !verifying && !isVerifyingRef.current) {
       handleVerifyOTP();
     }
   };
@@ -124,7 +159,7 @@ export default function VerifyEmailPage() {
       otpInputRefs.current[index - 1]?.focus();
     }
     // Enter from any input -> submit if OTP is complete
-    if (e.key === "Enter" && isOtpComplete() && !verifying) {
+    if (e.key === "Enter" && isOtpComplete() && !verifying && !isVerifyingRef.current) {
       e.preventDefault();
       handleVerifyOTP();
     }
@@ -258,18 +293,17 @@ export default function VerifyEmailPage() {
 
               <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-700 text-center">
-                  Your email has been successfully verified! You can now log in
-                  to your account.
+                  Your email has been successfully verified! Redirecting to your dashboard...
                 </p>
               </div>
 
               <motion.button
                 whileHover={{ scale: 1.02, y: -2 }}
                 whileTap={{ scale: 0.98 }}
-                onClick={() => router.push("/log-in")}
+                onClick={() => router.push("/dashboard")}
                 className="h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300"
               >
-                Go to Login
+                Go to Dashboard
               </motion.button>
             </div>
           )}

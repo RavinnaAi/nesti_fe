@@ -2,60 +2,176 @@
 
 export const dynamic = "force-dynamic";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
-  User,
-  Lock,
-  CreditCard,
-  Code2,
-  Building,
-  Copy,
-  Share2,
-} from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import PersonalInfo from "@/components/settings/PersonalInfo";
-import ChangePassword from "@/components/settings/ChangePassword";
 import SubscriptionInfo from "@/components/settings/SubscriptionInfo";
 import ChatbotEmbed from "@/components/settings/ChatbotEmbed";
 import BusinessInformation from "@/components/settings/BusinessInformation";
+import IcpIntegrationCard from "@/components/settings/IcpIntegrationCard";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
-import SidebarTabs from "@/components/ui/SidebarTabs";
+import { useProfileQuery } from "@/hooks/useAuthApi";
 import { toast } from "react-toastify";
-import { useAppSelector } from "@/store";
+import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
+import { useAppDispatch } from "@/store";
+import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
+import {
+  CALENDLY_INTEGRATION_TOAST_ID,
+  CALENDLY_OAUTH_BROADCAST_CHANNEL,
+  CALENDLY_OAUTH_MESSAGE_SOURCE,
+  CALENDLY_OAUTH_WINDOW_NAME,
+} from "@/lib/calendlyOAuthPopup";
 
-const tabs = [
-  { id: "personal", label: "Personal Information", icon: User },
-  { id: "business", label: "Business Information", icon: Building },
-  { id: "password", label: "Change Password", icon: Lock },
-  { id: "subscription", label: "Subscription", icon: CreditCard },
-  { id: "chatbot", label: "Embed Chatbot", icon: Code2 },
+const VALID_TABS = [
+  "personal",
+  "business",
+  "icp",
+  "subscription",
+  "chatbot",
+  "leads",
 ];
 
-export default function SettingsPage() {
+function SettingsPageFallback() {
+  return (
+    <div className="w-full px-4 py-8 space-y-4" aria-busy="true" aria-label="Loading settings">
+      <div className="rounded-xl border border-border bg-white p-6 shadow-sm space-y-4">
+        <SkeletonBlock className="h-6 w-48 max-w-full" />
+        <SkeletonBlock className="h-4 w-full max-w-xl" />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-12 w-full rounded-lg" />
+          ))}
+        </div>
+        <SkeletonBlock className="h-32 w-full rounded-lg" />
+      </div>
+    </div>
+  );
+}
+
+function SettingsPageContent() {
   const { isAuthenticated } = useAuthGuard();
+  const dispatch = useAppDispatch();
+  const profileQuery = useProfileQuery();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const calendlyReturnHandled = useRef(null);
+  const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
-  const [stickyTop, setStickyTop] = useState("0");
 
   useEffect(() => {
-    const handleScroll = () => {
-      const isScrolled = typeof window !== "undefined" && window.scrollY > 0;
-      setStickyTop(isScrolled ? "15%" : "0");
-    };
-
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
+    setIsMounted(true);
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const params = new URLSearchParams(window.location.search);
-    const tab = params.get("tab");
-    const upgrade = params.get("upgrade");
-    const expired = params.get("expired");
+    const calendly = searchParams.get("calendly");
+    if (calendly === "connected" || calendly === "error") {
+      const key = searchParams.toString();
+      if (calendlyReturnHandled.current === key) return;
+      calendlyReturnHandled.current = key;
 
-    if (tab && tabs.some((t) => t.id === tab)) {
+      if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
+        try {
+          const bc = new BroadcastChannel(CALENDLY_OAUTH_BROADCAST_CHANNEL);
+          if (calendly === "connected") {
+            bc.postMessage({ source: CALENDLY_OAUTH_MESSAGE_SOURCE, result: "connected" });
+          } else {
+            const reason = searchParams.get("reason");
+            let message = "Calendly connection did not complete.";
+            if (reason) {
+              try {
+                message = decodeURIComponent(reason);
+              } catch {
+                /* keep default */
+              }
+            }
+            bc.postMessage({ source: CALENDLY_OAUTH_MESSAGE_SOURCE, result: "error", message });
+          }
+          bc.close();
+        } catch {
+          /* ignore */
+        }
+      } else if (typeof window !== "undefined") {
+        if (calendly === "connected") {
+          toast.success("Calendly connected.", { toastId: CALENDLY_INTEGRATION_TOAST_ID });
+        } else {
+          const reason = searchParams.get("reason");
+          try {
+            const msg = reason
+              ? decodeURIComponent(reason)
+              : "Calendly connection did not complete.";
+            toast.error(msg, { toastId: CALENDLY_INTEGRATION_TOAST_ID });
+          } catch {
+            toast.error("Calendly connection did not complete.", {
+              toastId: CALENDLY_INTEGRATION_TOAST_ID,
+            });
+          }
+        }
+        queryClient.invalidateQueries({ queryKey: ["calendar-status"] });
+      }
+
+      if (typeof window !== "undefined" && window.opener) {
+        try {
+          window.opener.focus();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const shouldTryClose =
+        typeof window !== "undefined" &&
+        (window.name === CALENDLY_OAUTH_WINDOW_NAME || Boolean(window.opener));
+
+      if (shouldTryClose) {
+        try {
+          window.close();
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const next = new URLSearchParams(searchParams.toString());
+      next.delete("calendly");
+      next.delete("reason");
+      const q = next.toString();
+      const cleanUrl = q ? `${pathname}?${q}` : pathname;
+
+      const t =
+        typeof window !== "undefined"
+          ? window.setTimeout(() => {
+              if (!window.closed) {
+                router.replace(cleanUrl, { scroll: false });
+              }
+            }, 0)
+          : 0;
+      return () => {
+        if (t) window.clearTimeout(t);
+      };
+    }
+  }, [searchParams, pathname, router, queryClient]);
+
+  useEffect(() => {
+    const tab = searchParams.get("tab");
+    const upgrade = searchParams.get("upgrade");
+    const expired = searchParams.get("expired");
+
+    if (tab === "appointments") {
+      router.replace("/calendar");
+      return;
+    }
+
+    if (tab === "leads") {
+      router.replace("/leads");
+      return;
+    }
+
+    if (tab && VALID_TABS.includes(tab)) {
       setActiveTab(tab);
+    } else if (!tab) {
+      setActiveTab("personal");
     }
 
     if (upgrade === "1") {
@@ -63,122 +179,195 @@ export default function SettingsPage() {
     } else if (expired === "1") {
       toast.warning("Your trial has expired. Please subscribe to continue.");
     }
-  }, []);
-  const ActiveComponent = useMemo(() => {
+  }, [searchParams, router]);
+
+  // Keep settings forms in sync with `/auth/profile`.
+  // PersonalInfo/BusinessInformation read from `state.profile.*` (profileSlice),
+  // so we must hydrate the slice from the profile query response.
+  useEffect(() => {
+    if (!profileQuery?.isSuccess) return;
+    const apiUser = profileQuery.data?.user || {};
+    const apiProfessional = profileQuery.data?.professionalProfile || {};
+
+    // Personal basics are always based on `user`; business fields come from `professionalProfile`.
+    const firstName = apiUser?.first_name || "";
+    const lastName = apiUser?.last_name || "";
+    const fullName = String(apiProfessional?.full_name || "")
+      .trim()
+      .replace(/\s+/g, " ")
+      .trim();
+
+    dispatch(
+      setPersonalInfo({
+        firstName,
+        lastName,
+        email: apiUser?.email || "",
+        role: apiUser?.role || apiProfessional?.professional_type || "",
+        phone: apiProfessional?.phone || apiUser?.phone || "",
+        calendlyUrl: apiProfessional?.calendly_link || "",
+        location: apiProfessional?.location || "",
+        profileImage: apiUser?.profile_image || "",
+        coverImage: apiUser?.cover_image || "",
+        fullName:
+          fullName ||
+          [firstName, lastName].filter(Boolean).join(" ").trim(),
+      })
+    );
+
+    dispatch(
+      setBusinessInfo({
+        professionalType: apiProfessional?.professional_type || apiUser?.role || "",
+        companyName: apiProfessional?.company_name || "",
+        website: apiProfessional?.website || "",
+        phone: apiProfessional?.phone || apiUser?.phone || "",
+        email: apiProfessional?.email || apiUser?.email || "",
+        experience: apiProfessional?.experience || "",
+        licenseNumber: apiProfessional?.license_number || "",
+        socialMedia: apiProfessional?.social_media || "",
+        transactionVolume: apiProfessional?.transaction_volume || "",
+        avgSalePrice: apiProfessional?.avg_sale_price || "",
+        responseTime: apiProfessional?.response_time || "",
+        availability: apiProfessional?.availability || "",
+        supportLevel: apiProfessional?.support_level || "",
+        negotiationStyle: apiProfessional?.negotiation_style || "",
+        salesApproach: apiProfessional?.sales_approach || "",
+        energyStyle: apiProfessional?.energy_style || "",
+        personalityTag: apiProfessional?.personality_tag || "",
+        awards: apiProfessional?.awards || "",
+        testimonial: apiProfessional?.bio || "",
+        targetNeighborhoods: apiProfessional?.target_neighborhoods || "",
+        fullName:
+          fullName ||
+          [firstName, lastName].filter(Boolean).join(" ").trim(),
+        location: apiProfessional?.location || "",
+        specializations: Array.isArray(apiProfessional?.specializations)
+          ? apiProfessional.specializations
+          : [],
+        communicationChannels: Array.isArray(apiProfessional?.communication_channels)
+          ? apiProfessional.communication_channels
+          : [],
+        preferredClients: Array.isArray(apiProfessional?.preferred_clients)
+          ? apiProfessional.preferred_clients
+          : [],
+        calendlyLink: apiProfessional?.calendly_link || "",
+      })
+    );
+  }, [profileQuery?.isSuccess, profileQuery?.data, dispatch]);
+
+  const goToBusinessTab = useCallback(() => {
+    setActiveTab("business");
+    const next = new URLSearchParams(searchParams.toString());
+    next.set("tab", "business");
+    const qs = next.toString();
+    router.replace(qs ? `${pathname}?${qs}` : `${pathname}?tab=business`, { scroll: false });
+  }, [pathname, router, searchParams]);
+
+  /**
+   * After business "Save changes": go to dashboard only on first-time completion (signup onboarding).
+   * Returning users who already completed setup stay on Settings when updating.
+   */
+  const onBusinessSaveSuccess = useCallback(async () => {
+    const snapshot = queryClient.getQueryData(["profile"]);
+    const wasIncomplete = !snapshot?.profile_setup?.is_complete;
+    await queryClient.refetchQueries({ queryKey: ["profile"] });
+    const data = queryClient.getQueryData(["profile"]);
+    if (data?.profile_setup?.is_complete && wasIncomplete) {
+      router.replace("/dashboard");
+    }
+  }, [queryClient, router]);
+
+  /**
+   * After personal save: dashboard only if this save finished first-time onboarding; else business tab if still incomplete.
+   * If profile was already complete, stay on Personal (normal edits).
+   */
+  const onPersonalSaveSuccess = useCallback(async () => {
+    const snapshot = queryClient.getQueryData(["profile"]);
+    const wasIncomplete = !snapshot?.profile_setup?.is_complete;
+    await queryClient.refetchQueries({ queryKey: ["profile"] });
+    const data = queryClient.getQueryData(["profile"]);
+    if (data?.profile_setup?.is_complete && wasIncomplete) {
+      router.replace("/dashboard");
+      return;
+    }
+    if (!data?.profile_setup?.is_complete) {
+      goToBusinessTab();
+    }
+  }, [queryClient, router, goToBusinessTab]);
+
+  const tabContent = useMemo(() => {
     switch (activeTab) {
       case "personal":
-        return PersonalInfo;
-      case "password":
-        return ChangePassword;
+        return <PersonalInfo onSaveSuccess={onPersonalSaveSuccess} />;
       case "subscription":
-        return SubscriptionInfo;
+        return <SubscriptionInfo />;
       case "chatbot":
-        return ChatbotEmbed;
+        return <ChatbotEmbed />;
       case "business":
-        return BusinessInformation;
+        return <BusinessInformation onSaveSuccess={onBusinessSaveSuccess} />;
+      case "icp":
+        return <IcpIntegrationCard />;
       default:
-        return PersonalInfo;
+        return <PersonalInfo onSaveSuccess={onPersonalSaveSuccess} />;
     }
-  }, [activeTab]);
+  }, [activeTab, onPersonalSaveSuccess, onBusinessSaveSuccess]);
 
-  const Content = ActiveComponent;
+  const profileSetup = profileQuery.data?.profile_setup;
+  const setupIncomplete =
+    profileQuery.isSuccess && profileSetup && !profileSetup.is_complete;
 
-  const activeMeta = tabs.find((t) => t.id === activeTab);
-  const { user } = useAppSelector((state) => state.auth);
-  const ActiveIcon = activeMeta?.icon;
-
-  if (!isAuthenticated) {
-    return null;
-  }
+  if (!isMounted) return null;
+  if (!isAuthenticated) return null;
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Tabs */}
-        <div className="lg:col-span-3 relative">
-          <SidebarTabs
-            tabs={tabs}
-            activeId={activeTab}
-            onChange={setActiveTab}
-            stickyTop={stickyTop}
-            activeClassName="bg-primary-dark text-white"
-            inactiveClassName="text-text-heading hover:bg-primary/5"
-            activeIconClassName="bg-white/20 text-white"
-            inactiveIconClassName="bg-background-light"
-          />
+    <div className="w-full px-4 pb-6 pt-8 sm:pt-9">
+      {setupIncomplete ? (
+        <div
+          className="mb-4 rounded-xl border border-amber-200/90 bg-amber-50/95 px-4 py-3 text-sm text-amber-950 shadow-sm"
+          role="status"
+        >
+          <p className="font-semibold text-amber-950">Finish your workspace setup</p>
+          <p className="mt-1.5 leading-relaxed text-amber-900/95">
+            Complete <strong>Personal Information</strong> (name, email, phone) and{" "}
+            <strong>Business Information</strong> (company name and where you serve). Other areas of the app stay
+            locked until both are done.
+          </p>
+          <ul className="mt-2 list-inside list-disc text-xs text-amber-900/85">
+            {!profileSetup.personal_complete ? (
+              <li>Personal: add phone and confirm your name and email.</li>
+            ) : null}
+            {!profileSetup.business_complete ? (
+              <li>
+                Business: add <strong>company / brokerage</strong> (Basics). For service area, use{" "}
+                <strong>Location</strong> on Basics and/or <strong>target neighborhoods</strong> under Style &amp;
+                Metrics.
+              </li>
+            ) : null}
+          </ul>
         </div>
-
-        {/* Content */}
-        <div className="lg:col-span-9">
-          <div className="rounded-md border border-border bg-white shadow-sm p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                {ActiveIcon ? <ActiveIcon size={18} /> : null}
-              </div>
-              <div className="flex-1">
-                <div className="text-xl font-bold text-text-heading">
-                  {activeMeta?.label || "Profile Information"}
-                </div>
-                <div className="text-sm text-text-body">
-                  Manage your account preferences
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const link =
-                      (typeof window !== "undefined"
-                        ? window.location.origin
-                        : "") + `/profile?email=${user?.email}`;
-                    try {
-                      await navigator.clipboard.writeText(link);
-                      toast.success("Link copied to clipboard");
-                    } catch (err) {
-                      toast.error("Failed to copy link");
-                    }
-                  }}
-                  className="h-10 w-10 rounded-md bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
-                  aria-label="Copy public link"
-                >
-                  <Copy size={16} className="text-text-heading" />
-                </button>
-                <button
-                  type="button"
-                  onClick={async () => {
-                    const link =
-                      (typeof window !== "undefined"
-                        ? window.location.origin
-                        : "") + `/profile?email=${user?.email}`;
-                    try {
-                      await navigator.clipboard.writeText(link);
-                      toast.success("Share link copied to clipboard");
-                    } catch (err) {
-                      toast.error("Failed to copy link");
-                    }
-                  }}
-                  className="h-10 w-10 rounded-md bg-background-light hover:bg-primary/10 flex items-center justify-center border border-border transition"
-                  aria-label="Share"
-                >
-                  <Share2 size={16} className="text-text-heading" />
-                </button>
-              </div>
-            </div>
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeTab}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18 }}
-              >
-                <Content />
-              </motion.div>
-            </AnimatePresence>
-          </div>
-        </div>
+      ) : null}
+      <div className="w-full rounded-xl border border-border bg-white shadow-sm" style={{ width: "100%" }}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -6 }}
+            transition={{ duration: 0.18 }}
+            className="w-full min-w-0 p-5 sm:p-5"
+            style={{ width: "100%" }}
+          >
+            {tabContent}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
+  );
+}
+
+export default function SettingsPage() {
+  return (
+    <Suspense fallback={<SettingsPageFallback />}>
+      <SettingsPageContent />
+    </Suspense>
   );
 }

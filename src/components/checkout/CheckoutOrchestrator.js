@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { Loader2 } from "lucide-react";
 import { countries } from "countries-list";
 import { useAppDispatch, useAppSelector } from "@/store";
@@ -16,9 +17,10 @@ import {
   usePaymentMethods,
 } from "@/hooks/useBillingApi";
 import { toast } from "react-toastify";
-import StripeProvider from "./StripeProvider";
-import PaymentForm from "./PaymentForm";
 import ThankYouModal from "./ThankYouModal";
+
+const StripeProvider = dynamic(() => import("./StripeProvider"), { ssr: false });
+const PaymentForm = dynamic(() => import("./PaymentForm"), { ssr: false });
 
 function getNumericPrice(plan) {
   if (!plan) return 0;
@@ -301,14 +303,6 @@ export default function CheckoutOrchestrator() {
               </button>
               {taxCalculation ? (
                 <div className="text-xs text-text-muted text-right">
-                  {/* <div>
-                    Estimated tax:{" "}
-                    <span className="font-semibold text-text-heading">
-                      {typeof taxCalculation.amount_tax === "number"
-                        ? `$${(taxCalculation.amount_tax / 100).toFixed(2)}`
-                        : "-"}
-                    </span>
-                  </div> */}
                   <div>
                     Estimated total:{" "}
                     <span className="font-semibold text-text-heading">

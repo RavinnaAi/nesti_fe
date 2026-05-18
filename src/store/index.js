@@ -6,6 +6,7 @@ import authReducer from "./authSlice";
 import profileReducer from "./profileSlice";
 import pricingReducer from "./pricingSlice";
 import selectedPlanReducer from "./selectedPlanSlice";
+import proChatReducer from "./proChatSlice";
 
 export const makeStore = () =>
   configureStore({
@@ -14,6 +15,7 @@ export const makeStore = () =>
       profile: profileReducer,
       pricing: pricingReducer,
       selectedPlan: selectedPlanReducer,
+      proChat: proChatReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });

@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { User, Mail, Phone, Calendar } from "lucide-react";
+import { User, Mail, Phone, Calendar, Pencil, ImageIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import FormField from "@/components/auth/FormField";
 import SubmitButton from "@/components/auth/SubmitButton";
 import { useAppDispatch, useAppSelector } from "@/store";
-import { useSavePersonalInfo } from "@/hooks/useProfileApi";
+import { useSavePersonalInfo, useUploadProfileMedia } from "@/hooks/useProfileApi";
 import { setPersonalInfo } from "@/store/profileSlice";
+import ChangePassword from "@/components/settings/ChangePassword";
+
+function phoneDigitCount(value) {
+  const s = String(value || "").trim();
+  if (!s) return 0;
+  return (s.match(/\d/g) || []).length;
+}
 
 const validatePersonalInfo = (form) => {
   const errors = {};
@@ -21,13 +28,15 @@ const validatePersonalInfo = (form) => {
       errors.email = "Please enter a valid email";
     }
   }
-  if (form.phone && form.phone.trim().length < 7) {
-    errors.phone = "Phone should be at least 7 digits";
+  if (!form.phone || !form.phone.trim()) {
+    errors.phone = "Phone is required";
+  } else if (phoneDigitCount(form.phone) < 7) {
+    errors.phone = "Phone should include at least 7 digits";
   }
   return errors;
 };
 
-export default function PersonalInfo() {
+export default function PersonalInfo({ onSaveSuccess } = {}) {
   const storedPersonal = useAppSelector((state) => state.profile.personalInfo);
   const dispatch = useAppDispatch();
   const [focusedField, setFocusedField] = useState("");
@@ -36,18 +45,24 @@ export default function PersonalInfo() {
     lastName: "",
     email: "",
     phone: "",
-    calendalyUrl: "",
+    calendlyUrl: "",
   });
   const [profileImage, setProfileImage] = useState("");
   const [coverImage, setCoverImage] = useState("");
   const fileInputRef = useRef(null);
   const coverInputRef = useRef(null);
   const [loading, setLoading] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
   const savePersonalInfo = useSavePersonalInfo();
+  const uploadMedia = useUploadProfileMedia();
 
   useEffect(() => {
     if (storedPersonal) {
-      setForm((prev) => ({ ...prev, ...storedPersonal }));
+      setForm((prev) => ({
+        ...prev,
+        ...storedPersonal,
+        calendlyUrl: storedPersonal.calendlyUrl || storedPersonal.calendalyUrl || "",
+      }));
       if (storedPersonal.profileImage) {
         setProfileImage(storedPersonal.profileImage);
       }
@@ -63,40 +78,40 @@ export default function PersonalInfo() {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     const errors = validatePersonalInfo(form);
     if (Object.keys(errors).length) {
       Object.values(errors).forEach((msg) => toast.error(msg));
       return;
     }
-    // console.log("savePersonalInfo", storedPersonal);
     const payload = {
-      professional_type: storedPersonal.role,
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
-      fullName: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
-      email: form.email.trim().toLowerCase(),
+      full_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
       phone: form.phone.trim(),
-      calendalyUrl: form.calendalyUrl.trim(),
-      profile_image: profileImage,
-      cover_image: coverImage,
+      calendly_link: form.calendlyUrl.trim(),
     };
-
-    // console.log("payload", payload);
-    // return;
+    if (profileImage && /^https?:\/\//i.test(String(profileImage))) {
+      payload.profile_image = String(profileImage).trim();
+    }
+    if (coverImage && /^https?:\/\//i.test(String(coverImage))) {
+      payload.cover_image = String(coverImage).trim();
+    }
 
     setLoading(true);
     try {
       await savePersonalInfo.mutateAsync(payload);
-    } catch (err) {
-      console.error("Personal info update error:", err);
+      await onSaveSuccess?.();
+    } catch {
+      /* error surfaced via toast in useSavePersonalInfo hook */
     } finally {
       setLoading(false);
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file.");
@@ -107,17 +122,21 @@ export default function PersonalInfo() {
       toast.error("Image must be under 3MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result;
-      setProfileImage(dataUrl);
-      dispatch(setPersonalInfo({ profileImage: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const data = await uploadMedia.mutateAsync({ file, kind: "profile" });
+      const url = data?.profile_image || data?.url || "";
+      if (url) {
+        setProfileImage(url);
+        dispatch(setPersonalInfo({ profileImage: url }));
+      }
+    } catch {
+      /* toast from hook */
+    }
   };
 
-  const handleCoverChange = (e) => {
+  const handleCoverChange = async (e) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       toast.error("Please select an image file.");
@@ -128,191 +147,215 @@ export default function PersonalInfo() {
       toast.error("Image must be under 3MB.");
       return;
     }
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const dataUrl = reader.result;
-      setCoverImage(dataUrl);
-      dispatch(setPersonalInfo({ coverImage: dataUrl }));
-    };
-    reader.readAsDataURL(file);
+    try {
+      const data = await uploadMedia.mutateAsync({ file, kind: "cover" });
+      const url = data?.cover_image || data?.url || "";
+      if (url) {
+        setCoverImage(url);
+        dispatch(setPersonalInfo({ coverImage: url }));
+      }
+    } catch {
+      /* toast from hook */
+    }
   };
+
+  const displayName =
+    [form.firstName, form.lastName].filter(Boolean).join(" ").trim() || "Your profile";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-md bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
-          {profileImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={profileImage}
-              alt="Profile"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <User className="text-text-muted" size={32} />
-          )}
-        </div>
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            <User size={16} />
-            Change Photo
-          </button>
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleImageChange}
-          />
-          <div className="text-xs text-text-muted">
-            JPG, PNG or WEBP. Max 2MB
-          </div>
-        </div>
-      </div>
+    <div className="space-y-5">
+      <h2 className="text-lg font-bold tracking-tight text-text-heading sm:text-xl">
+        Personal information
+      </h2>
 
-      <div className="flex items-center gap-4">
-        <div className="h-24 w-24 rounded-md bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
+      {/* Cover + profile card */}
+      <div className="overflow-hidden rounded-xl border border-border/60 bg-white shadow-sm">
+        {/* Cover — fixed 16:5 aspect */}
+        <div className="relative aspect-[16/5] w-full min-h-[8rem] sm:min-h-0">
           {coverImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={coverImage}
-              alt="cover"
-              className="h-full w-full object-cover"
+              alt=""
+              className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
-            <User className="text-text-muted" size={32} />
+            <div
+              className="absolute inset-0 bg-gradient-to-br from-slate-100 via-slate-50 to-primary/10"
+              aria-hidden
+            />
           )}
+          <div className="absolute inset-x-0 top-0 flex justify-end p-3 sm:p-3.5">
+            <button
+              type="button"
+              disabled={uploadMedia.isPending}
+              onClick={() => coverInputRef.current?.click()}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/50 bg-white/90 px-3 py-1 text-[10px] font-semibold text-text-heading shadow-sm backdrop-blur-md transition hover:bg-white disabled:opacity-50"
+            >
+              <ImageIcon size={13} className="text-primary" aria-hidden />
+              {uploadMedia.isPending ? "Uploading…" : "Change cover"}
+            </button>
+            <input
+              ref={coverInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleCoverChange}
+            />
+          </div>
         </div>
-        <div className="space-y-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
-            onClick={() => coverInputRef.current?.click()}
-          >
-            <User size={16} />
-            Change Cover
-          </button>
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleCoverChange}
-          />
-          <div className="text-xs text-text-muted">
-            JPG, PNG or WEBP. Max 3MB
+
+        {/* Avatar + name */}
+        <div className="relative flex items-end gap-3 px-4 pb-3.5 sm:gap-4 sm:px-6 sm:pb-4">
+          <div className="relative z-[1] -mt-8 shrink-0 sm:-mt-9">
+            <div className="relative h-[4.5rem] w-[4.5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[5.25rem] sm:w-[5.25rem] sm:rounded-2xl">
+              {profileImage ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileImage} alt="" className="h-full w-full object-cover object-center" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-text-muted/70">
+                  <User size={24} strokeWidth={1.5} />
+                </div>
+              )}
+            </div>
+            <button
+              type="button"
+              disabled={uploadMedia.isPending}
+              onClick={() => fileInputRef.current?.click()}
+              className="absolute -bottom-1 -right-1 inline-flex items-center gap-1 rounded-full border border-border/70 bg-white px-2 py-0.5 text-[9px] font-semibold text-text-heading shadow transition hover:border-primary/40 hover:text-primary disabled:opacity-50"
+              aria-label="Edit profile photo"
+            >
+              <Pencil size={10} className="shrink-0 text-primary" aria-hidden />
+              Edit
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleImageChange}
+            />
+          </div>
+          <div className="min-w-0 flex-1 pb-0.5">
+            <p className="text-sm font-semibold tracking-tight text-text-heading sm:text-base">{displayName}</p>
           </div>
         </div>
       </div>
 
-      {/* <div className="space-y-2">
-        <div className="h-24 w-full rounded-2xl bg-background-light border border-border shadow-sm overflow-hidden flex items-center justify-center">
-          {coverImage ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={coverImage}
-              alt="Cover"
-              className="h-full w-full object-cover"
+      {/* Contact & scheduling */}
+      <div className="rounded-xl border border-border/60 bg-white p-4 shadow-sm sm:p-5">
+        <h3 className="text-xs font-semibold text-text-heading">Contact &amp; scheduling</h3>
+        <div className="mt-3.5 grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-x-4 md:gap-y-3">
+          <FormField
+            label="First Name"
+            name="firstName"
+            value={form.firstName}
+            onChange={handleChange}
+            onFocus={() => setFocusedField("firstName")}
+            onBlur={() => setFocusedField("")}
+            placeholder="Enter first name"
+            icon={User}
+            focusedField={focusedField}
+            className="!h-12 text-[13px]"
+            required
+          />
+          <FormField
+            label="Last Name"
+            name="lastName"
+            value={form.lastName}
+            onChange={handleChange}
+            onFocus={() => setFocusedField("lastName")}
+            onBlur={() => setFocusedField("")}
+            placeholder="Enter last name"
+            icon={User}
+            focusedField={focusedField}
+            className="!h-12 text-[13px]"
+            required
+          />
+          <FormField
+            label="Email"
+            name="email"
+            type="email"
+            value={form.email}
+            onChange={handleChange}
+            onFocus={() => setFocusedField("email")}
+            onBlur={() => setFocusedField("")}
+            placeholder="you@example.com"
+            icon={Mail}
+            focusedField={focusedField}
+            disabled
+            className="!h-12 bg-gray-100 text-[13px] cursor-not-allowed"
+            required
+          />
+          <FormField
+            label="Phone"
+            name="phone"
+            value={form.phone}
+            onChange={handleChange}
+            onFocus={() => setFocusedField("phone")}
+            onBlur={() => setFocusedField("")}
+            placeholder="+1 555 000 0000"
+            icon={Phone}
+            focusedField={focusedField}
+            className="!h-12 text-[13px]"
+          />
+          <div className="md:col-span-2">
+            <FormField
+              label="Calendly URL"
+              name="calendlyUrl"
+              value={form.calendlyUrl}
+              onChange={handleChange}
+              onFocus={() => setFocusedField("calendlyUrl")}
+              onBlur={() => setFocusedField("")}
+              placeholder="https://calendly.com/your-handle/..."
+              icon={Calendar}
+              focusedField={focusedField}
+              className="!h-12 text-[13px]"
             />
-          ) : (
-            <User className="text-text-muted" size={32} />
-          )}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="mt-5 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-white shadow-sm text-sm font-semibold text-text-heading hover:border-primary hover:text-primary transition"
-            onClick={() => coverInputRef.current?.click()}
+            onClick={() => setShowPasswordModal(true)}
+            className="w-full rounded-md border border-border bg-white px-4 py-2 text-[13px] font-semibold text-text-heading transition hover:border-primary/40 hover:text-primary sm:w-auto"
           >
-            <User size={16} />
-            Change Cover
+            Change password
           </button>
-          <input
-            ref={coverInputRef}
-            type="file"
-            accept="image/*"
-            className="hidden"
-            onChange={handleCoverChange}
-          />
-          <div className="text-xs text-text-muted">JPG, PNG or WEBP. Max 3MB</div>
+          <SubmitButton
+            loading={loading}
+            type="button"
+            onClick={handleSubmit}
+            className="w-full text-[13px] sm:w-auto sm:min-w-[10rem]"
+          >
+            Save changes
+          </SubmitButton>
         </div>
-      </div> */}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <FormField
-          label="First Name"
-          name="firstName"
-          value={form.firstName}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("firstName")}
-          onBlur={() => setFocusedField("")}
-          placeholder="Enter first name"
-          icon={User}
-          focusedField={focusedField}
-          required
-        />
-        <FormField
-          label="Last Name"
-          name="lastName"
-          value={form.lastName}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("lastName")}
-          onBlur={() => setFocusedField("")}
-          placeholder="Enter last name"
-          icon={User}
-          focusedField={focusedField}
-          required
-        />
-        <FormField
-          label="Email"
-          name="email"
-          type="email"
-          value={form.email}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("email")}
-          onBlur={() => setFocusedField("")}
-          placeholder="you@example.com"
-          icon={Mail}
-          focusedField={focusedField}
-          disabled
-          className="bg-gray-100 cursor-not-allowed"
-          required
-        />
-        <FormField
-          label="Phone"
-          name="phone"
-          value={form.phone}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("phone")}
-          onBlur={() => setFocusedField("")}
-          placeholder="+1 555 000 0000"
-          icon={Phone}
-          focusedField={focusedField}
-        />
-
-        <FormField
-          label="Calendaly Url"
-          name="calendalyUrl"
-          value={form.calendalyUrl}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("calendalyUrl")}
-          onBlur={() => setFocusedField("")}
-          placeholder="Enter calendaly url"
-          icon={Calendar}
-          focusedField={focusedField}
-          required
-        />  
-       
-
       </div>
 
-      <div className="pt-2">
-        <SubmitButton loading={loading}>Save changes</SubmitButton>
-      </div>
-    </form>
+      {showPasswordModal ? (
+        <div
+          className="fixed inset-0 z-[130] flex items-center justify-center bg-transparent p-4 lg:pl-60"
+          style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        >
+          <div className="w-full max-w-lg rounded-lg border border-border/90 bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-border px-3 py-2.5">
+              <h3 className="text-sm font-semibold text-text-heading">Change password</h3>
+              <button
+                type="button"
+                onClick={() => setShowPasswordModal(false)}
+                className="rounded-md border border-border px-2 py-1 text-[11px] font-semibold text-text-muted hover:text-text-heading hover:bg-slate-50"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-3">
+              <ChangePassword />
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
   );
 }

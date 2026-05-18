@@ -43,6 +43,10 @@ const nextConfig = {
         protocol: "https",
         hostname: "img.logo.dev",
       },
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+      },
     ],
     // Optimize images
     formats: ["image/avif", "image/webp"],
@@ -54,11 +58,9 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_NODE_BACKEND_URL: process.env.NEXT_PUBLIC_NODE_BACKEND_URL,
+    NEXT_PUBLIC_SOCKET_ORIGIN: process.env.NEXT_PUBLIC_SOCKET_ORIGIN,
+    NEXT_PUBLIC_WS_ORIGIN: process.env.NEXT_PUBLIC_WS_ORIGIN,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
-    NEXTAUTH_URL:
-      process.env.NEXTAUTH_URL ||
-      process.env.NEXT_PUBLIC_APP_URL ||
-      "http://localhost:3000",
   },
 
   async headers() {
@@ -72,7 +74,7 @@ const nextConfig = {
         headers: [
           {
             key: "Content-Security-Policy",
-            value: `default-src 'self'; base-uri 'self'; object-src 'none'; frame-src https://calendly.com https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; ${connectSrc} form-action 'self'`,
+            value: `default-src 'self'; base-uri 'self'; object-src 'self' data: blob:; frame-src https://calendly.com https://js.stripe.com https://hooks.stripe.com; frame-ancestors 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: blob: https:; font-src 'self' data: https:; ${connectSrc} form-action 'self'`,
           },
           {
             key: "Strict-Transport-Security",
@@ -136,6 +138,7 @@ const nextConfig = {
       { source: "/favicon.ico", destination: "/logo/logo.png" },
     ];
   },
+
 };
 
 module.exports = nextConfig;

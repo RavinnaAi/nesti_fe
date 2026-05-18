@@ -7,13 +7,24 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Bot, ArrowRight, X, User, Settings, LogOut } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
+import NotificationsBell from "@/components/notifications/NotificationsBell";
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, token } = useAppSelector((state) => state.auth);
-  const isAuthenticated = Boolean(token);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Prevent hydration mismatch:
+  // server render doesn't have client auth state yet, so defer auth-dependent
+  // navigation until after mount.
+  const isInviteLanding = String(pathname || "").startsWith("/invite/");
+  const isAuthenticated = isMounted && Boolean(token) && !isInviteLanding;
 
   const NAVIGATION_ITEMS = useMemo(
     () =>
@@ -21,6 +32,8 @@ export default function Header() {
         ? [
           { label: "Dashboard", href: "/dashboard" },
           { label: "Leads", href: "/leads" },
+          { label: "Clients", href: "/clients" },
+          { label: "Logs", href: "/nurture-logs" },
           { label: "Analytics", href: "/analytics" },
         ]
         : [
@@ -62,22 +75,24 @@ export default function Header() {
 
   const displayName =
     user?.name ||
+    [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
     [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
     user?.email ||
-    "User";
+    "";
   const displayEmail = user?.email || "";
-  const initials =
-    displayName
-      .split(" ")
-      .filter(Boolean)
-      .slice(0, 2)
-      .map((part) => part[0]?.toUpperCase())
-      .join("") || "U";
+  const initials = displayName
+    ? displayName
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0]?.toUpperCase())
+        .join("")
+    : "?";
 
   const handleLogout = () => {
     dispatch(logoutAndClearAll());
     setIsProfileOpen(false);
-    router.push("/log-in");
+    router.replace("/");
   };
 
   return (
@@ -111,10 +126,9 @@ export default function Header() {
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${isActive
-                      ? "text-text-body bg-primary/10 font-semibold"
-                      : "text-text-body"
-                      }`}
+                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${
+                      isActive ? "text-text-body bg-primary/10 font-semibold" : "text-text-body"
+                    }`}
                   >
                     {item.label}
                   </Link>
@@ -147,24 +161,16 @@ export default function Header() {
                 </Link>
               </>
             ) : (
-              <div className="relative" ref={profileRef}>
+              <>
+                <NotificationsBell />
+                <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((prev) => !prev)}
                   className="flex items-center gap-3 bg-background-light rounded-md hover:shadow-md transition-all"
                 >
-                  <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
+                  <div className="h-12 w-12 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                     {initials}
                   </div>
-                  {/* <div className="hidden lg:flex flex-col items-start">
-                    <span className="text-sm font-semibold text-text-heading">
-                      {displayName}
-                    </span>
-                    {displayEmail && (
-                      <span className="text-xs text-text-muted">
-                        {displayEmail}
-                      </span>
-                    )}
-                  </div> */}
                 </button>
                 <AnimatePresence>
                   {isProfileOpen && (
@@ -219,12 +225,14 @@ export default function Header() {
                     </motion.div>
                   )}
                 </AnimatePresence>
-              </div>
+                </div>
+              </>
             )}
           </div>
 
           {/* Mobile menu button */}
-          <div className="md:hidden">
+          <div className="md:hidden flex items-center gap-2">
+            {isAuthenticated ? <NotificationsBell /> : null}
             <motion.button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-text-body hover:text-primary hover:bg-background-light focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary"
@@ -346,10 +354,11 @@ export default function Header() {
                     >
                       <Link
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-all duration-200 ${isActive
-                          ? "bg-primary text-white shadow-md"
-                          : "text-text-body hover:bg-primary/10 hover:text-primary"
-                          }`}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-all duration-200 ${
+                          isActive
+                            ? "bg-primary text-white shadow-md"
+                            : "text-text-body hover:bg-primary/10 hover:text-primary"
+                        }`}
                         onClick={() => setIsMenuOpen(false)}
                       >
                         {isActive && (
@@ -415,7 +424,7 @@ export default function Header() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 px-4 py-3 rounded-md bg-background-light border border-border">
-                      <div className="h-10 w-10 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
+                      <div className="h-12 w-12 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
                         {initials}
                       </div>
                       <div className="flex flex-col">

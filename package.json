@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
@@ -18,12 +18,14 @@
     "countries-list": "^3.2.2",
     "framer-motion": "^12.26.1",
     "lucide-react": "^0.562.0",
-    "next": "^14.2.5",
+    "next": "^14.2.35",
     "react": "^18.3.1",
     "react-calendly": "^4.4.0",
     "react-dom": "^18.3.1",
     "react-redux": "^9.2.0",
-    "react-toastify": "^11.0.5"
+    "react-toastify": "^11.0.5",
+    "recharts": "^2.15.0",
+    "socket.io-client": "^4.8.3"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.20",

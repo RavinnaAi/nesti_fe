@@ -89,11 +89,18 @@ export default function LeadDetailsModal({ lead, onClose }) {
                             <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wider">Intent</span>
                             <div className="flex items-center gap-2">
                                 <Activity size={16} className="text-primary" />
-                                <span className={`px-2 py-0.5 rounded-md text-lg font-bold uppercase tracking-wide ${String(lead.intent).toLowerCase() === 'buy'
-                                        ? 'text-green-700'
-                                        : 'text-orange-700'
-                                    }`}>
-                                    {lead.intent || "—"}
+                                <span
+                                    className={`px-2 py-0.5 rounded-md text-lg font-bold uppercase tracking-wide ${
+                                        !lead.intent || String(lead.intent).toLowerCase() === "unspecified"
+                                            ? "text-gray-600"
+                                            : String(lead.intent).toLowerCase() === "buy"
+                                              ? "text-green-700"
+                                              : "text-orange-700"
+                                    }`}
+                                >
+                                    {lead.intent && String(lead.intent).toLowerCase() !== "unspecified"
+                                        ? lead.intent
+                                        : "—"}
                                 </span>
                             </div>
                         </div>

@@ -6,23 +6,36 @@ import { Copy, Check, RefreshCw, Link as LinkIcon, Trash2, Pause, Play } from "l
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppSelector } from "@/store";
+import { PROFESSIONAL_ROLE_VALUES } from "@/constants/auth";
 import dynamic from "next/dynamic";
-import { useFeatureAccess } from "@/hooks/useFeatureAccess";
-import { FEATURES } from "@/constants/features";
+import { normalizeWidgetRole } from "@/lib/chatWidgetRoleUi";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "";
-const FRONTEND_BASE = process.env.NEXT_PUBLIC_API_URL || "";
+
+/** Origin where the Next app is served (embed + iframe URLs), not the API host. */
+function getSiteOrigin() {
+  if (typeof window !== "undefined" && window.location?.origin) {
+    return window.location.origin;
+  }
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    ""
+  );
+}
+
 const ChatWidget = dynamic(() => import("@/components/chatbot/ChatWidget"), { ssr: false });
 
 export default function ChatbotEmbed() {
-  const { token } = useAppSelector((state) => state.auth);
-  // Basic chatbot embedding is available on free trial + Basic/Pro subscriptions.
-  const { hasFeature } = useFeatureAccess();
-  const canUseChatbot = hasFeature(FEATURES.CHATBOT_BASIC);
+  const { token, user } = useAppSelector((state) => state.auth);
+  const personalInfo = useAppSelector((state) => state.profile.personalInfo);
+  const businessInfo = useAppSelector((state) => state.profile.businessInfo);
   const queryClient = useQueryClient();
   const [newName, setNewName] = useState("");
   const [copiedKey, setCopiedKey] = useState("");
   const [previewToken, setPreviewToken] = useState("");
+  const [previewWidgetRole, setPreviewWidgetRole] = useState("agent");
+  const [previewDisplayName, setPreviewDisplayName] = useState("");
 
   const {
     data,
@@ -43,19 +56,55 @@ export default function ChatbotEmbed() {
 
   const embeds = useMemo(() => {
     if (!data) return [];
+    if (Array.isArray(data.embeds)) return data.embeds;
     if (Array.isArray(data)) return data;
     if (Array.isArray(data?.data)) return data.data;
     return [];
   }, [data]);
 
+  /** Match public /chatbot/[token] resolve: configured display name, else host name from profile. */
+  const previewHostAvatarUrl = useMemo(
+    () =>
+      String(personalInfo?.profileImage || user?.profile_image || user?.img_url || "").trim(),
+    [personalInfo?.profileImage, user?.profile_image, user?.img_url],
+  );
+
+  const previewHostDisplayName = useMemo(() => {
+    const fromBiz = String(businessInfo?.fullName || "").trim();
+    if (fromBiz) return fromBiz;
+    const fromPersonal = [personalInfo?.firstName, personalInfo?.lastName].filter(Boolean).join(" ").trim();
+    if (fromPersonal) return fromPersonal;
+    return [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim();
+  }, [
+    businessInfo?.fullName,
+    personalInfo?.firstName,
+    personalInfo?.lastName,
+    user?.first_name,
+    user?.last_name,
+  ]);
+
+  const previewWidgetTitle = useMemo(() => {
+    const configured = String(previewDisplayName || "").trim();
+    if (configured) return configured;
+    return previewHostDisplayName || undefined;
+  }, [previewDisplayName, previewHostDisplayName]);
+
   const generateMutation = useMutation({
-    mutationFn: (url_name) =>
-      apiClient({
+    mutationFn: (displayName) => {
+      const payload = {};
+      const role = user?.role;
+      if (role && PROFESSIONAL_ROLE_VALUES.includes(role)) {
+        payload.widget_role = role;
+      }
+      const name = String(displayName || "").trim();
+      if (name) payload.widget_settings = { display_name: name };
+      return apiClient({
         url: API_ENDPOINTS.embed.generate,
         method: "POST",
-        data: url_name ? { url_name } : {},
+        data: payload,
         token,
-      }),
+      });
+    },
     onSuccess: () => {
       toast.success("Embed link generated");
       setNewName("");
@@ -105,11 +154,8 @@ export default function ChatbotEmbed() {
   };
 
   const renderEmbedSnippet = (embed) => {
-    const tokenValue = embed?.unique_token || embed?.token || embed?.id;
-    const origin =
-      FRONTEND_BASE ||
-      (typeof window !== "undefined" && window.location?.origin ? window.location.origin : "") ||
-      API_BASE;
+    const tokenValue = embed?.unique_token || embed?.token || embed?._id;
+    const origin = getSiteOrigin() || API_BASE;
     const scriptSrc = `${origin}/chatbot/widget.js?token=${tokenValue}`;
     return `<script src="${scriptSrc}"></script>`;
   };
@@ -120,19 +166,6 @@ export default function ChatbotEmbed() {
         <div className="text-sm font-semibold text-text-heading mb-2">Embed Chatbot</div>
         <p className="text-sm text-text-body">
           Please log in to manage your chatbot embed links.
-        </p>
-      </div>
-    );
-  }
-
-  if (!canUseChatbot) {
-    return (
-      <div className="rounded-md border border-border bg-white p-4 shadow-sm space-y-2">
-        <div className="text-sm font-semibold text-text-heading mb-1">Embed Chatbot</div>
-        <p className="text-sm text-text-body">
-          Chatbot embeds are part of the paid Nesti plans.{" "}
-          <span className="font-semibold">Upgrade your subscription</span> on the Subscription tab to unlock this
-          feature.
         </p>
       </div>
     );
@@ -188,19 +221,17 @@ export default function ChatbotEmbed() {
         ) : isError ? (
           <div className="text-sm text-red-600">Failed to load embeds.</div>
         ) : !embeds.length ? (
-          <div className="text-sm text-text-body">
-            No embed links yet. Generate one to get started.
+            <div className="text-sm text-text-body">
+            No embed links yet. Generate one to get started. The widget matches your account type (agent,
+            mortgage broker, or lawyer) and uses the same chat API as the static HTML demos in{" "}
+            <code className="text-xs">node-backend/</code>.
           </div>
         ) : (
           <div className="space-y-3">
             {embeds.map((embed) => {
-              const tokenValue = embed?.unique_token || embed?.token || embed?.id;
-              const origin =
-                FRONTEND_BASE ||
-                (typeof window !== "undefined" && window.location?.origin
-                  ? window.location.origin
-                  : "") ||
-                API_BASE;
+              const embedDocId = embed?._id || embed?.id;
+              const tokenValue = embed?.unique_token || embed?.token;
+              const origin = getSiteOrigin() || API_BASE;
               const publicUrl = `${origin}/chatbot/${tokenValue}`;
               const codeSnippet = renderEmbedSnippet(embed);
               const iframeSnippet = `<iframe src="${publicUrl}" style="width:100%;height:100%;border:none;"></iframe>`;
@@ -209,16 +240,20 @@ export default function ChatbotEmbed() {
 
               return (
                 <div
-                  key={`embed-${embed?.id || tokenValue}`}
+                  key={`embed-${embedDocId || tokenValue}`}
                   className=" flex flex-col gap-3"
                 >
                   <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
                     <div>
                       <div className="text-sm font-semibold text-text-heading">
-                        {embed?.url_name || "Website Chatbot"}
+                        {embed?.widget_settings?.display_name || "Website Chatbot"}
                       </div>
                       <div className="text-xs text-text-muted">
-                        Token: {tokenValue} • Created:{" "}
+                        Token: {tokenValue} • Widget:{" "}
+                        <span className="font-medium text-text-body">
+                          {embed?.widget_role || "agent"}
+                        </span>{" "}
+                        • Created:{" "}
                         {embed?.created_at
                           ? new Date(embed.created_at).toLocaleString()
                           : "—"}
@@ -229,7 +264,7 @@ export default function ChatbotEmbed() {
                         type="button"
                         onClick={() =>
                           updateMutation.mutate({
-                            id: embed.id,
+                            id: embedDocId,
                             payload: { is_active: !active },
                           })
                         }
@@ -243,7 +278,7 @@ export default function ChatbotEmbed() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => deleteMutation.mutate(embed.id)}
+                        onClick={() => deleteMutation.mutate(embedDocId)}
                         className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition"
                       >
                         <Trash2 className="h-4 w-4" /> Delete
@@ -266,7 +301,23 @@ export default function ChatbotEmbed() {
                         )}
                         Copy link
                       </button>
-                      {/* Open + preview disabled */}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setPreviewToken(tokenValue);
+                          setPreviewWidgetRole(normalizeWidgetRole(embed?.widget_role));
+                          const settings =
+                            embed?.widget_settings && typeof embed.widget_settings === "object"
+                              ? embed.widget_settings
+                              : {};
+                          setPreviewDisplayName(
+                            String(settings.display_name ?? settings.displayName ?? "").trim(),
+                          );
+                        }}
+                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/5 transition"
+                      >
+                        Preview
+                      </button>
                     </div>
                   </div>
 
@@ -346,7 +397,7 @@ export default function ChatbotEmbed() {
       </div>
 
       {previewToken && (
-        <div className="rounded bg-primary-dark/10 shadow-lg p-4 space-y-3">
+        <div className="rounded bg-primary-dark/10 shadow-lg p-4 space-y-4">
           <div className="flex items-center justify-between ">
             <div>
               <div className="text-sm font-semibold text-text-heading">Live Preview</div>
@@ -356,21 +407,45 @@ export default function ChatbotEmbed() {
             </div>
             <button
               type="button"
-              onClick={() => setPreviewToken("")}
+              onClick={() => {
+                setPreviewToken("");
+                setPreviewWidgetRole("agent");
+                setPreviewDisplayName("");
+              }}
               className="text-xs text-text-muted hover:text-text-heading"
             >
               Close preview
             </button>
           </div>
-          <div className="relative w-full min-h-[480px] bg-transparent rounded overflow-hidden">
-            <ChatWidget
-              embedToken={previewToken}
-              defaultOpen
-              allowLauncher={false}
-              title="Chatbot Preview"
-              subtitle="Public embed experience"
-              inlineMode
-            />
+          <div>
+            <div className="text-xs font-semibold text-text-heading mb-2">
+              Iframe embed (production-style)
+            </div>
+            <div className="w-full h-[480px] rounded-md border border-border overflow-hidden bg-white">
+              <iframe
+                title="Chatbot iframe preview"
+                src={`${getSiteOrigin()}/chatbot/${previewToken}`}
+                className="w-full h-full border-0"
+                sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+              />
+            </div>
+          </div>
+          <div>
+            <div className="text-xs font-semibold text-text-heading mb-2">
+              In-page widget (dev)
+            </div>
+            <div className="relative w-full min-h-[400px] bg-transparent rounded overflow-hidden border border-dashed border-border/60">
+              <ChatWidget
+                embedToken={previewToken}
+                widgetRole={previewWidgetRole}
+                title={previewWidgetTitle}
+                hostAvatarUrl={previewHostAvatarUrl}
+                hostDisplayName={previewHostDisplayName}
+                defaultOpen
+                allowLauncher
+                inlineMode
+              />
+            </div>
           </div>
         </div>
       )}

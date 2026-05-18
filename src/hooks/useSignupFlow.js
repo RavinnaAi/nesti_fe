@@ -24,6 +24,8 @@ export function useSignupFlow() {
     try {
       const dataToStore = {
         email: data.email?.toLowerCase().trim(),
+        verificationToken: data.verificationToken || null,
+        inviteToken: data.inviteToken || null,
         timestamp: Date.now(),
       };
       if (typeof window !== "undefined") {
@@ -49,6 +51,34 @@ export function useSignupFlow() {
     return null;
   };
 
+  const getVerificationToken = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = localStorage.getItem(SIGNUP_DATA_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        return data.verificationToken || null;
+      }
+    } catch (error) {
+      console.error("Error reading verificationToken:", error);
+    }
+    return null;
+  };
+
+  const getInviteToken = () => {
+    if (typeof window === "undefined") return null;
+    try {
+      const stored = localStorage.getItem(SIGNUP_DATA_KEY);
+      if (stored) {
+        const data = JSON.parse(stored);
+        return data.inviteToken || null;
+      }
+    } catch (error) {
+      console.error("Error reading inviteToken:", error);
+    }
+    return null;
+  };
+
   const clearSignupData = () => {
     try {
       if (typeof window !== "undefined") {
@@ -64,6 +94,8 @@ export function useSignupFlow() {
     signupData,
     saveSignupData,
     getEmail,
+    getVerificationToken,
+    getInviteToken,
     clearSignupData,
   };
 }
