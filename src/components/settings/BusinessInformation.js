@@ -103,6 +103,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
   const formRef = useRef(form);
   formRef.current = form;
   const websiteLocationSaveTimerRef = useRef(null);
+  const hasUserEditedRef = useRef(false);
 
   const hydrateFromStore = useCallback(() => {
     if (storedBusiness) {
@@ -149,6 +150,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    hasUserEditedRef.current = true;
     setForm((prev) => ({ ...prev, [name]: value }));
     if (name === "website" || name === "location" || name === "companyName") {
       scheduleWebsiteLocationAutosave();
@@ -156,10 +158,12 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
   };
 
   const handleSelectChange = (name, val) => {
+    hasUserEditedRef.current = true;
     setForm((prev) => ({ ...prev, [name]: val }));
   };
 
   useEffect(() => {
+    if (hasUserEditedRef.current) return;
     hydrateFromStore();
   }, [hydrateFromStore]);
 
@@ -209,6 +213,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
           preferredClients,
         })
       );
+      hasUserEditedRef.current = false;
       await onSaveSuccess?.();
     } catch {
       /* error surfaced via toast in useSaveBusinessInfo hook */
@@ -246,6 +251,7 @@ export default function BusinessInformation({ onSaveSuccess } = {}) {
         preferredClients,
       })
     );
+    hasUserEditedRef.current = false;
     const nextIdx = Math.min(currentIdx + 1, SUB_TABS.length - 1);
     setActiveSubTab(SUB_TABS[nextIdx].id);
   };
