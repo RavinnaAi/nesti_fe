@@ -1,8 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Use standalone output for smaller production image and better memory usage
-  output: "standalone",
-
   // Optimize for production builds
   compress: true,
 
