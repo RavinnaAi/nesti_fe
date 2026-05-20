@@ -34,6 +34,7 @@ export const emptyAgentLeadDraft = () => ({
   urgency_readiness: "",
   preferred_contact_method: "",
   best_time_to_contact: "",
+  property_images: [],
 });
 
 export function buildAgentFormData(intent, draft) {
@@ -78,6 +79,7 @@ export function buildAgentFormData(intent, draft) {
     must_have_features: draft.must_have_features.trim(),
     parking_required: draft.parking_required,
     backyard_needed: draft.backyard_needed,
+    property_images: Array.isArray(draft.property_images) ? draft.property_images : [],
   };
 }
 
@@ -107,6 +109,9 @@ export function buildAgentFormContactOverride(formData) {
     urgency_readiness: formData.urgency_readiness,
     preferred_contact_method: formData.preferred_contact_method,
     best_time_to_contact: formData.best_time_to_contact,
+    ...(formData.intent === "sell" && Array.isArray(formData.property_images)
+      ? { property_images: formData.property_images }
+      : {}),
   };
 }
 

@@ -56,6 +56,26 @@ export async function fetchInviteLinks({ token, page = 1, limit = 8 }) {
   });
 }
 
+export async function fetchRewardsProfile({ token }) {
+  return apiClient({
+    url: API_ENDPOINTS.invites.rewardsProfile,
+    method: "GET",
+    token,
+  });
+}
+
+export async function fetchRewardsLedger({ token, page = 1, limit = 20 } = {}) {
+  const params = new URLSearchParams({
+    page: String(page || 1),
+    limit: String(limit || 20),
+  });
+  return apiClient({
+    url: `${API_ENDPOINTS.invites.rewardEvents}?${params.toString()}`,
+    method: "GET",
+    token,
+  });
+}
+
 export async function fetchInviteConversions({ token, days = 30, page = 1, limit = 10 } = {}) {
   const params = new URLSearchParams({
     days: String(days || 30),
@@ -64,6 +84,15 @@ export async function fetchInviteConversions({ token, days = 30, page = 1, limit
   });
   return apiClient({
     url: `${API_ENDPOINTS.invites.conversions}?${params.toString()}`,
+    method: "GET",
+    token,
+  });
+}
+
+export async function fetchInviteConversionRoleTrends({ token, days = 30 } = {}) {
+  const qs = `?days=${encodeURIComponent(String(days || 30))}`;
+  return apiClient({
+    url: `${API_ENDPOINTS.invites.conversionRoleTrends}${qs}`,
     method: "GET",
     token,
   });

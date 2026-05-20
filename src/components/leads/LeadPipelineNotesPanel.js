@@ -1,48 +1,35 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { MessageSquareText } from "lucide-react";
-import LeadPipelineStageControl from "@/components/leads/LeadPipelineStageControl";
+import { MessageSquareText, X } from "lucide-react";
 
 /** Max rows in "Previous comments" (newest first). */
-const PREVIOUS_NOTES_SHOWN = 2;
+const PREVIOUS_NOTES_SHOWN = 4;
 
 /**
- * Agent notes with pipeline stage. Optional `pipelineListFilterHint` when the lead was opened
- * from a filtered list (`status` / `pipeline` in the URL).
- *
- * Stage + optional note are saved together with one "Save changes" action (not on each dropdown change).
+ * Agent notes and history. Pipeline close/reopen now lives in Lead Profile so the
+ * close flow is tied to the lead context instead of hidden inside comments.
  */
 export default function LeadPipelineNotesPanel({
   lead,
   onPatchLead,
   patchLeadPending = false,
-  pipelineListFilterHint = null,
 }) {
   const leadData = lead && typeof lead === "object" ? lead : {};
-  const savedStatus = leadData.status ?? leadData.match_status ?? "new";
-  const [draftMatchStatus, setDraftMatchStatus] = useState(savedStatus);
   const [noteDraft, setNoteDraft] = useState("");
+  const [activeNote, setActiveNote] = useState(null);
   const fieldId = String(leadData.id || "lead").replace(/\W/g, "");
 
-  useEffect(() => {
-    setDraftMatchStatus(leadData.status ?? leadData.match_status ?? "new");
-  }, [leadData.id, leadData.status, leadData.match_status]);
-
-  const hasStatusChange = draftMatchStatus !== savedStatus;
   const hasNote = noteDraft.trim().length > 0;
-  const canSave = hasStatusChange || hasNote;
+  const canSave = hasNote;
 
   const handleSaveChanges = async () => {
     if (!onPatchLead || !canSave) return;
     try {
-      await onPatchLead({
-        ...(hasStatusChange ? { match_status: draftMatchStatus } : {}),
-        ...(hasNote ? { note: noteDraft.trim() } : {}),
-      });
+      await onPatchLead({ note: noteDraft.trim() });
       setNoteDraft("");
     } catch {
-      setDraftMatchStatus(savedStatus);
+      /* toast from parent */
     }
   };
 
@@ -55,14 +42,25 @@ export default function LeadPipelineNotesPanel({
     })
     .slice(0, PREVIOUS_NOTES_SHOWN);
 
+  useEffect(() => {
+    if (!activeNote) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event) => {
+      if (event.key === "Escape") setActiveNote(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [activeNote]);
+
   if (typeof onPatchLead !== "function") return null;
 
   const newNoteCard = (opts = {}) => {
-    const { fillColumn = false } = opts;
     return (
-      <div
-        className={`flex min-h-[240px] flex-col lg:min-h-0 ${fillColumn ? "min-h-0 flex-1" : "flex-1"}`}
-      >
+      <div className="flex flex-col">
         <p className="mb-3 shrink-0 text-xs font-medium text-text-heading">Note (optional)</p>
         <textarea
           id={`lead-agent-note-${fieldId}`}
@@ -71,7 +69,7 @@ export default function LeadPipelineNotesPanel({
           onChange={(e) => setNoteDraft(e.target.value)}
           rows={4}
           placeholder="Call outcome, objection, next step…"
-          className="min-h-[5rem] w-full flex-1 resize-y rounded-md border border-border bg-white px-3 py-2.5 text-sm text-text-heading leading-snug placeholder:text-text-muted/60 placeholder:text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-60"
+          className="h-36 min-h-36 w-full resize-y rounded-md border border-border bg-white px-3 py-2.5 text-sm text-text-heading leading-snug placeholder:text-text-muted/60 placeholder:text-[13px] focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-60"
         />
         <div className="mt-3 flex shrink-0 items-center gap-3 justify-start">
           <button
@@ -91,7 +89,7 @@ export default function LeadPipelineNotesPanel({
   };
 
   const commentsColumn = (
-    <div className="flex min-h-0 min-w-0 flex-col lg:h-full">
+    <div className="flex min-w-0 flex-col">
       <div className="mb-2 flex shrink-0 items-center gap-2">
         <MessageSquareText className="size-3.5 shrink-0 text-text-muted" aria-hidden />
         <h3 className="text-xs font-semibold uppercase tracking-[0.06em] text-text-muted">
@@ -106,7 +104,7 @@ export default function LeadPipelineNotesPanel({
         ) : null}
       </div>
 
-      <div className="flex min-h-[200px] flex-1 flex-col overflow-hidden rounded-lg border border-border/60 bg-background-light/25 lg:min-h-0">
+      <div className="flex min-h-[220px] flex-col overflow-hidden rounded-lg border border-border/60 bg-background-light/25">
         {agentNotesAll.length > 0 ? (
           <ul className="space-y-2.5 overflow-y-auto overscroll-contain p-3 sm:p-4">
             {agentNotes.map((n) => {
@@ -118,10 +116,19 @@ export default function LeadPipelineNotesPanel({
               return (
                 <li
                   key={n.id || `${who}-${whenLabel}-${String(n.text).slice(0, 24)}`}
-                  className={`rounded-md border px-3 py-2.5 shadow-sm ${
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => setActiveNote({ ...n, whenLabel, who, isSystem })}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      setActiveNote({ ...n, whenLabel, who, isSystem });
+                    }
+                  }}
+                  className={`cursor-pointer rounded-md border px-3 py-2.5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/20 ${
                     isSystem
-                      ? "border-primary/20 bg-primary/[0.03]"
-                      : "border-border/35 bg-white/90"
+                      ? "border-primary/20 bg-primary/[0.03] hover:bg-primary/[0.06]"
+                      : "border-border/35 bg-white/90 hover:bg-white"
                   }`}
                 >
                   <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-0.5">
@@ -138,7 +145,7 @@ export default function LeadPipelineNotesPanel({
                   <p className={`mt-1.5 text-sm leading-relaxed whitespace-pre-wrap break-words ${
                     isSystem ? "text-text-muted italic" : "text-text-body"
                   }`}>
-                    {n.text}
+                    {String(n.text).length > 180 ? `${String(n.text).slice(0, 180)}...` : n.text}
                   </p>
                 </li>
               );
@@ -158,38 +165,66 @@ export default function LeadPipelineNotesPanel({
   );
 
   const body = (
-    <div className="flex min-h-[300px] flex-col gap-6 rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.03] to-transparent p-4 sm:p-5 lg:flex-row lg:items-stretch lg:gap-6">
-      <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col gap-4 lg:border-r lg:border-border/50 lg:pr-6">
-        <div className="shrink-0">
-          <LeadPipelineStageControl
-            lead={lead}
-            patchLeadPending={patchLeadPending}
-            unboxed
-            hint={pipelineListFilterHint}
-            submitOnSelect={false}
-            draftMatchStatus={draftMatchStatus}
-            onDraftMatchStatusChange={setDraftMatchStatus}
-          />
-        </div>
-        <div className="flex min-h-0 min-w-0 flex-1 flex-col">{newNoteCard({ fillColumn: true })}</div>
+    <div className="grid grid-cols-1 gap-5 rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.03] to-transparent p-4 sm:p-5 xl:grid-cols-2 xl:items-start xl:gap-6">
+      <div className="min-w-0 xl:border-r xl:border-border/50 xl:pr-6">
+        {newNoteCard()}
       </div>
-      <div className="flex min-h-0 min-w-0 flex-1 basis-0 flex-col border-t border-border/50 pt-6 lg:border-t-0 lg:pt-0">
+      <div className="min-w-0 border-t border-border/50 pt-5 xl:border-t-0 xl:pt-0">
         {commentsColumn}
       </div>
     </div>
   );
 
   return (
-    <div className="w-full rounded-xl border border-border/70 bg-white shadow-sm p-4 sm:p-5">
+    <div className="relative w-full rounded-xl border border-border/70 bg-white shadow-sm p-4 sm:p-5">
       <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.06em] text-text-muted sm:mb-3">
         Notes
       </h2>
       <p className="mb-4 max-w-xl text-xs leading-relaxed text-text-muted sm:mb-5">
-        Choose a pipeline stage, add an optional note, then click{" "}
-        <span className="font-medium text-text-heading/90">Save changes</span> to update the lead.
-        Reopening or closing a lead asks for confirmation first.
+        Add call outcomes, objections, and next-step context here. Use the Lead Profile tab to change pipeline stage or close the lead.
       </p>
       {body}
+      {activeNote ? (
+        <div
+          className="absolute inset-0 z-30 grid place-items-center bg-black/5 p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) setActiveNote(null);
+          }}
+        >
+          <div
+            className="w-full max-w-xl rounded-xl border border-border bg-white shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="lead-note-modal-title"
+          >
+            <div className="flex items-start justify-between gap-3 border-b border-border/70 px-5 py-4">
+              <div>
+                <h3 id="lead-note-modal-title" className="text-sm font-semibold text-text-heading">
+                  {activeNote.isSystem ? "System note" : "Lead note"}
+                </h3>
+                <p className="mt-1 text-xs text-text-muted">
+                  {activeNote.isSystem ? "System" : activeNote.who || "Agent"} · {activeNote.whenLabel || "—"}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveNote(null)}
+                className="rounded-md border border-border p-1.5 text-text-muted transition hover:bg-background-light hover:text-text-heading"
+                aria-label="Close note"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto px-5 py-4">
+              <p className={`whitespace-pre-wrap break-words text-sm leading-relaxed ${
+                activeNote.isSystem ? "text-text-muted italic" : "text-text-body"
+              }`}>
+                {activeNote.text}
+              </p>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

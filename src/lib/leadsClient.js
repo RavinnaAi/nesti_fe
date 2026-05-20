@@ -45,20 +45,37 @@ export async function fetchLeadsByProfileId({ token, profileId, ...query }) {
 
 export async function fetchLeadById({ token, id }) {
   return apiClient({
-    url: withQuery(API_ENDPOINTS.leads.detail(id), { include_conversion: 1 }),
+    url: API_ENDPOINTS.leads.detail(id),
     method: "GET",
     token,
   });
 }
 
-/** PATCH lead: `match_status` and/or `note` (append-only agent note). */
-export async function patchLead({ token, id, match_status, note }) {
+export async function analyzeLeadInsights({ token, leadId, refresh = false }) {
+  return apiClient({
+    url: withQuery(API_ENDPOINTS.ai.analyzeLeadInsights(leadId), refresh ? { refresh: 1 } : {}),
+    method: "POST",
+    token,
+  });
+}
+
+/** PATCH lead: `match_status` and/or `note` (append-only agent note), plus optional close metadata. */
+export async function patchLead({ token, id, match_status, note, close_reason, close_note, closed_value }) {
   const data = {};
   if (match_status != null && String(match_status).trim() !== "") {
     data.match_status = String(match_status).trim();
   }
   if (note != null && String(note).trim() !== "") {
     data.note = String(note).trim();
+  }
+  if (close_reason != null && String(close_reason).trim() !== "") {
+    data.close_reason = String(close_reason).trim();
+  }
+  if (close_note != null && String(close_note).trim() !== "") {
+    data.close_note = String(close_note).trim();
+  }
+  if (closed_value != null && closed_value !== "") {
+    data.closed_value = Number(closed_value);
   }
   return apiClient({
     url: API_ENDPOINTS.leads.patch(id),

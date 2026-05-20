@@ -6,8 +6,8 @@ const LEAD_WORKSPACE_TAB_ALIASES = { notes: "pipeline" };
 export const LEAD_WORKSPACE_TABS = [
   { id: "lead_profile", label: "Lead Profile" },
   { id: "lead_details", label: "Lead Details" },
+  { id: "intelligence", label: "AI Insights" },
   { id: "conversation", label: "Conversation" },
-  { id: "actions", label: "Actions" },
   { id: "property_matches", label: "Property Matches" },
   { id: "consultation", label: "Consultation" },
   { id: "nurture", label: "Nurture Email" },
@@ -31,8 +31,8 @@ export function normalizeLeadWorkspaceTabId(tab) {
 const WORKSPACE_TAB_ORDER_WITHOUT_PROPERTY_MATCHES = [
   "lead_profile",
   "lead_details",
+  "intelligence",
   "conversation",
-  "actions",
   "consultation",
   "nurture",
   "pipeline",
@@ -40,7 +40,7 @@ const WORKSPACE_TAB_ORDER_WITHOUT_PROPERTY_MATCHES = [
 ];
 
 const LAWYER_TAB_LABEL_OVERRIDES = {
-  actions: "Next steps",
+  intelligence: "AI Insights",
   lead_profile: "Client & contact",
   lead_details: "Matter overview",
   nurture: "Nurture email",

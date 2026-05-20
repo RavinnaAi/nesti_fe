@@ -2,10 +2,13 @@
 
 import { getStatusDisplay } from "@/lib/leadPipelineConfig";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
+import LeadPipelineStageControl from "@/components/leads/LeadPipelineStageControl";
 
 export default function LeadsProfileTab({
   selectedConversation,
   lead,
+  onPatchLead,
+  patchLeadPending = false,
 }) {
   const leadData = lead && typeof lead === "object" ? lead : {};
   const profRole = leadData.professional_type;
@@ -104,6 +107,8 @@ export default function LeadsProfileTab({
     </div>
   );
 
+  const pipelineInfo = getStatusDisplay(leadData.status ?? leadData.match_status);
+
   return (
     <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
       {selectedConversation ? (
@@ -137,24 +142,42 @@ export default function LeadsProfileTab({
             </div>
           </div>
 
-          <div className="rounded-md border border-border bg-white p-4 space-y-3">
-            <div className="text-sm font-semibold text-text-heading">
-              {isLawyerLead ? "Matter summary" : isMortgageBrokerLead ? "Financing summary" : "Lead context"}
+          {typeof onPatchLead === "function" ? (
+            <div className="rounded-md border border-primary/15 bg-gradient-to-r from-primary/[0.04] via-white to-white p-4">
+              <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div className="text-sm font-semibold text-text-heading">Pipeline management</div>
+                    <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold leading-tight ${pipelineInfo.color}`}>
+                      {pipelineInfo.label}
+                    </span>
+                  </div>
+                  <p className="mt-1 max-w-2xl text-[11px] leading-relaxed text-text-muted">
+                    Move this lead through active stages or select a final outcome. Closing opens a role-specific confirmation with reason, note, and value fields.
+                  </p>
+                </div>
+                <LeadPipelineStageControl
+                  lead={leadData}
+                  onPatchLead={onPatchLead}
+                  patchLeadPending={patchLeadPending}
+                  title="Stage"
+                  unboxed
+                  professionalType={profRole}
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="rounded-md border border-border bg-white p-4 space-y-4">
+            <div>
+              <div className="text-sm font-semibold text-text-heading">
+                {isLawyerLead ? "Matter summary" : isMortgageBrokerLead ? "Financing summary" : "Lead context"}
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
+                Key information captured from the lead intake.
+              </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              <div className="rounded-md border border-border/60 bg-background-light/50 px-3 py-2">
-                <div className="text-[10px] uppercase tracking-wide text-text-muted">Pipeline stage</div>
-                <div className="mt-1">
-                  {(() => {
-                    const info = getStatusDisplay(leadData.status ?? leadData.match_status);
-                    return (
-                      <span className={`inline-block rounded-full border px-2.5 py-0.5 text-[11px] font-semibold leading-tight ${info.color}`}>
-                        {info.label}
-                      </span>
-                    );
-                  })()}
-                </div>
-              </div>
               {hideBuyerSellerIntent ? null : <KeyValue label="Intent" value={leadData.intent} />}
               <KeyValue label="Lead type" value={leadData.lead_type} />
               <KeyValue label="Budget" value={budgetDisplay} />

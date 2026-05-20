@@ -1,5 +1,7 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
+import Image from "next/image";
 import { LEAD_STEP_LABELS, PRE_CHAT_STEPS } from "./agentLeadCapture";
 import StepSegmentBar from "./StepSegmentBar";
 import ChatSelect from "./ChatSelect";
@@ -143,11 +145,35 @@ export default function AgentLeadOnboarding({
   onStartChat,
   onStartOver,
   validationError,
+  propertyImageFiles = [],
+  onPropertyImageFilesChange,
+  propertyImagesUploading = false,
 }) {
   const isBuy = chosenIntent === "buy";
   const rawStepIndex = PRE_CHAT_STEPS.indexOf(step);
   const barStepIndex = rawStepIndex >= 0 ? rawStepIndex : 0;
   const showBack = step !== "intent";
+  const sellerImageFiles = useMemo(
+    () => Array.from(propertyImageFiles || []).slice(0, 8),
+    [propertyImageFiles],
+  );
+  const sellerImagePreviews = useMemo(
+    () =>
+      sellerImageFiles.map((file) => ({
+        name: file?.name || "Property image",
+        url: file ? URL.createObjectURL(file) : "",
+      })),
+    [sellerImageFiles],
+  );
+
+  useEffect(
+    () => () => {
+      sellerImagePreviews.forEach((item) => {
+        if (item.url) URL.revokeObjectURL(item.url);
+      });
+    },
+    [sellerImagePreviews],
+  );
 
   const footer = (primaryLabel, primaryAction, primaryIsStart = false) => (
     <div
@@ -177,9 +203,10 @@ export default function AgentLeadOnboarding({
         <button
           type="button"
           onClick={primaryIsStart ? onStartChat : onForward}
+          disabled={propertyImagesUploading}
           className="px-5 py-2 text-xs rounded-full bg-primary text-white font-semibold hover:brightness-95"
         >
-          {primaryLabel}
+          {propertyImagesUploading && primaryIsStart ? "Starting..." : primaryLabel}
         </button>
       </div>
     </div>
@@ -465,6 +492,59 @@ export default function AgentLeadOnboarding({
               onChange={(e) => onFieldChange("must_have_features", e.target.value)}
               placeholder="e.g. garage, pool"
             />
+          </div>
+          <div className="col-span-2 rounded-2xl border border-dashed border-primary/30 bg-primary/5 p-3">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-bold text-text-heading">
+                  Property photos <span className="text-red-500">*</span>
+                </p>
+                <p className="text-[10px] text-text-muted mt-0.5">
+                  Upload at least one image, up to 8. These will appear only on this seller lead.
+                </p>
+              </div>
+              <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold text-primary">
+                {sellerImageFiles.length}/8
+              </span>
+            </div>
+            <label className="mt-2 flex cursor-pointer items-center justify-center rounded-xl border border-border bg-white px-3 py-2 text-[11px] font-semibold text-text-heading hover:border-primary/50">
+              Choose images
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                className="hidden"
+                disabled={propertyImagesUploading}
+                onChange={(e) =>
+                  onPropertyImageFilesChange?.(Array.from(e.target.files || []).slice(0, 8))
+                }
+              />
+            </label>
+            {sellerImagePreviews.length ? (
+              <div className="mt-2 grid grid-cols-4 gap-2">
+                {sellerImagePreviews.map((item, idx) => (
+                  <div key={`${item.name}-${idx}`} className="relative overflow-hidden rounded-xl border border-border bg-white">
+                    <Image
+                      src={item.url}
+                      alt={item.name}
+                      width={120}
+                      height={80}
+                      unoptimized
+                      className="h-14 w-full object-cover"
+                    />
+                  </div>
+                ))}
+              </div>
+            ) : null}
+            {sellerImageFiles.length ? (
+              <button
+                type="button"
+                onClick={() => onPropertyImageFilesChange?.([])}
+                className="mt-2 text-[10px] font-semibold text-text-muted hover:text-text-heading"
+              >
+                Remove selected images
+              </button>
+            ) : null}
           </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
