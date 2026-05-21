@@ -80,7 +80,7 @@ function ProfileCell({ user }) {
   );
 }
 
-export default function InviteSignupsPanel({ token, days = 30 }) {
+export default function InviteSignupsPanel({ token, days = 30, showMetrics = true, showHeader = true }) {
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
 
@@ -169,56 +169,65 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
   }, [items, rowsPerPage]);
 
   return (
-    <section className="rounded-xl border border-border bg-white p-4 shadow-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Users size={16} className="text-primary" />
-            <h2 className="text-sm font-bold text-text-heading">Invite link signups</h2>
+    <section className="rounded-lg border border-border bg-white p-3 shadow-sm">
+      {showHeader ? (
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-primary" />
+              <h3 className="text-sm font-bold text-text-heading">Invite link signups</h3>
+            </div>
+            <p className="mt-1 text-xs text-text-muted">
+              People who joined through your invite links in the last {Number(days) || 30} days.
+            </p>
           </div>
-          <p className="mt-1 text-xs text-text-muted">
-            People who joined through your invite links in the last {Number(days) || 30} days.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => {
-              metricsQuery.refetch();
-              linksQuery.refetch();
-              conversionsQuery.refetch();
-            }}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading hover:bg-primary/5"
-          >
-            <RefreshCw size={14} />
-            Refresh
-          </button>
-          <button
-            type="button"
-            onClick={handleCopyLatest}
-            disabled={!latestGenericLink || linksQuery.isLoading || linksQuery.isError}
-            title={copyButtonHelp}
-            className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <Copy size={14} />
-            Copy invite link
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                metricsQuery.refetch();
+                linksQuery.refetch();
+                conversionsQuery.refetch();
+              }}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading hover:bg-primary/5"
+            >
+              <RefreshCw size={14} />
+              Refresh
+            </button>
+            <button
+              type="button"
+              onClick={handleCopyLatest}
+              disabled={!latestGenericLink || linksQuery.isLoading || linksQuery.isError}
+              title={copyButtonHelp}
+              className="inline-flex items-center gap-2 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Copy size={14} />
+              Copy invite link
+            </button>
+          </div>
         </div>
-      </div>
-      <p className="mt-2 text-[11px] text-text-muted">{copyButtonHelp}</p>
+      ) : null}
+      {showMetrics ? <p className="mt-2 text-[11px] text-text-muted">{copyButtonHelp}</p> : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-5">
-        <TotalsCard label="Invites" value={isLoading ? "…" : totals.invites_sent ?? 0} tone="soft" />
-        <TotalsCard label="Clicks" value={isLoading ? "…" : totals.clicked ?? 0} />
-        <TotalsCard label="Pending" value={isLoading ? "…" : totals.pending ?? 0} />
-        <TotalsCard label="Completed" value={isLoading ? "…" : totals.completed ?? 0} />
-        <TotalsCard
-          label={rewardsEnabled ? "Points" : "Points (disabled)"}
-          value={isLoading ? "…" : points.points_balance ?? 0}
-          tone={rewardsEnabled ? "default" : "soft"}
-        />
-      </div>
+      {showMetrics ? (
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-7">
+          <TotalsCard label="Invites" value={isLoading ? "…" : totals.invites_sent ?? 0} tone="soft" />
+          <TotalsCard label="Clicks" value={isLoading ? "…" : totals.clicked ?? 0} />
+          <TotalsCard label="Pending" value={isLoading ? "…" : totals.pending ?? 0} />
+          <TotalsCard label="Completed" value={isLoading ? "…" : totals.completed ?? 0} />
+          <TotalsCard
+            label={rewardsEnabled ? "Points" : "Points (disabled)"}
+            value={isLoading ? "…" : points.points_balance ?? 0}
+            tone={rewardsEnabled ? "default" : "soft"}
+          />
+          <TotalsCard
+            label="Tier"
+            value={isLoading ? "…" : String(points.tier || "bronze").replace(/\b\w/g, (c) => c.toUpperCase())}
+          />
+          <TotalsCard label="Reputation" value={isLoading ? "…" : `${points.reputation_score ?? 50}/100`} />
+        </div>
+      ) : null}
 
       {!rewardsEnabled ? (
         <div className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] text-amber-900">
@@ -228,8 +237,8 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
         </div>
       ) : null}
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-border/70">
-        <div className="flex items-center justify-between gap-2 border-b border-border/70 bg-primary/[0.03] px-3 py-2">
+      <div className={`${showHeader || showMetrics ? (showMetrics ? "mt-4" : "mt-2") : ""} overflow-hidden rounded-lg border border-border/70`}>
+        <div className="flex items-center justify-between gap-2 border-b border-border/70 bg-primary/[0.03] px-3 py-1.5">
           <div className="text-xs font-semibold text-text-heading">People joined</div>
           <div className="text-[11px] text-text-muted">
             {pagination.total != null ? (
@@ -258,13 +267,13 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
               <tbody className="divide-y divide-border/60">
                 {conversionsQuery.isLoading ? (
                   <tr>
-                    <td className="px-2 py-3 text-xs text-text-muted" colSpan={5}>
+                    <td className="px-2 py-2 text-xs text-text-muted" colSpan={5}>
                       Loading signups...
                     </td>
                   </tr>
                 ) : items.length === 0 ? (
                   <tr>
-                    <td className="px-2 py-3 text-xs text-text-muted" colSpan={5}>
+                    <td className="px-2 py-2 text-xs text-text-muted" colSpan={5}>
                       No signups yet.
                     </td>
                   </tr>
@@ -272,7 +281,7 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
                   tableRows.map((row, idx) => {
                     if (!row) {
                       return (
-                        <tr key={`invite-signups-empty-row-${idx}`} className="h-[42px]" aria-hidden>
+                        <tr key={`invite-signups-empty-row-${idx}`} className="h-[36px]" aria-hidden>
                           {Array.from({ length: 5 }).map((_, cellIdx) => (
                             <td key={`invite-signups-empty-cell-${idx}-${cellIdx}`} className="px-2 py-1.5">
                               <span className="invisible">—</span>
@@ -284,7 +293,7 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
                     const user = row?.joined_user || null;
                     const email = String(user?.email || "").trim() || "—";
                     return (
-                      <tr key={row.id} className="h-[42px] text-xs text-text-body align-middle">
+                      <tr key={row.id} className="h-[36px] text-xs text-text-body align-middle">
                         <td className="px-2 py-1.5">
                           <ProfileCell user={user} />
                         </td>
@@ -309,7 +318,7 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
           </div>
         )}
 
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-border/80 bg-background-light/40 px-3 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border/80 bg-background-light/40 px-3 py-2">
           <p className="text-xs text-text-muted">
             Page <span className="font-semibold text-text-heading">{Number(pagination.page || page || 1)}</span> of{" "}
             <span className="font-semibold text-text-heading">{Math.max(1, Number(totalPages || 1))}</span>
@@ -322,7 +331,7 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
               type="button"
               disabled={!hasPrev || conversionsQuery.isFetching}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2.5 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
             >
               <ChevronLeft size={14} />
               Previous
@@ -331,7 +340,7 @@ export default function InviteSignupsPanel({ token, days = 30 }) {
               type="button"
               disabled={!hasNext || conversionsQuery.isFetching}
               onClick={() => setPage((p) => p + 1)}
-              className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex h-7 items-center gap-1 rounded-md border border-border px-2.5 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
             >
               Next
               <ChevronRight size={14} />

@@ -47,11 +47,10 @@ export default function LeadsConsultationTab({
 
   const apptRaw = leadData.appointment_status;
   const apptNorm = String(apptRaw || "").toLowerCase();
-  const nurtureBooked = Boolean(leadData.nurture_consultation_booked);
+  const nurtureBooked = apptNorm === "booked" && Boolean(leadData.nurture_consultation_booked);
   const calendlyRaw = leadData.calendly_booking_status;
   const hasBookedSignal =
     apptNorm === "booked" ||
-    nurtureBooked ||
     pipelineStatus === "consult_booked" ||
     pipelineStatus === "showing_booked";
 

@@ -161,9 +161,21 @@ export default function InviteGrowthPanel({
               </a>
             ))}
           </div>
-          <p className="mt-3 text-xs text-text-muted">
-            Points balance: <span className="font-semibold text-text-heading">{points.points_balance || 0}</span>
-          </p>
+          <div className="mt-3 space-y-1 text-xs text-text-muted">
+            <p>
+              Points: <span className="font-semibold text-text-heading tabular-nums">{points.points_balance || 0}</span>
+            </p>
+            <p>
+              Tier:{" "}
+              <span className="inline-flex rounded-full border border-primary/25 bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-primary">
+                {String(points.tier || "bronze")}
+              </span>
+            </p>
+            <p>
+              Reputation:{" "}
+              <span className="font-semibold text-text-heading tabular-nums">{points.reputation_score ?? 50}/100</span>
+            </p>
+          </div>
         </div>
       </div>
     </section>

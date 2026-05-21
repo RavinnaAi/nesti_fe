@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
@@ -16,7 +16,7 @@ import { useLogin } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
 import { getInviteAttribution, saveInviteAttribution } from "@/lib/inviteAttributionStorage";
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useAppSelector((state) => state.auth.token);
@@ -152,5 +152,13 @@ export default function LoginPage() {
       {/* Right - Visual Section */}
       <AuthVisualSection variant="login" />
     </AuthLayout>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

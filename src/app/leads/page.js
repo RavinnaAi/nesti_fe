@@ -521,8 +521,14 @@ function LeadsPageContent() {
 
   const patchLeadMutation = useMutation({
     mutationFn: (payload) => patchLead({ token, id: selectedLeadId, ...payload }),
-    onSuccess: (data) => {
-      toast.success("Lead updated");
+    onSuccess: (data, variables) => {
+      const isNoteOnly =
+        variables?.note &&
+        !variables?.match_status &&
+        !variables?.close_reason &&
+        !variables?.close_note &&
+        variables?.closed_value == null;
+      toast.success(isNoteOnly ? "Note added" : "Lead updated");
       const id = selectedLeadId;
       if (id && data?.lead) {
         queryClient.setQueryData(["lead-detail", token, id], (prev) => ({

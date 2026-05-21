@@ -36,6 +36,8 @@ function humanizeToken(value) {
 }
 
 function detailFieldsForBooking(booking) {
+  if (booking?.booking_origin === "public_profile_consultation") return [];
+  if (!booking?.lead_match_id && !booking?.conversation_id) return [];
   const lawyerQ = booking?.qualification?.lawyer || {};
   const mortgageQ = booking?.qualification?.mortgage_broker || {};
   const inferredType = (() => {
@@ -117,6 +119,9 @@ function BookingDetailModal({ booking, onClose, token, onCanceled }) {
   const whenFull = t
     ? t.toLocaleString(undefined, { dateStyle: "full", timeStyle: "short" })
     : "No time recorded";
+  const isStandaloneConsultation =
+    booking.booking_origin === "public_profile_consultation" ||
+    (!booking.lead_match_id && !booking.conversation_id);
   const leadName = booking.contact?.full_name || booking.contact?.email || "—";
   const detailRows = detailFieldsForBooking(booking);
   const canCancel =
@@ -221,7 +226,9 @@ function BookingDetailModal({ booking, onClose, token, onCanceled }) {
             <p className="mt-0.5 font-medium text-text-heading">{whenFull}</p>
           </div>
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Lead name</p>
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+              {isStandaloneConsultation ? "Invitee" : "Lead name"}
+            </p>
             <p className="mt-0.5 font-medium text-text-heading">{leadName}</p>
             {booking.contact?.email ? (
               <p className="mt-0.5 text-xs text-text-muted">{booking.contact.email}</p>

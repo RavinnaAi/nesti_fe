@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircle2, Info, XCircle } from "lucide-react";
+import Image from "next/image";
+import { CheckCircle2, ChevronLeft, ChevronRight, Download, Info, X, XCircle } from "lucide-react";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
 export default function LeadsDetailsTab({
@@ -19,34 +20,90 @@ export default function LeadsDetailsTab({
   const [showCalendlyCancelModal, setShowCalendlyCancelModal] = useState(false);
   const [calendlyCancelSubmitting, setCalendlyCancelSubmitting] = useState(false);
 
-  useEffect(() => {
-    if (!showCalendlyCancelModal) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [showCalendlyCancelModal]);
-
-  useEffect(() => {
-    if (!showCalendlyCancelModal) return;
-    const onKey = (e) => {
-      if (e.key === "Escape" && !calendlyCancelSubmitting && !cancelCalendlyPending) {
-        setShowCalendlyCancelModal(false);
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [showCalendlyCancelModal, calendlyCancelSubmitting, cancelCalendlyPending]);
-
   const leadData = lead && typeof lead === "object" ? lead : {};
   const profRole = leadData.professional_type;
   const hideBuyerSellerIntent = profRole === "lawyer" || profRole === "mortgage_broker";
   const isLawyerLead = profRole === "lawyer";
   const isMortgageBrokerLead = profRole === "mortgage_broker";
   const property = leadData.property || {};
+  const propertyImages = Array.isArray(property.images)
+    ? property.images.filter((img) => img?.secure_url || img?.url)
+    : [];
   const qualification = leadData.qualification || {};
-  const conversion = leadData.conversion || {};
+  const conversionFunnel = leadData.conversion_funnel || {};
+  const decisionSupport = leadData.decision_support || {};
+  const trust = leadData.trust || {};
+  const [previewImageIndex, setPreviewImageIndex] = useState(null);
+  const previewImage =
+    previewImageIndex != null && propertyImages[previewImageIndex]
+      ? propertyImages[previewImageIndex]
+      : null;
+  const isAgentSellerLead =
+    !isLawyerLead &&
+    !isMortgageBrokerLead &&
+    (String(leadData.intent || "").toLowerCase() === "sell" ||
+      /seller|sell/.test(String(leadData.lead_type || "").toLowerCase()));
+
+  const closePreview = useCallback(() => setPreviewImageIndex(null), []);
+  const goPreviewPrev = useCallback(() =>
+    setPreviewImageIndex((idx) => {
+      if (idx == null || propertyImages.length < 2) return idx;
+      return (idx - 1 + propertyImages.length) % propertyImages.length;
+    }), [propertyImages.length]);
+  const goPreviewNext = useCallback(() =>
+    setPreviewImageIndex((idx) => {
+      if (idx == null || propertyImages.length < 2) return idx;
+      return (idx + 1) % propertyImages.length;
+    }), [propertyImages.length]);
+  const triggerImageDownload = (url, filename = "property-image") => {
+    const link = String(url || "").trim();
+    if (!/^https?:\/\//i.test(link)) return;
+    const a = document.createElement("a");
+    a.href = link.includes("/image/upload/")
+      ? link.replace("/image/upload/", "/image/upload/fl_attachment/")
+      : link;
+    a.download = filename || "property-image";
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.style.display = "none";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  };
+
+  useEffect(() => {
+    if (!showCalendlyCancelModal && !previewImage) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [showCalendlyCancelModal, previewImage]);
+
+  useEffect(() => {
+    if (!showCalendlyCancelModal && !previewImage) return;
+    const onKey = (e) => {
+      if (e.key === "Escape" && previewImage) {
+        closePreview();
+        return;
+      }
+      if (e.key === "ArrowLeft" && previewImage) goPreviewPrev();
+      if (e.key === "ArrowRight" && previewImage) goPreviewNext();
+      if (e.key === "Escape" && !calendlyCancelSubmitting && !cancelCalendlyPending) {
+        setShowCalendlyCancelModal(false);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [
+    showCalendlyCancelModal,
+    previewImage,
+    goPreviewPrev,
+    goPreviewNext,
+    closePreview,
+    calendlyCancelSubmitting,
+    cancelCalendlyPending,
+  ]);
 
   const readable = (value) => {
     if (value === null || value === undefined || value === "") return "—";
@@ -126,6 +183,18 @@ export default function LeadsDetailsTab({
   })();
 
   const appointmentStatus = leadData.appointment_status || "—";
+  const responseWindowText = conversionFunnel.response_window_minutes
+    ? `${conversionFunnel.response_window_minutes} minutes`
+    : "";
+  const primaryOutcome =
+    conversionFunnel.stage ||
+    leadData.conversion?.outcome?.primary_outcome ||
+    "—";
+  const conversionAlert = conversionFunnel.sla_at_risk
+    ? `SLA at risk - respond within ${responseWindowText || "the recommended window"}`
+    : conversionFunnel.urgency
+      ? `${conversionFunnel.urgency}${responseWindowText ? ` - respond within ${responseWindowText}` : ""}`
+      : leadData.conversion?.alert?.title || "—";
 
   const displayField = (v) => formatLeadIntakeSlug(v) || readable(v);
 
@@ -137,8 +206,64 @@ export default function LeadsDetailsTab({
   );
 
 
+  const closeSummary = leadData.close_summary;
+
+  const closeSummaryBanner = (() => {
+    if (!closeSummary) return null;
+    const isWon = closeSummary.status === "converted";
+    const reopened = Boolean(closeSummary.reopened_at);
+    const reasonLabel = closeSummary.reason
+      ? String(closeSummary.reason).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
+      : null;
+    const closedDate = closeSummary.closed_at
+      ? new Date(closeSummary.closed_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      : null;
+    const valueDisplay = closeSummary.value != null && Number(closeSummary.value) > 0
+      ? new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(closeSummary.value)
+      : null;
+
+    return (
+      <div className={`rounded-lg border p-3.5 ${
+        reopened
+          ? "border-border/60 bg-slate-50/50"
+          : isWon
+            ? "border-emerald-200 bg-emerald-50/60"
+            : "border-slate-200 bg-slate-50/60"
+      }`}>
+        <div className="flex items-center gap-2">
+          {isWon ? (
+            <CheckCircle2 className={`w-4 h-4 shrink-0 ${reopened ? "text-slate-400" : "text-emerald-600"}`} />
+          ) : (
+            <XCircle className={`w-4 h-4 shrink-0 ${reopened ? "text-slate-400" : "text-slate-600"}`} />
+          )}
+          <span className={`text-sm font-semibold ${reopened ? "text-text-muted line-through" : "text-text-heading"}`}>
+            {isWon ? "Closed — won" : "Closed — lost"}
+          </span>
+          {reopened && (
+            <span className="ml-1 text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+              Reopened
+            </span>
+          )}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-text-muted">
+          {reasonLabel && <span>Reason: <span className="font-medium text-text-heading">{reasonLabel}</span></span>}
+          {valueDisplay && <span>Value: <span className="font-medium text-text-heading">{valueDisplay}</span></span>}
+          {closeSummary.closed_by_label && closedDate && (
+            <span>By {closeSummary.closed_by_label} on {closedDate}</span>
+          )}
+        </div>
+        {closeSummary.note && (
+          <p className={`mt-2 text-xs italic leading-relaxed ${reopened ? "text-text-muted" : "text-text-body"}`}>
+            &ldquo;{closeSummary.note}&rdquo;
+          </p>
+        )}
+      </div>
+    );
+  })();
+
   return (
     <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
+      {closeSummaryBanner}
       {selectedConversation ? (
         <>
           <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -263,6 +388,43 @@ export default function LeadsDetailsTab({
                 </div>
               </div>
 
+              {isAgentSellerLead && propertyImages.length ? (
+                <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-sm font-semibold text-text-heading">Property photos</div>
+                      <p className="text-[11px] text-text-muted mt-0.5">
+                        Uploaded by the seller during lead intake.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[10px] font-semibold text-primary">
+                      {propertyImages.length} image{propertyImages.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+                    {propertyImages.map((img, index) => {
+                      const src = img.secure_url || img.url;
+                      return (
+                        <button
+                          type="button"
+                          key={`${img.public_id || src}-${index}`}
+                          onClick={() => setPreviewImageIndex(index)}
+                          className="group overflow-hidden rounded-xl border border-border bg-background-light"
+                        >
+                          <Image
+                            src={src}
+                            alt={img.original_filename || `Seller property image ${index + 1}`}
+                            width={320}
+                            height={180}
+                            className="h-28 w-full object-cover transition-transform duration-200 group-hover:scale-105"
+                          />
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="rounded-md border border-border bg-white p-4 space-y-3">
                 <div className="text-sm font-semibold text-text-heading">Qualification</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
@@ -284,8 +446,8 @@ export default function LeadsDetailsTab({
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               <KeyValue label="Appointment status" value={appointmentStatus} />
-              <KeyValue label="Primary outcome" value={conversion?.outcome?.primary_outcome} />
-              <KeyValue label="Alert" value={conversion?.alert?.title} />
+              <KeyValue label="Primary outcome" value={primaryOutcome} />
+              <KeyValue label="Alert" value={conversionAlert} />
             </div>
             {String(appointmentStatus).toLowerCase() === "booked" &&
             typeof onCancelCalendlyAppointment === "function" ? (
@@ -312,6 +474,88 @@ export default function LeadsDetailsTab({
       ) : (
         <div className="text-sm text-text-muted">Choose a lead to view details.</div>
       )}
+
+      {previewImage && typeof document !== "undefined"
+        ? createPortal(
+            <div
+              className="fixed inset-y-0 left-0 right-0 z-[135] flex items-center justify-center bg-background-light/80 p-3 backdrop-blur-[1px] sm:p-6 lg:left-60"
+              role="dialog"
+              aria-modal="true"
+              onMouseDown={(e) => {
+                if (e.target === e.currentTarget) closePreview();
+              }}
+            >
+              <div
+                className="mx-auto flex h-[78vh] min-h-[420px] max-h-[760px] w-[min(1120px,96vw)] flex-col overflow-hidden rounded-2xl border border-border/70 bg-white/95 shadow-[0_20px_60px_rgba(15,23,42,0.20)]"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                <div className="flex items-center justify-between gap-2 border-b border-border/70 px-3 py-2 sm:px-4">
+                  <div className="min-w-0 truncate text-xs font-semibold text-text-heading sm:text-sm">
+                    {previewImage.original_filename || `Property image ${previewImageIndex + 1}`}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        triggerImageDownload(
+                          previewImage.secure_url || previewImage.url,
+                          previewImage.original_filename || "property-image"
+                        )
+                      }
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-2.5 py-1.5 text-xs font-semibold text-text-heading transition hover:bg-background-light"
+                    >
+                      <Download size={14} />
+                      Download
+                    </button>
+                    <button
+                      type="button"
+                      onClick={closePreview}
+                      className="inline-flex rounded-lg border border-border bg-white px-2 py-1.5 text-xs font-semibold text-text-muted transition hover:bg-background-light hover:text-text-heading"
+                      aria-label="Close image preview"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+                <div className="relative flex min-h-0 flex-1 items-center justify-center bg-background-light/70 p-2 sm:p-4">
+                  {propertyImages.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={goPreviewPrev}
+                      className="absolute left-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border/70 bg-white/95 p-2 text-text-heading shadow transition hover:bg-background-light"
+                      aria-label="Previous image"
+                    >
+                      <ChevronLeft size={18} />
+                    </button>
+                  ) : null}
+                  <Image
+                    src={previewImage.secure_url || previewImage.url}
+                    alt={previewImage.original_filename || "Property image preview"}
+                    width={1280}
+                    height={820}
+                    className="h-full w-full object-contain"
+                  />
+                  {propertyImages.length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={goPreviewNext}
+                      className="absolute right-2 top-1/2 z-10 -translate-y-1/2 rounded-full border border-border/70 bg-white/95 p-2 text-text-heading shadow transition hover:bg-background-light"
+                      aria-label="Next image"
+                    >
+                      <ChevronRight size={18} />
+                    </button>
+                  ) : null}
+                  {propertyImages.length > 1 ? (
+                    <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border border-border/70 bg-white/95 px-2 py-1 text-[10px] font-semibold text-text-heading shadow-sm">
+                      {previewImageIndex + 1} / {propertyImages.length}
+                    </div>
+                  ) : null}
+                </div>
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
 
       {showCalendlyCancelModal &&
       typeof document !== "undefined" &&

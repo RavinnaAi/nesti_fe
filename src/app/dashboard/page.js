@@ -3,31 +3,25 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { Copy, Link2, Mail, MessageCircle, MessageSquare, RefreshCw, Share2, Sparkles, X } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useProfileQuery } from "@/hooks/useAuthApi";
 import { useRecordLeadView } from "@/hooks/useRecordLeadView";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  fetchChatAnalyticsFunnel,
-  fetchChatAnalyticsLeadTrends,
   fetchChatAnalyticsSummary,
   fetchChatAnalyticsTimeseries,
-  fetchNurtureLogs,
 } from "@/lib/chatClient";
 import { fetchLeads, fetchLeadProfiles } from "@/lib/leadsClient";
 import { fetchCalendarBookings } from "@/lib/calendarClient";
+import { fetchInviteConversionRoleTrends } from "@/lib/inviteClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { formatLeadLocationLine, getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
 import DashboardTopTables from "@/components/dashboard/DashboardTopTables";
 import DashboardCalendlyButton from "@/components/dashboard/DashboardCalendlyButton";
-import {
-  createInviteLink,
-} from "@/lib/inviteClient";
 
 const DashboardAnalyticsPanels = dynamic(
   () => import("@/components/dashboard/DashboardAnalyticsPanels"),
@@ -148,8 +142,6 @@ export default function DashboardPage() {
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [secondaryQueriesReady, setSecondaryQueriesReady] = useState(false);
-  const [inviteModalOpen, setInviteModalOpen] = useState(false);
-  const [inviteModalLink, setInviteModalLink] = useState("");
 
   useEffect(() => {
     setAvatarBroken(false);
@@ -167,7 +159,7 @@ export default function DashboardPage() {
   const leadsQuery = useQuery({
     queryKey: ["dashboard-leads", token],
     enabled: Boolean(token),
-    queryFn: () => fetchLeads({ token, page: 1, limit: 100 }),
+    queryFn: () => fetchLeads({ token, page: 1, limit: 25 }),
     staleTime: 60_000,
   });
 
@@ -178,13 +170,6 @@ export default function DashboardPage() {
     staleTime: 60_000,
   });
 
-  const analyticsFunnelQuery = useQuery({
-    queryKey: ["dashboard-analytics-funnel", token, windowDays],
-    enabled: Boolean(token) && secondaryQueriesReady,
-    queryFn: () => fetchChatAnalyticsFunnel({ token, days: windowDays }),
-    staleTime: 60_000,
-  });
-
   const analyticsTimeseriesQuery = useQuery({
     queryKey: ["dashboard-analytics-timeseries", token, windowDays],
     enabled: Boolean(token) && secondaryQueriesReady,
@@ -192,24 +177,17 @@ export default function DashboardPage() {
     staleTime: 60_000,
   });
 
-  const nurtureLogsChartQuery = useQuery({
-    queryKey: ["dashboard-nurture-logs-chart", token, windowDays],
+  const inviteRoleTrendsQuery = useQuery({
+    queryKey: ["dashboard-invite-role-trends", token, windowDays],
     enabled: Boolean(token) && secondaryQueriesReady,
-    queryFn: () => fetchNurtureLogs({ token, page: 1, limit: 100 }),
-    staleTime: 60_000,
-  });
-
-  const leadTrendsQuery = useQuery({
-    queryKey: ["dashboard-analytics-lead-trends", token, windowDays, userRole],
-    enabled: Boolean(token) && secondaryQueriesReady,
-    queryFn: () => fetchChatAnalyticsLeadTrends({ token, days: windowDays }),
+    queryFn: () => fetchInviteConversionRoleTrends({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const profilesTopQuery = useQuery({
     queryKey: ["dashboard-top-profiles", token],
     enabled: Boolean(token) && secondaryQueriesReady,
-    queryFn: () => fetchLeadProfiles({ token, page: 1, limit: 50 }),
+    queryFn: () => fetchLeadProfiles({ token, page: 1, limit: 20 }),
     staleTime: 60_000,
   });
 
@@ -238,11 +216,9 @@ export default function DashboardPage() {
   const refreshAll = () => {
     leadsQuery.refetch();
     analyticsSummaryQuery.refetch();
-    analyticsFunnelQuery.refetch();
     analyticsTimeseriesQuery.refetch();
-    nurtureLogsChartQuery.refetch();
+    inviteRoleTrendsQuery.refetch();
     profilesTopQuery.refetch();
-    leadTrendsQuery.refetch();
     calendarBookingsQuery.refetch();
     queryClient.invalidateQueries({ queryKey: ["calendar-bookings", token] });
   };
@@ -250,45 +226,10 @@ export default function DashboardPage() {
   const isRefreshing =
     leadsQuery.isFetching ||
     analyticsSummaryQuery.isFetching ||
-    analyticsFunnelQuery.isFetching ||
     analyticsTimeseriesQuery.isFetching ||
-    nurtureLogsChartQuery.isFetching ||
+    inviteRoleTrendsQuery.isFetching ||
     profilesTopQuery.isFetching ||
-    leadTrendsQuery.isFetching ||
     calendarBookingsQuery.isFetching;
-
-  const handleGenerateInvite = async () => {
-    if (!token) return;
-    try {
-      const created = await createInviteLink({
-        token,
-        payload: { source_channel: "dashboard", intended_audience: "any" },
-      });
-      const url = created?.share_url || created?.invite?.share_url || "";
-      setInviteModalLink(url);
-      if (url && typeof navigator !== "undefined" && navigator.clipboard?.writeText) {
-        toast.success("Invite link generated.");
-      } else {
-        toast.success("Invite link generated.");
-      }
-    } catch (error) {
-      toast.error(error?.message || "Unable to create invite link.");
-    }
-  };
-
-  const handleCopyInviteFromModal = async () => {
-    const url = String(inviteModalLink || "").trim();
-    if (!url) {
-      toast.info("Generate or paste an invite link first.");
-      return;
-    }
-    try {
-      await navigator.clipboard.writeText(url);
-      toast.success("Invite link copied.");
-    } catch {
-      toast.error("Could not copy invite link.");
-    }
-  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -386,40 +327,11 @@ export default function DashboardPage() {
       .slice(0, 5);
   }, [profilesTopQuery.data]);
 
-  const intentTrend = useMemo(
-    () => (Array.isArray(leadTrendsQuery.data?.intent) ? leadTrendsQuery.data.intent : []),
-    [leadTrendsQuery.data]
-  );
-
-  const budgetTrend = useMemo(
-    () => (Array.isArray(leadTrendsQuery.data?.budget) ? leadTrendsQuery.data.budget : []),
-    [leadTrendsQuery.data]
-  );
-
-  const intentMetric = leadTrendsQuery.data?.intent_metric || "buyer_seller";
-
-  /** Nurture sends per UTC day: merge KPI timeseries with NurtureLog rows (logs backfill before KPI existed). */
   const chartSeries = useMemo(() => {
     const base = analyticsTimeseriesQuery.data?.series;
     if (!Array.isArray(base) || base.length === 0) return [];
-    const logPayload = nurtureLogsChartQuery.data;
-    const items = Array.isArray(logPayload?.items) ? logPayload.items : [];
-    const fromLogs = new Map();
-    items.forEach((log) => {
-      const st = String(log?.status || "sent").toLowerCase();
-      if (st === "failed") return;
-      const raw = log?.sent_at || log?.created_at;
-      if (!raw) return;
-      const dt = new Date(raw);
-      if (Number.isNaN(dt.getTime())) return;
-      const key = new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate())).toISOString().slice(0, 10);
-      fromLogs.set(key, (fromLogs.get(key) || 0) + 1);
-    });
-    return base.map((row) => ({
-      ...row,
-      nurture_email_sent: Math.max(Number(row.nurture_email_sent || 0), fromLogs.get(row.date) || 0),
-    }));
-  }, [analyticsTimeseriesQuery.data, nurtureLogsChartQuery.data]);
+    return base;
+  }, [analyticsTimeseriesQuery.data]);
 
   // Avoid hydration mismatch: server has no sessionStorage token; client may. First paint must match server.
   if (!isMounted) {
@@ -562,17 +474,6 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setInviteModalOpen(true);
-                if (!inviteModalLink) void handleGenerateInvite();
-              }}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/35 bg-primary/[0.08] px-3 py-1.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/[0.14]"
-            >
-              <Sparkles size={13} />
-              Invite
-            </button>
             <div
               role="tablist"
               aria-label="Analytics window"
@@ -618,23 +519,15 @@ export default function DashboardPage() {
 
         <DashboardAnalyticsPanels
           windowDays={analyticsTimeseriesQuery.data?.window_days || windowDays}
-          funnel={analyticsFunnelQuery.data?.funnel}
-          summary={analyticsSummaryQuery.data?.summary}
           series={chartSeries}
-          intentTrend={intentTrend}
-          intentMetric={intentMetric}
-          budgetTrend={budgetTrend}
+          inviteRoleTrends={inviteRoleTrendsQuery.data}
           isLoading={
-            analyticsFunnelQuery.isLoading ||
             analyticsTimeseriesQuery.isLoading ||
-            leadTrendsQuery.isLoading ||
-            nurtureLogsChartQuery.isLoading
+            inviteRoleTrendsQuery.isLoading
           }
           isError={
-            analyticsFunnelQuery.isError ||
             analyticsTimeseriesQuery.isError ||
-            leadTrendsQuery.isError ||
-            nurtureLogsChartQuery.isError
+            inviteRoleTrendsQuery.isError
           }
         />
 
@@ -660,128 +553,6 @@ export default function DashboardPage() {
             onClose={() => setSelectedLeadId(null)}
           />
         )}
-        {inviteModalOpen ? (
-          <motion.div
-            className="fixed inset-0 z-[90] flex items-center justify-center bg-transparent p-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setInviteModalOpen(false)}
-          >
-            <motion.div
-              initial={{ y: 16, opacity: 0, scale: 0.98 }}
-              animate={{ y: 0, opacity: 1, scale: 1 }}
-              exit={{ y: 10, opacity: 0, scale: 0.98 }}
-              transition={{ duration: 0.18 }}
-              className="w-full max-w-lg rounded-xl border border-border bg-white p-4 shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-text-heading">Invite link</h3>
-                <button
-                  type="button"
-                  onClick={() => setInviteModalOpen(false)}
-                  className="rounded-md border border-border p-1.5 text-text-muted hover:text-text-heading"
-                  aria-label="Close invite modal"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-              <p className="mb-3 text-xs text-text-muted">
-                You can paste an existing invite link or generate a new one.
-              </p>
-              <div className="space-y-2">
-                <label className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-                  Invite URL
-                </label>
-                <div className="flex items-center gap-2">
-                  <div className="relative flex-1">
-                    <Link2
-                      size={14}
-                      className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted"
-                    />
-                    <input
-                      type="text"
-                      value={inviteModalLink}
-                      onChange={(event) => setInviteModalLink(event.target.value)}
-                      placeholder="Paste invite link here"
-                      className="h-10 w-full rounded-md border border-border bg-white pl-8 pr-2 text-xs text-text-heading"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleCopyInviteFromModal}
-                    className="inline-flex h-10 items-center gap-1 rounded-md border border-border bg-white px-3 text-xs font-semibold text-text-heading hover:bg-primary/5"
-                  >
-                    <Copy size={13} />
-                    Copy
-                  </button>
-                </div>
-              </div>
-              <div className="mt-3 rounded-lg border border-border/70 bg-primary/[0.02] p-3">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
-                  Share
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(() => {
-                    const url = String(inviteModalLink || "").trim();
-                    const disabled = !url;
-                    const btnBase =
-                      "inline-flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-semibold transition";
-                    const enabledCls =
-                      "border-border bg-white text-text-heading hover:bg-primary/5";
-                    const disabledCls =
-                      "pointer-events-none border-border/60 bg-slate-100 text-text-muted";
-                    const cls = `${btnBase} ${disabled ? disabledCls : enabledCls}`;
-                    const subject = "Join my Nesti network";
-                    const emailHref = url
-                      ? `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(url)}`
-                      : "#";
-                    const whatsappHref = url
-                      ? `https://wa.me/?text=${encodeURIComponent(`Join my Nesti network: ${url}`)}`
-                      : "#";
-                    const smsHref = url
-                      ? `sms:?body=${encodeURIComponent(`Join my Nesti network: ${url}`)}`
-                      : "#";
-                    const socialHref = url
-                      ? `https://x.com/intent/tweet?text=${encodeURIComponent(`Join my Nesti network ${url}`)}`
-                      : "#";
-                    return (
-                      <>
-                        <a href={emailHref} className={cls} target="_blank" rel="noreferrer">
-                          <Mail size={14} />
-                          Email
-                        </a>
-                        <a href={whatsappHref} className={cls} target="_blank" rel="noreferrer">
-                          <MessageCircle size={14} />
-                          WhatsApp
-                        </a>
-                        <a href={smsHref} className={cls}>
-                          <MessageSquare size={14} />
-                          SMS
-                        </a>
-                        <a href={socialHref} className={cls} target="_blank" rel="noreferrer">
-                          <Share2 size={14} />
-                          Social
-                        </a>
-                      </>
-                    );
-                  })()}
-                </div>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  type="button"
-                  onClick={handleGenerateInvite}
-                  className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-3.5 text-xs font-semibold text-white hover:bg-primary-dark"
-                >
-                  <Sparkles size={13} />
-                  Generate new invite
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        ) : null}
       </AnimatePresence>
     </div>
   );

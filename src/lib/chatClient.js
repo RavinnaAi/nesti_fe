@@ -115,6 +115,30 @@ export async function sendChatMessage({
   return json;
 }
 
+export async function uploadSellerPropertyImages({ embedToken, sessionId, files }) {
+  const t = String(embedToken || "").trim();
+  const sid = String(sessionId || "").trim();
+  const list = Array.from(files || []).filter(Boolean).slice(0, 8);
+  if (!t || !sid) throw new Error("Missing chatbot session.");
+  if (!list.length) return { success: true, images: [] };
+
+  const body = new FormData();
+  body.append("embedToken", t);
+  body.append("sessionId", sid);
+  list.forEach((file) => body.append("images", file));
+
+  const response = await fetch(API_ENDPOINTS.chat.propertyImages, {
+    method: "POST",
+    body,
+    cache: "no-store",
+  });
+  const json = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(json));
+  }
+  return json;
+}
+
 /** Optional lead score (same as node-backend `POST /api/chat/score-preview`). Fails soft — returns null. */
 export async function postChatScorePreview({ formContact, professionalType }) {
   try {

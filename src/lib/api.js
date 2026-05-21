@@ -81,10 +81,16 @@ export const API_ENDPOINTS = {
     list: withBaseUrl("/api/invites"),
     metrics: withBaseUrl("/api/invites/metrics"),
     conversions: withBaseUrl("/api/invites/conversions"),
+    conversionRoleTrends: withBaseUrl("/api/invites/conversions/role-trends"),
     resolve: withBaseUrl((token) => `/api/invites/resolve/${token}`),
     capture: withBaseUrl("/api/invites/capture"),
     finalize: withBaseUrl("/api/invites/finalize"),
     rewardEvents: withBaseUrl("/api/invites/rewards/events"),
+    rewardsProfile: withBaseUrl("/api/invites/rewards/profile"),
+  },
+  ai: {
+    leadInsights: withBaseUrl((conversationId) => `/api/ai/lead/insights/${conversationId}`),
+    analyzeLeadInsights: withBaseUrl((leadId) => `/api/ai/lead/${leadId}/insights/analyze`),
   },
   leads: {
     list: withBaseUrl("/api/leads"),
@@ -101,6 +107,7 @@ export const API_ENDPOINTS = {
   chat: {
     /** Public embed POST (no Bearer); body includes embedToken. */
     send: withBaseUrl("/api/chat"),
+    propertyImages: withBaseUrl("/api/chat/property-images"),
     clearSession: (sessionId) => withBaseUrl(`/api/chat/clear/${sessionId}`),
     conversations: withBaseUrl("/api/chat/conversations"),
     conversationMessages: withBaseUrl((id) => `/api/chat/conversations/${id}/messages`),

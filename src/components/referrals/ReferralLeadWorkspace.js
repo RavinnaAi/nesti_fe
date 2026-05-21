@@ -17,7 +17,6 @@ import {
 import { toast } from "react-toastify";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
-import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
 import { fetchLeadById, patchLead } from "@/lib/leadsClient";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
@@ -582,26 +581,6 @@ export default function ReferralLeadWorkspace({
     </div>
   );
 
-  const actionsPanel = (
-    <div className="rounded-md border border-border bg-white p-4">
-      <p className="mb-3 text-xs text-text-muted">Recommended next steps from your role and lead context.</p>
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() => detailQuery.refetch()}
-          disabled={detailQuery.isFetching}
-          className="rounded border border-border bg-white px-3 py-2 text-xs font-semibold text-text-heading hover:bg-background-light disabled:opacity-50"
-        >
-          {detailQuery.isFetching ? "Refreshing…" : "Refresh lead snapshot"}
-        </button>
-      </div>
-      <LeadsAiActionsTab
-        selectedConversation={{ id: activeConversationId || "referral-conversation" }}
-        lead={lead}
-      />
-    </div>
-  );
-
   const nurturePanel = (
     <LeadsNurtureTab
       nurtureForm={nurtureForm}
@@ -629,7 +608,6 @@ export default function ReferralLeadWorkspace({
     <div className="inline-flex rounded-lg border border-border bg-background-light/40 p-1">
       {[
         { id: "details", label: "Details" },
-        { id: "actions", label: "Actions" },
         { id: "nurture", label: "Nurture Email" },
         { id: "notes", label: "Notes" },
       ].map((tab) => (
@@ -740,7 +718,6 @@ export default function ReferralLeadWorkspace({
           <div className="space-y-4">
             {toolkitTabStrip}
             {detailTab === "details" ? leadDetailsCard : null}
-            {detailTab === "actions" ? actionsPanel : null}
             {detailTab === "nurture" ? nurturePanel : null}
             {detailTab === "notes" ? notesPanel : null}
           </div>
@@ -749,7 +726,7 @@ export default function ReferralLeadWorkspace({
             {leadDetailsCard}
             <div className="flex flex-col gap-3 rounded-lg border border-primary/25 bg-primary/[0.06] px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm leading-relaxed text-text-body">
-                For this accepted referral: use the tabs for actions, nurture email, and pipeline notes.
+                For this accepted referral: use the workspace for nurture email and pipeline notes.
               </p>
               {pipelineWorkspaceHref ? (
                 <Link

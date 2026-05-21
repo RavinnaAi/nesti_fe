@@ -11,6 +11,7 @@ import {
   resetChatIdentity,
   sendChatMessage,
   setVisitorId,
+  uploadSellerPropertyImages,
 } from "@/lib/chatClient";
 import { motion } from "framer-motion";
 import ConversationProgress from "./ConversationProgress";
@@ -96,6 +97,12 @@ export default function ChatWidget({
   hostAvatarUrl = "",
   /** Fallback header name when `title` is not set (e.g. professional full name). */
   hostDisplayName = "",
+  /** Pre-populate the agent lead draft (for property inquiry from public pages). */
+  prefillLeadDraft = null,
+  /** Pre-select intent ("buy" | "sell") skipping the intent step. */
+  prefillIntent = null,
+  /** Public profile inquiries should not reuse an older browser chat session. */
+  freshSessionOnMount = false,
 }) {
   const resolvedRole = normalizeWidgetRole(widgetRole);
   const roleUi = getChatWidgetRolePresentation(resolvedRole);
@@ -122,7 +129,11 @@ export default function ChatWidget({
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [sessionId, setSessionId] = useState(() =>
-    typeof window !== "undefined" ? getOrCreateSessionId() : "",
+    typeof window !== "undefined"
+      ? freshSessionOnMount
+        ? resetChatIdentity().sessionId
+        : getOrCreateSessionId()
+      : "",
   );
   const [visitorId, setVisitorIdState] = useState("");
   const [error, setError] = useState("");
@@ -135,12 +146,29 @@ export default function ChatWidget({
   const latestCalendlyLinkRef = useRef("");
 
   const [leadFlowStep, setLeadFlowStep] = useState(() => {
-    if (resolvedRole === "agent") return "intent";
+    if (resolvedRole === "agent") return prefillIntent ? "contact" : "intent";
     if (resolvedRole === "lawyer" || resolvedRole === "mortgage_broker") return "details";
     return "chat";
   });
-  const [chosenIntent, setChosenIntent] = useState(null);
-  const [leadDraft, setLeadDraft] = useState(() => emptyAgentLeadDraft());
+  const [chosenIntent, setChosenIntent] = useState(() => prefillIntent || null);
+  const [leadDraft, setLeadDraft] = useState(() =>
+    prefillLeadDraft ? { ...emptyAgentLeadDraft(), ...prefillLeadDraft } : emptyAgentLeadDraft()
+  );
+
+  // Apply prefill whenever the parent changes the property being inquired about
+  const prevPrefillKeyRef = useRef(null);
+  useEffect(() => {
+    if (!prefillLeadDraft) return;
+    const key = JSON.stringify(prefillLeadDraft);
+    if (key === prevPrefillKeyRef.current) return;
+    prevPrefillKeyRef.current = key;
+    setLeadDraft((d) => ({ ...d, ...prefillLeadDraft }));
+    if (prefillIntent) {
+      setChosenIntent(prefillIntent);
+      setLeadFlowStep("contact");
+    }
+  }, [prefillLeadDraft, prefillIntent]);
+  const [sellerPropertyImageFiles, setSellerPropertyImageFiles] = useState([]);
   const [rolePreflightDraft, setRolePreflightDraft] = useState(() =>
     emptyPreflightDraftForRole(resolvedRole),
   );
@@ -168,6 +196,11 @@ export default function ChatWidget({
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (freshSessionOnMount) {
+      const vid = getVisitorId();
+      if (vid) setVisitorIdState(vid);
+      return;
+    }
     if (resolvedRole === "lawyer") {
       const { sessionId: nextSid } = resetChatIdentity();
       setSessionId(nextSid);
@@ -178,7 +211,7 @@ export default function ChatWidget({
     setSessionId((prev) => (String(prev || "").trim() ? prev : sid));
     const vid = getVisitorId();
     if (vid) setVisitorIdState(vid);
-  }, [resolvedRole]);
+  }, [resolvedRole, freshSessionOnMount]);
 
   useEffect(() => {
     if (useAgentLeadForm && leadFlowStep !== "chat") return;
@@ -379,13 +412,42 @@ export default function ChatWidget({
       setFormValidationError("Please complete all onboarding fields to start chat.");
       return;
     }
+    if (chosenIntent === "sell" && !sellerPropertyImageFiles.length) {
+      setFormValidationError("Please upload at least one property image to create a seller lead.");
+      return;
+    }
     setFormValidationError("");
 
     const { formContact, opening, summary, leadProfilePreview } = getAgentStartPayload(
       chosenIntent,
       leadDraft
     );
-    await runPreparedChatStart({ opening, summary, leadProfilePreview, formContact });
+    let nextFormContact = formContact;
+    if (chosenIntent === "sell" && sellerPropertyImageFiles.length) {
+      try {
+        setLoading(true);
+        const uploaded = await uploadSellerPropertyImages({
+          embedToken,
+          sessionId,
+          files: sellerPropertyImageFiles,
+        });
+        nextFormContact = {
+          ...formContact,
+          property_images: Array.isArray(uploaded?.images) ? uploaded.images : [],
+        };
+        if (!nextFormContact.property_images.length) {
+          setFormValidationError("Please upload at least one property image to create a seller lead.");
+          setLoading(false);
+          return;
+        }
+        setLeadDraft((d) => ({ ...d, property_images: nextFormContact.property_images }));
+      } catch (err) {
+        setFormValidationError(err?.message || "Property images could not be uploaded. Please try again.");
+        setLoading(false);
+        return;
+      }
+    }
+    await runPreparedChatStart({ opening, summary, leadProfilePreview, formContact: nextFormContact });
   };
 
   const handleStartChatFromRolePreflight = async () => {
@@ -438,6 +500,7 @@ export default function ChatWidget({
         setLeadFlowStep("intent");
         setChosenIntent(null);
         setLeadDraft(emptyAgentLeadDraft());
+        setSellerPropertyImageFiles([]);
       } else if (useRolePreflight) {
         setLeadFlowStep("details");
         setRolePreflightDraft(emptyPreflightDraftForRole(resolvedRole));
@@ -470,6 +533,7 @@ export default function ChatWidget({
     const { sessionId: nextSid } = resetChatIdentity();
     setSessionId(nextSid);
     setVisitorIdState("");
+    setSellerPropertyImageFiles([]);
     resetConversationState({ resetInput: true });
   };
 
@@ -523,8 +587,7 @@ export default function ChatWidget({
   }, [leadFlowStep, chosenIntent, leadDraft]);
 
   const disabledSend = !input.trim() || loading || !embedToken;
-  const showConversationProgress =
-    useAgentLeadForm && leadFlowStep === "chat" && Boolean(leadFormContact);
+  const showConversationProgress = false;
   const showRoleChatProgress =
     useRolePreflight &&
     resolvedRole !== "lawyer" &&
@@ -608,6 +671,9 @@ export default function ChatWidget({
         }}
         draft={leadDraft}
         onFieldChange={(field, value) => setLeadDraft((d) => ({ ...d, [field]: value }))}
+        propertyImageFiles={sellerPropertyImageFiles}
+        onPropertyImageFilesChange={setSellerPropertyImageFiles}
+        propertyImagesUploading={loading}
         onBack={onboardingGoBack}
         onForward={onboardingGoForward}
         onStartChat={handleStartChatFromForm}
@@ -665,7 +731,7 @@ export default function ChatWidget({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           className={`${
             inlineMode
-              ? "relative w-full h-[600px] max-h-[70vh]"
+              ? "relative w-full h-full"
               : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[85vh] z-50"
           } bg-transparent rounded-[2rem] shadow-2xl flex flex-col border border-border overflow-hidden backdrop-blur-sm`}
         >

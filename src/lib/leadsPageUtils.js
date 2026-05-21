@@ -246,7 +246,7 @@ export function getMatchesCount(conversation) {
 /** List-row consultation summary: pipeline Status column stays match-only; this is Calendly + nurture. */
 export function getConsultationListCell(row) {
   const appt = String(row?.appointment_status ?? "").toLowerCase();
-  const nurture = Boolean(row?.nurture_consultation_booked);
+  const nurture = appt === "booked" && Boolean(row?.nurture_consultation_booked);
   if (appt === "canceled") {
     return {
       label: "Canceled",

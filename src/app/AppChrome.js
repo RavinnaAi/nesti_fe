@@ -12,7 +12,7 @@ import CustomToastContainer from "@/components/ui/ToastContainer";
 import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import ConversationsBell from "@/components/prochat/ConversationsBell";
-import { CalendarDays, ChevronDown, LogOut, Menu, Settings, User } from "lucide-react";
+import { CalendarDays, ChevronDown, Globe2, LogOut, Menu, Settings, User } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import {
@@ -136,6 +136,7 @@ export default function AppChrome({ children }) {
 
   const isChatbotEmbed = pathname.startsWith("/chatbot");
   const isCalendlyCallback = pathname.startsWith("/calendly-callback");
+  const isProfessionalPublicPage = pathname.startsWith("/p/") || pathname.startsWith("/professional/");
   const isFixedTableListRoute =
     pathname === "/leads" || pathname === "/referrals" || pathname === "/clients";
   const isPublicAuthPage = useMemo(
@@ -148,8 +149,9 @@ export default function AppChrome({ children }) {
       pathname.startsWith("/verify-reset-otp") ||
       pathname.startsWith("/reset-password") ||
       pathname.startsWith("/verify-email") ||
-      pathname.startsWith("/publicPage"),
-    [pathname]
+      pathname.startsWith("/publicPage") ||
+      isProfessionalPublicPage,
+    [pathname, isProfessionalPublicPage]
   );
 
   useEffect(() => {
@@ -302,6 +304,11 @@ export default function AppChrome({ children }) {
     return <>{children}</>;
   }
 
+  // ── Professional public storefronts own their full layout ──
+  if (isProfessionalPublicPage) {
+    return <>{children}</>;
+  }
+
   // ── Not yet mounted: never render public shell on protected routes ──
   if (!isMounted) {
     if (!isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback) {
@@ -421,6 +428,15 @@ export default function AppChrome({ children }) {
                       >
                         <Settings size={16} className="text-text-muted" />
                         Settings
+                      </Link>
+                      <Link
+                        href="/dashboard/public-profile"
+                        role="menuitem"
+                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <Globe2 size={16} className="text-text-muted" />
+                        Create Web Page
                       </Link>
                       <Link
                         href="/calendar"

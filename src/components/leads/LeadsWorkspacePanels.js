@@ -9,7 +9,7 @@ import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
 import LeadsActionsTab from "@/components/leads/LeadsActionsTab";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 import LeadsConsultationTab from "@/components/leads/LeadsConsultationTab";
-import LeadsAiActionsTab from "@/components/leads/LeadsAiActionsTab";
+import LeadsIntelligenceTab from "@/components/leads/LeadsIntelligenceTab";
 import LeadsPropertyMatchesTab from "@/components/leads/LeadsPropertyMatchesTab";
 import { extractMeta, formatMetaEntries, getConversationMeta } from "@/lib/leadsPageUtils";
 
@@ -27,10 +27,6 @@ export default function LeadsWorkspacePanels({
   propertyMatchesQuery,
   cancelCalendlyMutation,
   patchLeadMutation,
-  statusFromUrl,
-  pipelineFromUrl,
-  /** When set (including `null`), overrides default list hint from URL filters. */
-  pipelineListFilterHint,
   /** When set, consultation tab uses this instead of `onActiveTabChange("nurture")` (e.g. URL-synced tab on lead detail). */
   onConsultationGoToNurture,
   /** When false, Lead Profile does not wire patch (detail route uses pipeline tab for edits). */
@@ -58,16 +54,6 @@ export default function LeadsWorkspacePanels({
   token,
 }) {
   const conversationMeta = extractMeta(selectedConversation);
-  const resolvedPipelineHint =
-    pipelineListFilterHint !== undefined
-      ? pipelineListFilterHint
-      : statusFromUrl || pipelineFromUrl
-        ? (
-            <p className="text-xs text-text-muted leading-relaxed">
-              You opened this lead from a pipeline list filter; adjust stage here or in Lead Profile.
-            </p>
-          )
-        : null;
   const goToNurture =
     typeof onConsultationGoToNurture === "function"
       ? onConsultationGoToNurture
@@ -122,8 +108,12 @@ export default function LeadsWorkspacePanels({
         />
       ) : null}
 
-      {activeTab === "actions" ? (
-        <LeadsAiActionsTab selectedConversation={selectedConversation} lead={leadDetail} />
+      {activeTab === "intelligence" ? (
+        <LeadsIntelligenceTab
+          token={token}
+          leadId={selectedLeadId}
+          lead={leadDetail}
+        />
       ) : null}
 
       {activeTab === "property_matches" ? (
@@ -160,7 +150,6 @@ export default function LeadsWorkspacePanels({
           lead={leadDetail}
           onPatchLead={(body) => patchLeadMutation.mutateAsync(body)}
           patchLeadPending={patchLeadMutation.isPending}
-          pipelineListFilterHint={resolvedPipelineHint}
         />
       ) : null}
 

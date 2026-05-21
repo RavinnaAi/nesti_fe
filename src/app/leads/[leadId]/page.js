@@ -423,8 +423,14 @@ function LeadWorkspacePageContent() {
 
   const patchLeadMutation = useMutation({
     mutationFn: (payload) => patchLead({ token, id: leadId, ...payload }),
-    onSuccess: (data) => {
-      toast.success("Lead updated");
+    onSuccess: (data, variables) => {
+      const isNoteOnly =
+        variables?.note &&
+        !variables?.match_status &&
+        !variables?.close_reason &&
+        !variables?.close_note &&
+        variables?.closed_value == null;
+      toast.success(isNoteOnly ? "Note added" : "Lead updated");
       if (data?.lead) {
         queryClient.setQueryData(["lead-detail", token, leadId], (prev) => ({
           ...(prev && typeof prev === "object" ? prev : {}),
@@ -490,15 +496,7 @@ function LeadWorkspacePageContent() {
             propertyMatchesQuery={propertyMatchesQuery}
             cancelCalendlyMutation={cancelCalendlyMutation}
             patchLeadMutation={patchLeadMutation}
-            pipelineListFilterHint={
-              openedFromPipelineFilter ? (
-                <p className="text-xs text-text-muted leading-relaxed">
-                  You opened this lead from a filtered pipeline view. Change the stage below.
-                </p>
-              ) : null
-            }
             onConsultationGoToNurture={() => selectTab("nurture")}
-            enableProfilePatch={false}
             referralForm={referralForm}
             setReferralForm={setReferralForm}
             createReferralMutation={createReferralMutation}
