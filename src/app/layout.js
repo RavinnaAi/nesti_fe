@@ -1,9 +1,8 @@
 import "./globals.css";
-import { Suspense } from "react";
 import { Inter, Poppins } from "next/font/google";
 
 import Providers from "./providers";
-import AppChrome from "./AppChrome";
+import AppChromeShell from "./AppChromeShell";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -30,19 +29,7 @@ export default function RootLayout({ children }) {
         className={`${inter.variable} ${poppins.variable} flex flex-col min-h-screen`}
       >
         <Providers>
-          {/*
-            usePathname() inside AppChrome can opt the root into client navigation handling;
-            Suspense avoids dev/runtime webpack chunk issues and matches Next.js guidance.
-          */}
-          <Suspense
-            fallback={
-              <div className="flex min-h-screen items-center justify-center bg-background">
-                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-              </div>
-            }
-          >
-            <AppChrome>{children}</AppChrome>
-          </Suspense>
+          <AppChromeShell>{children}</AppChromeShell>
         </Providers>
       </body>
     </html>

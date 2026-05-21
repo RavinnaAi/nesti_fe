@@ -11,6 +11,7 @@ import {
   BarChart3,
   ClipboardList,
   Code2,
+  Globe2,
   Settings,
   CreditCard,
   Building2,
@@ -60,6 +61,7 @@ const SETTINGS_ITEMS = [
   { id: "icp", label: "Ideal Client Profile", tab: "icp", icon: Target },
   { id: "subscription", label: "Subscription", tab: "subscription", icon: CreditCard },
   { id: "chatbot", label: "Chatbot", tab: "chatbot", icon: Code2 },
+  { id: "public-profile", label: "Create Web Page", href: "/dashboard/public-profile", icon: Globe2 },
 ];
 
 /** Sidebar nav icon: gradient tile, depth, hover lift on idle state */
@@ -656,11 +658,14 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                   <div className="ml-2 mt-0.5 space-y-0.5 rounded-lg border border-border/60 bg-white/80 py-1.5 pl-2 pr-1">
                     {SETTINGS_ITEMS.map((item) => {
                       const Icon = item.icon;
-                      const tabActive = pathname === "/settings" && settingsTab === item.tab;
+                      const href = item.href || `/settings?tab=${item.tab}`;
+                      const tabActive = item.href
+                        ? pathname === item.href
+                        : pathname === "/settings" && settingsTab === item.tab;
                       return (
                         <Link
                           key={item.id}
-                          href={`/settings?tab=${item.tab}`}
+                          href={href}
                           onClick={() => {
                             setPipelineNavOpen(false);
                             setProfessionalsOpen(false);
@@ -669,7 +674,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                           }}
                           onMouseEnter={() => {
                             if (!shouldPrefetch) return;
-                            router.prefetch(`/settings?tab=${item.tab}`);
+                            router.prefetch(href);
                           }}
                           className={`flex items-center gap-2 rounded-md px-2 py-1.5 text-[11px] font-semibold leading-snug transition ${
                             tabActive

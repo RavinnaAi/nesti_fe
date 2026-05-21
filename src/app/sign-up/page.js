@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { useGoogleLogin } from "@react-oauth/google";
@@ -26,7 +26,7 @@ import { useSignup, useGoogleSignup } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
 import { getInviteAttribution, saveInviteAttribution } from "@/lib/inviteAttributionStorage";
 
-export default function SignUpPage() {
+function SignUpPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = useAppSelector((state) => state.auth.token);
@@ -258,5 +258,13 @@ export default function SignUpPage() {
       {/* Right - Visual Section */}
       <AuthVisualSection variant="signup" />
     </AuthLayout>
+  );
+}
+
+export default function SignUpPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignUpPageContent />
+    </Suspense>
   );
 }

@@ -165,6 +165,7 @@ export default function AgentLeadOnboarding({
       })),
     [sellerImageFiles],
   );
+  const startLoadingLabel = isBuy ? "Creating inquiry..." : "Uploading listing...";
 
   useEffect(
     () => () => {
@@ -206,7 +207,7 @@ export default function AgentLeadOnboarding({
           disabled={propertyImagesUploading}
           className="px-5 py-2 text-xs rounded-full bg-primary text-white font-semibold hover:brightness-95"
         >
-          {propertyImagesUploading && primaryIsStart ? "Starting..." : primaryLabel}
+          {propertyImagesUploading && primaryIsStart ? startLoadingLabel : primaryLabel}
         </button>
       </div>
     </div>
