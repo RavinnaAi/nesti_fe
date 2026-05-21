@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { Suspense, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -21,7 +21,7 @@ function referralsListHref(direction, page) {
   return `/referrals?${p.toString()}`;
 }
 
-export default function ReferralsPage() {
+function ReferralsPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const rawDirection = String(searchParams.get("direction") || "inbound")
@@ -170,5 +170,13 @@ export default function ReferralsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ReferralsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ReferralsPageContent />
+    </Suspense>
   );
 }

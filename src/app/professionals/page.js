@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
@@ -8,7 +8,7 @@ import DashboardProfessionalsTabs from "@/components/dashboard/DashboardProfessi
 
 const ALLOWED_ROLES = new Set(["agent", "lawyer", "mortgage_broker"]);
 
-export default function ProfessionalsPage() {
+function ProfessionalsPageContent() {
   const { isAuthenticated } = useAuthGuard();
   const token = useAppSelector((state) => state.auth.token);
   const searchParams = useSearchParams();
@@ -30,5 +30,13 @@ export default function ProfessionalsPage() {
         />
       </div>
     </div>
+  );
+}
+
+export default function ProfessionalsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ProfessionalsPageContent />
+    </Suspense>
   );
 }
