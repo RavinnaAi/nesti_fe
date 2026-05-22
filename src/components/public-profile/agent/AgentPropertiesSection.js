@@ -225,10 +225,14 @@ export default function AgentPropertiesSection({ profile, onChatOpen, onChatClos
   const [selectedProperty, setSelectedProperty] = useState(null);
   const [page, setPage] = useState(1);
   const lastCloseChatRequestRef = useRef(closeChatRequest);
+  const fetchedSlugRef = useRef('');
 
   // Fetch seller properties from the dedicated endpoint
   useEffect(() => {
     if (!profile?.slug) return;
+    if (fetchedSlugRef.current === profile.slug) return;
+    fetchedSlugRef.current = profile.slug;
+
     setLoading(true);
     getSellerProperties(profile.slug)
       .then((data) => setProperties(Array.isArray(data?.properties) ? data.properties : []))
@@ -260,7 +264,7 @@ export default function AgentPropertiesSection({ profile, onChatOpen, onChatClos
 
   if (loading) {
     return (
-      <section className="bg-slate-50/60 py-12">
+      <section className="bg-transparent py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-primary">Available Now</p>
@@ -286,7 +290,7 @@ export default function AgentPropertiesSection({ profile, onChatOpen, onChatClos
 
   return (
     <>
-      <section id="properties" className="bg-slate-50/60 py-12">
+      <section id="properties" className="bg-transparent py-12">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
           {/* Header */}

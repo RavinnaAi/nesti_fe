@@ -4,6 +4,7 @@ import { useState } from 'react';
 import PublicHero from '../PublicHero';
 import PublicExpertiseBand from '../PublicExpertiseBand';
 import PublicServices from '../PublicServices';
+import PublicRoleDetailSection from '../PublicRoleDetailSection';
 import PublicHappyClientsSlider from '../PublicHappyClientsSlider';
 import AgentListingsSection from './AgentListingsSection';
 import AgentPropertiesSection from './AgentPropertiesSection';
@@ -57,6 +58,7 @@ export default function AgentLandingPage({ profile }) {
     <div>
       <PublicHero profile={profile} onCTAClick={handleCTAClick} />
       <PublicExpertiseBand profile={profile} onCTAClick={handleCTAClick} />
+      <PublicRoleDetailSection profile={profile} />
 
       {profile.about && (
         <AgentAboutSection about={profile.about} profile={profile} />

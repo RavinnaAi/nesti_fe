@@ -1,17 +1,10 @@
 'use client';
 
-import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
-import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 
 const ChatWidget = dynamic(() => import('@/components/chatbot/ChatWidget'), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center">
-      <div className="animate-pulse text-sm text-slate-400">Loading chat…</div>
-    </div>
-  ),
+  loading: () => null,
 });
 
 function getGreeting(profile, propertyContext) {
@@ -30,38 +23,17 @@ function getGreeting(profile, propertyContext) {
   return `Hi! Thanks for reaching out to ${name}. How can I help you today?`;
 }
 
-function getTitle(profile, propertyContext) {
-  if (propertyContext) {
-    const loc = propertyContext.address || propertyContext.location || null;
-    return loc ? `Inquiry — ${loc}` : 'Property Inquiry';
-  }
-  if (profile?.professional_type === 'agent') return 'Real Estate Inquiry';
-  if (profile?.professional_type === 'mortgage_broker') return 'Mortgage Inquiry';
-  if (profile?.professional_type === 'lawyer') return 'Legal Services Inquiry';
-  return 'Professional Inquiry';
-}
-
 export default function PublicInquiryChatWidget({ profile, isOpen, onClose, inquiryType = 'contact', propertyContext = null }) {
-  useEffect(() => {
-    if (!isOpen || !profile?.slug) return;
-    trackAnalyticsEvent({
-      slug: profile.slug,
-      event_type: 'chatbot_open',
-      cta_type: inquiryType,
-      session_id: generateSessionId(),
-      visitor_id: generateVisitorId(),
-    }).catch(() => {});
-  }, [isOpen, profile?.slug, inquiryType]);
-
   if (!isOpen) return null;
 
-  // Use the professional's own embed token from the public profile response.
-  // Falls back to a generic public-inquiry token which still creates leads via the chat API.
-  const embedToken = profile?.embed_token || 'public-inquiry';
+  // If the professional hasn't configured (or has deleted) their embed URL,
+  // don't show the chatbot at all.
+  const embedToken = profile?.embed_token;
+  if (!embedToken) return null;
+
   const widgetRole =
     profile?.professional_type === 'mortgage_broker' ? 'mortgage-broker' : (profile?.professional_type || 'agent');
 
-  // Build prefill draft from seller property so buyer lead is created with the right context
   const prefillLeadDraft = propertyContext ? {
     location: propertyContext.location || propertyContext.address || '',
     address: propertyContext.address || propertyContext.location || '',
@@ -73,28 +45,18 @@ export default function PublicInquiryChatWidget({ profile, isOpen, onClose, inqu
   } : null;
 
   return (
-    <div className="fixed bottom-24 right-6 z-[9999] flex flex-col" style={{ width: 'min(420px, calc(100vw - 24px))', height: 'min(660px, calc(100vh - 120px))' }}>
-      <div className="relative flex h-full w-full flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
-        <div className="flex flex-1 flex-col overflow-hidden">
-          <ChatWidget
-            embedToken={embedToken}
-            widgetRole={widgetRole}
-            defaultOpen={true}
-            allowLauncher={false}
-            title={getTitle(profile, propertyContext)}
-            subtitle={`Connect with ${profile?.professional_name || 'this professional'}`}
-            inlineMode={true}
-            initialGreeting={getGreeting(profile, propertyContext)}
-            hostAvatarUrl={profile?.profile_photo_url}
-            hostDisplayName={profile?.professional_name}
-            fillHeight={true}
-            prefillLeadDraft={prefillLeadDraft}
-            prefillIntent={propertyContext ? 'buy' : null}
-            freshSessionOnMount={true}
-          />
-        </div>
-      </div>
-    </div>
+    <ChatWidget
+      embedToken={embedToken}
+      widgetRole={widgetRole}
+      defaultOpen={true}
+      allowLauncher={false}
+      hostDisplayName={profile?.professional_name}
+      hostAvatarUrl={profile?.profile_photo_url}
+      initialGreeting={getGreeting(profile, propertyContext)}
+      prefillLeadDraft={prefillLeadDraft}
+      prefillIntent={propertyContext ? 'buy' : null}
+      freshSessionOnMount={true}
+      onClose={onClose}
+    />
   );
 }
-

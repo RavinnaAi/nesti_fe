@@ -11,7 +11,11 @@ export default function AppChromeShell({ children }) {
   }, []);
 
   if (!mounted) {
-    return children;
+    return (
+      <main className="flex min-h-screen w-full items-center justify-center">
+        <p className="text-sm text-text-muted">Loading workspace...</p>
+      </main>
+    );
   }
 
   return <AppChrome>{children}</AppChrome>;

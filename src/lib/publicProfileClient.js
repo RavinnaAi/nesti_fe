@@ -1,8 +1,29 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
+const PUBLIC_PROFILE_CACHE_MS = 10_000;
+const PUBLIC_ANALYTICS_DEDUPE_MS = 30_000;
+const publicRequestCache = new Map();
+const analyticsEventCache = new Map();
+
+function cachedPublicRequest(key, ttlMs, requestFn) {
+  const now = Date.now();
+  const cached = publicRequestCache.get(key);
+  if (cached && now - cached.at < ttlMs) return cached.promise;
+
+  const promise = Promise.resolve()
+    .then(requestFn)
+    .catch((error) => {
+      publicRequestCache.delete(key);
+      throw error;
+    });
+
+  publicRequestCache.set(key, { at: now, promise });
+  return promise;
+}
+
 export async function getPublicProfile(slug) {
   const res = await fetch(`${API_BASE_URL}/api/public/professionals/${slug}`, {
-    cache: 'no-store',
+    next: { revalidate: 10 },
   });
 
   if (!res.ok) {
@@ -15,6 +36,21 @@ export async function getPublicProfile(slug) {
 
 export async function trackAnalyticsEvent({ slug, event_type, event_data = {}, session_id, visitor_id, cta_type, listing_id, service_id, duration_seconds }) {
   try {
+    const analyticsKey = [
+      slug,
+      event_type,
+      session_id,
+      visitor_id,
+      cta_type || '',
+      listing_id || '',
+      service_id || '',
+      duration_seconds == null ? '' : duration_seconds,
+    ].join('|');
+    const now = Date.now();
+    const lastSentAt = analyticsEventCache.get(analyticsKey);
+    if (lastSentAt && now - lastSentAt < PUBLIC_ANALYTICS_DEDUPE_MS) return null;
+    analyticsEventCache.set(analyticsKey, now);
+
     const res = await fetch(`${API_BASE_URL}/api/public/professionals/${slug}/analytics`, {
       method: 'POST',
       headers: {
@@ -76,6 +112,22 @@ export async function updatePublicProfile(token, data) {
   return res.json();
 }
 
+export async function deletePublicProfile(token) {
+  const res = await fetch(`${API_BASE_URL}/api/professional-dashboard/profile`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to delete public webpage' }));
+    throw new Error(error.message || 'Failed to delete public webpage');
+  }
+
+  return res.json();
+}
+
 export async function generatePublicProfileCopy(token) {
   const res = await fetch(`${API_BASE_URL}/api/professional-dashboard/profile/generate-copy`, {
     method: 'POST',
@@ -113,11 +165,13 @@ export async function getProfileAnalytics(token, { period = 'daily', start_date,
 }
 
 export async function getSellerProperties(slug) {
-  const res = await fetch(`${API_BASE_URL}/api/public/professionals/${slug}/properties`, {
-    cache: 'no-store',
+  return cachedPublicRequest(`seller-properties:${slug}`, PUBLIC_PROFILE_CACHE_MS, async () => {
+    const res = await fetch(`${API_BASE_URL}/api/public/professionals/${slug}/properties`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return { properties: [] };
+    return res.json();
   });
-  if (!res.ok) return { properties: [] };
-  return res.json();
 }
 
 export async function getPublicProfessionalsList({ role, limit = 12, exclude } = {}) {
@@ -142,16 +196,18 @@ export async function getPublicProfessionalNetwork({ role, limit = 60, exclude }
   if (role) params.append('role', role);
   if (exclude) params.append('exclude', exclude);
 
-  const res = await fetch(`${API_BASE_URL}/api/public/professional-network?${params}`, {
-    cache: 'no-store',
+  return cachedPublicRequest(`professional-network:${params.toString()}`, PUBLIC_PROFILE_CACHE_MS, async () => {
+    const res = await fetch(`${API_BASE_URL}/api/public/professional-network?${params}`, {
+      cache: 'no-store',
+    });
+
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({ message: 'Failed to fetch professional network' }));
+      throw new Error(error.message || 'Failed to fetch professional network');
+    }
+
+    return res.json();
   });
-
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'Failed to fetch professional network' }));
-    throw new Error(error.message || 'Failed to fetch professional network');
-  }
-
-  return res.json();
 }
 
 export async function checkSlugAvailability(slug, token = null) {

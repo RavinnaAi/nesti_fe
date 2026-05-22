@@ -131,7 +131,7 @@ export default function ProMessagesThreadPage() {
   const profQuery = useQuery({
     queryKey: ["prochat-group-add-search", token, memberSearch],
     enabled: Boolean(token) && settingsOpen && isGroup,
-    queryFn: () => fetchProfessionals({ token, search: memberSearch, page: 1, limit: 12 }),
+    queryFn: () => fetchProfessionals({ token, search: memberSearch, all: true }),
     staleTime: 10_000,
     refetchOnWindowFocus: false,
   });

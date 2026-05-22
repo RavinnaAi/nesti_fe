@@ -133,12 +133,9 @@ export const renderMessageSegments = (content, msgIdx, isUser, widgetRole, parse
       continue;
     }
     if (seg.type === "bullets") {
-      const lawyerAssistant = !isUser && widgetRole === "lawyer";
-      const listClassName = lawyerAssistant
-        ? "my-1.5 rounded-lg border border-slate-200/90 bg-slate-50 px-3 py-2 space-y-1.5"
-        : !isUser
-          ? "my-1.5 rounded-xl border border-border/80 bg-gradient-to-b from-emerald-50/40 to-background-light/95 px-3 py-2.5 space-y-2 shadow-sm"
-          : "my-1 space-y-1.5";
+      const listClassName = !isUser
+        ? "my-1.5 rounded-xl border border-border/80 bg-gradient-to-b from-emerald-50/40 to-background-light/95 px-3 py-2.5 space-y-2 shadow-sm"
+        : "my-1 space-y-1.5";
       const bulletRows = [];
       for (let bi = 0; bi < seg.lines.length; bi += 1) {
         const line = seg.lines[bi];
@@ -147,7 +144,7 @@ export const renderMessageSegments = (content, msgIdx, isUser, widgetRole, parse
           <div key={`msg-${msgIdx}-b-${bi}`} className="flex gap-2.5 items-start text-left">
             <span
               className={`mt-0.5 shrink-0 w-5 text-center text-[13px] font-semibold leading-relaxed ${
-                isUser ? "text-white/90" : lawyerAssistant ? "text-indigo-600" : "text-primary"
+                isUser ? "text-white/90" : "text-primary"
               }`}
               aria-hidden
             >

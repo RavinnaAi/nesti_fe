@@ -6,45 +6,45 @@ const ROLE_GUIDANCE = {
   agent: {
     eyebrow: 'Client Guide',
     title: 'Know what happens before you start.',
-    description: 'A simple guide to how inquiries, property questions, showings, and consultations are handled on this profile.',
+    description: 'A simple guide to how buying, selling, property questions, showings, and consultations are handled on this profile.',
     steps: [
-      { title: 'Ask about buying or selling', text: 'Use the chat bubble to share your goal, preferred area, price range, and timeline.' },
-      { title: 'Explore available opportunities', text: 'Review listed seller properties or ask the assistant about property availability.' },
-      { title: 'Get guided follow-up', text: 'Your details are organized so the agent can respond with useful next steps.' },
+      { title: 'Ask about buying or selling', text: 'Use the chat bubble to share your goal, preferred area, price range, property type, and timeline.' },
+      { title: 'Explore available opportunities', text: 'Review seller properties, ask about matches, or inquire directly from a property card.' },
+      { title: 'Get guided follow-up', text: 'Your details are organized into a lead profile so the agent can respond with useful next steps.' },
     ],
     faqs: [
-      { q: 'Can I ask about a specific property?', a: 'Yes. Use the chat bubble or property inquiry flow and mention the property or area.' },
-      { q: 'Can sellers create an inquiry?', a: 'Yes. Seller questions are guided through the chatbot so property details are captured clearly.' },
-      { q: 'How do I book a consultation?', a: 'Start a chat and choose consultation or explain your goal. The assistant will guide the request.' },
+      { q: 'Can I ask about a specific property?', a: 'Yes. Use the chat bubble or the property inquiry button so the property context is included.' },
+      { q: 'Can sellers create an inquiry?', a: 'Yes. Seller questions collect address, price, condition, timeline, and motivation details.' },
+      { q: 'Will I see matching properties?', a: 'For buyer inquiries, the assistant can surface available matches and help you choose a next step.' },
     ],
   },
   mortgage_broker: {
     eyebrow: 'Mortgage Guide',
     title: 'Understand the mortgage inquiry flow.',
-    description: 'A quick guide to getting financing guidance, pre-approval support, and broker follow-up.',
+    description: 'A quick guide to getting financing guidance, pre-approval support, affordability review, and broker follow-up.',
     steps: [
-      { title: 'Start with your financing goal', text: 'Ask about pre-approval, affordability, rates, refinancing, or mortgage programs.' },
-      { title: 'Share basic financial context', text: 'The assistant can guide details like budget, timeline, income range, and credit status.' },
-      { title: 'Receive broker follow-up', text: 'Your inquiry is routed with context so the broker can respond more efficiently.' },
+      { title: 'Start with your financing goal', text: 'Ask about pre-approval, affordability, rates, refinancing, purchase budget, or programs.' },
+      { title: 'Share basic financial context', text: 'The assistant can guide details like income range, credit score range, down payment, and timeline.' },
+      { title: 'Receive broker follow-up', text: 'Your inquiry is routed with financing context so the broker can respond more efficiently.' },
     ],
     faqs: [
-      { q: 'Can I get pre-approved here?', a: 'You can start the pre-approval inquiry. The broker follows up with the next required steps.' },
-      { q: 'Can I ask about refinancing?', a: 'Yes. The chatbot can collect refinancing goals and route them to the broker.' },
-      { q: 'Is this a final mortgage approval?', a: 'No. This starts the guided inquiry and broker review process.' },
+      { q: 'Can I get pre-approved here?', a: 'You can start the pre-approval inquiry and share the details needed for broker follow-up.' },
+      { q: 'Can I ask about affordability?', a: 'Yes. Share your budget, income range, down payment, and timeline for a more useful review.' },
+      { q: 'Is this a final mortgage approval?', a: 'No. This starts the guided inquiry and broker review process before formal underwriting.' },
     ],
   },
   lawyer: {
     eyebrow: 'Legal Guide',
     title: 'Start legal questions with more clarity.',
-    description: 'A simple guide for transaction, contract, title, and closing-related legal inquiries.',
+    description: 'A simple guide for transaction, contract, title, document, and closing-related legal inquiries.',
     steps: [
       { title: 'Choose the legal topic', text: 'Ask about closing, contract review, title support, transaction issues, or consultation.' },
-      { title: 'Share transaction context', text: 'The assistant helps collect the stage, timeline, property value, and service needs.' },
+      { title: 'Share transaction context', text: 'The assistant helps collect stage, closing timeline, property value, mortgage status, and service needs.' },
       { title: 'Route securely for follow-up', text: 'Your request is organized so the lawyer can understand the matter before responding.' },
     ],
     faqs: [
-      { q: 'Can I ask a legal question directly?', a: 'Yes. Start with the chat bubble and describe your real estate legal need.' },
-      { q: 'Can I request contract review?', a: 'Yes. The assistant will help gather contract and transaction context for follow-up.' },
+      { q: 'Can I ask a legal question directly?', a: 'Yes. Start with the chat bubble and describe the transaction or document issue.' },
+      { q: 'Can I request contract review?', a: 'Yes. The assistant gathers contract and transaction context for follow-up.' },
       { q: 'Is this legal advice?', a: 'No. This starts an inquiry so the lawyer can review and follow up appropriately.' },
     ],
   },
@@ -54,7 +54,7 @@ export default function PublicGuidanceSection({ profile }) {
   const content = ROLE_GUIDANCE[profile?.professional_type] || ROLE_GUIDANCE.agent;
 
   return (
-    <section id="guide" className="bg-white py-12">
+    <section id="guide" className="bg-transparent py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="grid gap-5 lg:grid-cols-[0.95fr_1.05fr]">
           <div className="rounded-[1.75rem] border border-slate-200 bg-gradient-to-br from-white via-slate-50/70 to-primary/5 p-6 shadow-sm">
@@ -110,12 +110,12 @@ export default function PublicGuidanceSection({ profile }) {
               <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
                 <MessageCircle size={17} className="mb-2 text-primary" />
                 <div className="text-sm font-bold text-text-heading">Use the chat bubble</div>
-                <p className="mt-1 text-xs leading-5 text-text-muted">Questions and inquiries start through the guided assistant.</p>
+                <p className="mt-1 text-xs leading-5 text-text-muted">Questions and inquiries start through a guided assistant tailored to this role.</p>
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
                 <LockKeyhole size={17} className="mb-2 text-primary" />
                 <div className="text-sm font-bold text-text-heading">Clear handoff</div>
-                <p className="mt-1 text-xs leading-5 text-text-muted">Your answers are organized before professional follow-up.</p>
+                <p className="mt-1 text-xs leading-5 text-text-muted">Your answers are organized into useful context before professional follow-up.</p>
               </div>
             </div>
           </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { MessageCircle } from "lucide-react";
 import {
   clearChatSession,
@@ -103,7 +104,11 @@ export default function ChatWidget({
   prefillIntent = null,
   /** Public profile inquiries should not reuse an older browser chat session. */
   freshSessionOnMount = false,
+  /** Called when the widget's X button is clicked so parent state can sync. */
+  onClose = null,
+  showPropertyMatchesInChat = true,
 }) {
+  const [mounted, setMounted] = useState(false);
   const resolvedRole = normalizeWidgetRole(widgetRole);
   const roleUi = getChatWidgetRolePresentation(resolvedRole);
   const roleBadgeLabel = getWidgetRoleShortLabel(resolvedRole);
@@ -178,6 +183,10 @@ export default function ChatWidget({
   const [hostAvatarBroken, setHostAvatarBroken] = useState(false);
   const trimmedAvatarUrl = hostAvatarUrl != null && String(hostAvatarUrl).trim() ? String(hostAvatarUrl).trim() : "";
   const showHostAvatar = Boolean(trimmedAvatarUrl && !hostAvatarBroken);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     setHostAvatarBroken(false);
@@ -267,6 +276,7 @@ export default function ChatWidget({
         lastPropertyMatchesSignatureRef.current = signature;
         // No second bubble when there are no matches — the main assistant reply already covers next steps / booking.
         if (!matches.length) return;
+        if (!showPropertyMatchesInChat) return;
         addMessage(
           "assistant",
           meta.property_matches_context === "sell"
@@ -282,7 +292,7 @@ export default function ChatWidget({
         setError(err?.message || "Property matches could not be loaded.");
       }
     },
-    [addMessage, embedToken, sessionId, useAgentLeadForm, visitorId, leadFormContact, setError],
+    [addMessage, embedToken, sessionId, useAgentLeadForm, visitorId, leadFormContact, showPropertyMatchesInChat, setError],
   );
 
   const applyChatPayload = useCallback(
@@ -332,7 +342,7 @@ export default function ChatWidget({
   );
 
   const runPreparedChatStart = useCallback(
-    async ({ opening, summary, leadProfilePreview, formContact }) => {
+    async ({ opening, summary, leadProfilePreview, formContact, fetchPropertyMatchesAfterReply = false }) => {
       setLeadFormContact(formContact);
       setLeadFlowStep("chat");
       setMessages([
@@ -347,7 +357,7 @@ export default function ChatWidget({
       setError("");
       setQuickReplies([]);
       lastOutboundUserTextRef.current = opening;
-      shouldFetchMatchesOnNextAssistantReplyRef.current = false;
+      shouldFetchMatchesOnNextAssistantReplyRef.current = Boolean(fetchPropertyMatchesAfterReply);
       lastPropertyMatchesSignatureRef.current = "";
 
       try {
@@ -447,7 +457,13 @@ export default function ChatWidget({
         return;
       }
     }
-    await runPreparedChatStart({ opening, summary, leadProfilePreview, formContact: nextFormContact });
+    await runPreparedChatStart({
+      opening,
+      summary,
+      leadProfilePreview,
+      formContact: nextFormContact,
+      fetchPropertyMatchesAfterReply: chosenIntent === "buy",
+    });
   };
 
   const handleStartChatFromRolePreflight = async () => {
@@ -615,7 +631,7 @@ export default function ChatWidget({
       roleBadgeLabel={roleBadgeLabel}
       headerSubtitle={headerSubtitle}
       inlineMode={inlineMode}
-      setIsOpen={setIsOpen}
+      setIsOpen={(val) => { setIsOpen(val); if (!val) onClose?.(); }}
     />
   );
 
@@ -712,13 +728,13 @@ export default function ChatWidget({
       </>
     );
 
-  return (
+  const floatingWidget = (
     <>
       {allowLauncher && !inlineMode && !isOpen && (
         <button
           onClick={() => setIsOpen(true)}
           type="button"
-          className={`fixed bottom-6 right-6 z-50 flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl ${roleUi.launcherClass}`}
+          className={`fixed bottom-6 right-6 z-[10050] flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl ${roleUi.launcherClass}`}
           aria-label={effectiveLauncherLabel}
         >
           <MessageCircle size={24} className="shrink-0" aria-hidden />
@@ -732,8 +748,8 @@ export default function ChatWidget({
           className={`${
             inlineMode
               ? "relative w-full h-full"
-              : "fixed bottom-6 right-6 w-[420px] max-w-[96vw] h-[640px] max-h-[85vh] z-50"
-          } bg-transparent rounded-[2rem] shadow-2xl flex flex-col border border-border overflow-hidden backdrop-blur-sm`}
+              : "fixed bottom-6 right-6 z-[10050] w-[420px] max-w-[96vw] h-[640px] max-h-[85vh]"
+          } bg-white rounded-[2rem] shadow-2xl flex flex-col overflow-hidden`}
         >
           <div className="flex flex-col h-full min-h-0">
             {header}
@@ -743,4 +759,10 @@ export default function ChatWidget({
       )}
     </>
   );
+
+  if (!inlineMode && mounted) {
+    return createPortal(floatingWidget, document.body);
+  }
+
+  return floatingWidget;
 }

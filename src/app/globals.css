@@ -41,6 +41,7 @@ h6 {
   .card {
     @apply bg-background border border-border rounded-lg shadow-sm;
   }
+
 }
 
 @layer utilities {

@@ -172,7 +172,7 @@ export default function PublicHappyClientsSlider({ testimonials = [], profile })
   const visible = cycledClients.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
 
   return (
-    <section id="reviews" className="bg-white py-12">
+    <section id="reviews" className="bg-transparent py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         {/* Header */}

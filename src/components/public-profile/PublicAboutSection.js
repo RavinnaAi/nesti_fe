@@ -38,7 +38,7 @@ export default function PublicAboutSection({ about, profile, role = 'agent' }) {
   if (!paragraphs.length) return null;
 
   return (
-    <section id="about" className="bg-white py-16 sm:py-20">
+    <section id="about" className="bg-transparent py-16 sm:py-20">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         {/* Main content row – both columns stretch to the same height */}
         <div className="flex flex-col gap-10 lg:flex-row lg:items-stretch lg:gap-14">

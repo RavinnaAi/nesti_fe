@@ -1,14 +1,20 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Bot, Globe, Mail, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
+import BackgroundElements from '@/components/layout/BackgroundElements';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
 import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 
 export default function PublicProfileLayout({ profile, children }) {
+  const trackedViewRef = useRef(false);
+
   useEffect(() => {
+    if (trackedViewRef.current) return;
+    trackedViewRef.current = true;
+
     const sessionId = generateSessionId();
     const visitorId = generateVisitorId();
     
@@ -26,18 +32,6 @@ export default function PublicProfileLayout({ profile, children }) {
     };
 
     trackView();
-
-    const startTime = Date.now();
-    return () => {
-      const duration = Math.floor((Date.now() - startTime) / 1000);
-      trackAnalyticsEvent({
-        slug: profile.slug,
-        event_type: 'profile_view',
-        session_id: sessionId,
-        visitor_id: visitorId,
-        duration_seconds: duration,
-      }).catch(() => {});
-    };
   }, [profile.slug]);
 
   const socialLinks = profile.social_links || {};
@@ -61,14 +55,15 @@ export default function PublicProfileLayout({ profile, children }) {
         : [];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
+      <BackgroundElements variant="default" />
       {/* Main Content */}
-      <main className="flex-1">
+      <main className="relative z-10 flex-1">
         {children}
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-slate-200 bg-slate-50">
+      <footer className="relative z-10 border-t border-primary/10 bg-white/70 backdrop-blur">
         <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8">
           <div className="grid gap-6 md:grid-cols-[1.1fr_0.65fr_0.85fr]">
             <div>

@@ -3,11 +3,43 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Award, Bot, Briefcase, CalendarCheck, Eye, Menu, ShieldCheck, Star, Users, X } from 'lucide-react';
+import { Award, Bot, CalendarCheck, Eye, Mail, Menu, Phone, ShieldCheck, Users, X } from 'lucide-react';
+
+const ROLE_HERO = {
+  agent: {
+    eyebrow: 'Local Market Partner',
+    fallbackHeadline: (name) => `Move smarter with ${name}`,
+    fallbackTagline:
+      'Get guided support for buying, selling, pricing, showings, and consultation requests in one organized experience.',
+    cardSubtitle: 'Local Real Estate Agent',
+    trustItems: ['Buyer & seller guidance', 'Property inquiry support', 'AI organized follow-up'],
+  },
+  mortgage_broker: {
+    eyebrow: 'Mortgage Strategy Partner',
+    fallbackHeadline: (name) => `Plan your financing with ${name}`,
+    fallbackTagline:
+      'Start a guided mortgage inquiry for pre-approval, affordability, refinancing, and document readiness.',
+    cardSubtitle: 'Mortgage Planning Specialist',
+    trustItems: ['Pre-approval guidance', 'Affordability review', 'Loan strategy follow-up'],
+  },
+  lawyer: {
+    eyebrow: 'Real Estate Legal Partner',
+    fallbackHeadline: (name) => `Close with clarity beside ${name}`,
+    fallbackTagline:
+      'Ask about contracts, title matters, closing timelines, and legal transaction support before your next step.',
+    cardSubtitle: 'Real Estate Legal Advisor',
+    trustItems: ['Contract review support', 'Closing timeline guidance', 'Secure legal intake'],
+  },
+};
 
 export default function PublicHero({ profile, onCTAClick }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const professionalType = profile.professional_type;
+  const heroContent = ROLE_HERO[professionalType] || ROLE_HERO.agent;
+  const professionalProfile = profile.professional_profile || {};
+  const companyName = professionalProfile.company_name || '';
+  const email = profile.email || '';
+  const phone = professionalProfile.phone || profile.phone || '';
   const roleLabel =
     professionalType === 'mortgage_broker'
       ? 'Mortgage Broker'
@@ -91,7 +123,7 @@ export default function PublicHero({ profile, onCTAClick }) {
   ];
 
   return (
-    <section className="relative overflow-hidden bg-white pt-16">
+    <section className="relative overflow-hidden bg-transparent pt-16">
       <header className="fixed inset-x-0 top-0 z-[1000] border-b border-border/70 bg-white/95 shadow-sm backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
           <Link
@@ -203,19 +235,29 @@ export default function PublicHero({ profile, onCTAClick }) {
 
         <div className="relative z-10 mx-auto grid min-h-[430px] max-w-7xl grid-cols-1 items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:px-8">
           <div className="lg:col-span-7 lg:max-w-2xl">
-            <span className="inline-flex rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700">
-              Top Rated {roleLabel}
+            <span className="inline-flex rounded-full border border-primary/15 bg-primary/5 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
+              {heroContent.eyebrow}
             </span>
 
             <h1 className="mt-3 max-w-2xl text-2xl font-semibold leading-[1.12] tracking-tight text-text-heading sm:text-3xl lg:text-[38px]">
-              {profile.headline || `Work with ${profile.professional_name}`}
+              {profile.headline || heroContent.fallbackHeadline(profile.professional_name || 'this professional')}
             </h1>
 
-            {profile.tagline && (
-              <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-text-body">
-                {profile.tagline}
-              </p>
-            )}
+            <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-text-body">
+              {profile.tagline || heroContent.fallbackTagline}
+            </p>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              {heroContent.trustItems.map((item) => (
+                <span
+                  key={item}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white/80 px-3 py-1 text-[11px] font-semibold text-text-body shadow-sm"
+                >
+                  <ShieldCheck size={12} className="text-primary" />
+                  {item}
+                </span>
+              ))}
+            </div>
 
             <div className="mt-5 flex flex-wrap gap-3">
               <button
@@ -246,42 +288,47 @@ export default function PublicHero({ profile, onCTAClick }) {
           </div>
 
           <div className="hidden lg:col-span-5 lg:block">
-            <div className="ml-auto max-w-xs rounded-2xl border border-slate-200 bg-white p-4 text-text-heading shadow-xl shadow-slate-900/10">
-              <div className="flex items-center gap-2.5">
-                <div className="relative h-11 w-11 overflow-hidden rounded-full border-2 border-white bg-primary shadow-sm ring-1 ring-slate-200">
+            <div className="ml-auto w-fit min-w-[18rem] max-w-[24rem] rounded-2xl bg-white p-3 text-left text-text-heading shadow-xl shadow-slate-900/10">
+              <div className="flex items-start gap-2.5">
+                <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-primary/15 bg-primary/10 shadow-sm ring-1 ring-slate-200">
                   {profile.profile_photo_url ? (
                     <Image
                       src={profile.profile_photo_url}
                       alt={profile.professional_name}
                       fill
-                      className="object-cover"
+                      sizes="56px"
+                      className="object-cover object-center"
                     />
                   ) : (
-                    <div className="grid h-full w-full place-items-center text-sm font-bold">
+                    <div className="grid h-full w-full place-items-center text-lg font-bold text-primary">
                       {profile.professional_name?.charAt(0) || 'P'}
                     </div>
                   )}
                 </div>
-                <div>
-                  <div className="text-sm font-semibold leading-tight">{profile.professional_name}</div>
-                  <div className="text-[10px] text-slate-500">Your Local {roleLabel}</div>
+                <div className="min-w-0 flex-1">
+                  <div className="truncate text-sm font-bold leading-tight">{profile.professional_name}</div>
+                  <div className="mt-0.5 text-[11px] text-slate-500">{heroContent.cardSubtitle}</div>
+                  {companyName ? <div className="mt-1 truncate text-xs font-semibold text-text-heading">{companyName}</div> : null}
                 </div>
               </div>
 
-              <div className="mt-4 space-y-2 text-xs font-medium text-slate-600">
-                <div className="flex items-center gap-2">
-                  <ShieldCheck size={13} className="text-primary" />
-                  Trusted Advisor
+              {(email || phone) ? (
+                <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs font-medium text-slate-600">
+                  {email ? (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Mail size={13} className="shrink-0 text-primary" />
+                      <span className="whitespace-nowrap">{email}</span>
+                    </div>
+                  ) : null}
+                  {phone ? (
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Phone size={13} className="shrink-0 text-primary" />
+                      <span className="whitespace-nowrap">{phone}</span>
+                    </div>
+                  ) : null}
                 </div>
-                <div className="flex items-center gap-2">
-                  <Briefcase size={13} className="text-primary" />
-                  Client Focused
-                </div>
-                <div className="flex items-center gap-2">
-                  <Star size={13} className="text-primary" />
-                  AI Powered Follow-up
-                </div>
-              </div>
+              ) : null}
+
             </div>
           </div>
         </div>

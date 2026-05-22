@@ -3,15 +3,17 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
-import { generatePublicProfileCopy, getOwnPublicProfile, updatePublicProfile } from '@/lib/publicProfileClient';
-import { Check, Copy, Eye, Globe2, Loader2, Save, Sparkles } from 'lucide-react';
+import { deletePublicProfile, generatePublicProfileCopy, getOwnPublicProfile, updatePublicProfile } from '@/lib/publicProfileClient';
+import { Check, Copy, Eye, Globe2, Loader2, Save, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import DeleteLeadConfirmModal from '@/components/leads/DeleteLeadConfirmModal';
 
 export default function PublicProfilePage() {
   const { token } = useAuthGuard();
   const queryClient = useQueryClient();
   const [origin, setOrigin] = useState('');
   const [copied, setCopied] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     setOrigin(window.location.origin);
@@ -37,12 +39,25 @@ export default function PublicProfilePage() {
   const generateCopyMutation = useMutation({
     mutationFn: () => generatePublicProfileCopy(token),
     onSuccess: (data) => {
-      queryClient.invalidateQueries(['own-public-profile']);
-      setFormData({});
-      toast.success(data?.message || 'AI landing page copy generated');
+      const generated = data?.generated || {};
+      setFormData((prev) => ({ ...prev, ...generated }));
+      toast.success(data?.message || 'AI landing page copy generated. Click Save to apply.');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to generate AI copy');
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => deletePublicProfile(token),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries(['own-public-profile']);
+      setFormData({});
+      setShowDeleteConfirm(false);
+      toast.success(data?.message || 'Public webpage deleted');
+    },
+    onError: (error) => {
+      toast.error(error.message || 'Failed to delete public webpage');
     },
   });
 
@@ -61,6 +76,15 @@ export default function PublicProfilePage() {
 
   const handlePublish = () => {
     updateMutation.mutate({ enabled: true });
+  };
+
+  const handleDeleteWebPage = () => {
+    if (!profile) return;
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteWebPage = () => {
+    deleteMutation.mutate();
   };
 
   const handleCopyPublicUrl = async () => {
@@ -117,7 +141,7 @@ export default function PublicProfilePage() {
               </p>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap lg:shrink-0">
               {slug && (
                 <a
                   href={`/professional/${slug}`}
@@ -153,10 +177,25 @@ export default function PublicProfilePage() {
                 )}
                 Generate
               </button>
+              {profile ? (
+                <button
+                  type="button"
+                  onClick={handleDeleteWebPage}
+                  disabled={deleteMutation.isPending}
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-lg border border-red-200 bg-red-50 px-3.5 text-xs font-semibold text-red-700 shadow-sm transition hover:bg-red-100 disabled:opacity-60"
+                >
+                  {deleteMutation.isPending ? (
+                    <Loader2 className="animate-spin" size={16} />
+                  ) : (
+                    <Trash2 size={16} />
+                  )}
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete page'}
+                </button>
+              ) : null}
               {Object.keys(formData).length > 0 ? (
                 <button
                   onClick={handleSave}
-                  disabled={updateMutation.isPending}
+                  disabled={updateMutation.isPending || deleteMutation.isPending}
                   className="inline-flex h-9 items-center gap-2 rounded-lg bg-slate-800 px-3.5 text-xs font-semibold text-white shadow-sm transition hover:bg-slate-700 disabled:opacity-50"
                 >
                   {updateMutation.isPending ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
@@ -262,6 +301,16 @@ export default function PublicProfilePage() {
           </section>
         </div>
       </div>
+      <DeleteLeadConfirmModal
+        open={showDeleteConfirm}
+        onCancel={() => setShowDeleteConfirm(false)}
+        onConfirm={confirmDeleteWebPage}
+        isPending={deleteMutation.isPending}
+        title="Delete web page?"
+        confirmLabel="Delete web page"
+        pendingLabel="Deleting web page..."
+        description="This will delete your public webpage and remove related profile analytics history. This action cannot be undone. You can create a new webpage later."
+      />
     </div>
   );
 }

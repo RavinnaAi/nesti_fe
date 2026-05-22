@@ -13,19 +13,19 @@ const iconMap = {
 
 const fallbackServices = {
   agent: [
-    { icon: 'home', title: 'Buyer Representation', description: 'Guidance for home search, property shortlisting, offers, and negotiations.', cta_text: 'Ask about buying' },
-    { icon: 'building', title: 'Seller Support', description: 'Help with pricing, positioning, property questions, and selling strategy.', cta_text: 'Ask about selling' },
-    { icon: 'key', title: 'Showings & Consultations', description: 'Request property guidance, market insight, or a consultation through the chat assistant.', cta_text: 'Start inquiry' },
+    { icon: 'home', title: 'Buyer Search Strategy', description: 'Clarify budget, preferred areas, home features, timeline, and viewing readiness before shortlisting the right properties.', cta_text: 'Ask about buying' },
+    { icon: 'building', title: 'Seller Positioning', description: 'Share property details, expected price, selling timeline, and motivation so the agent can follow up with a clearer strategy.', cta_text: 'Ask about selling' },
+    { icon: 'key', title: 'Showings & Consultations', description: 'Ask about a listing, request a showing, or start a guided consultation request through the profile assistant.', cta_text: 'Start inquiry' },
   ],
   mortgage_broker: [
-    { icon: 'dollar', title: 'Pre-Approval Guidance', description: 'Start a guided inquiry for affordability, documents, credit status, and next steps.', cta_text: 'Start pre-approval' },
-    { icon: 'building', title: 'Mortgage Strategy', description: 'Ask about rates, down payment, refinancing, and financing options.', cta_text: 'Ask a question' },
-    { icon: 'handshake', title: 'Consultation Support', description: 'Share your financing goal and get routed for professional follow-up.', cta_text: 'Start inquiry' },
+    { icon: 'dollar', title: 'Pre-Approval Readiness', description: 'Start with income range, credit status, down payment, purchase timeline, and documents needed for next steps.', cta_text: 'Start pre-approval' },
+    { icon: 'building', title: 'Affordability Planning', description: 'Ask about price range, monthly comfort level, loan options, refinance goals, and financing tradeoffs.', cta_text: 'Ask a question' },
+    { icon: 'handshake', title: 'Broker Follow-Up', description: 'Send a complete inquiry so the broker can respond with relevant guidance instead of starting from scratch.', cta_text: 'Start inquiry' },
   ],
   lawyer: [
-    { icon: 'contract', title: 'Contract Review', description: 'Ask about purchase agreements, conditions, clauses, and transaction documents.', cta_text: 'Ask about contracts' },
-    { icon: 'key', title: 'Closing Support', description: 'Get guidance on closing timelines, required documents, and transaction steps.', cta_text: 'Ask about closing' },
-    { icon: 'handshake', title: 'Title & Legal Guidance', description: 'Start an inquiry for title questions, legal concerns, or consultation support.', cta_text: 'Start inquiry' },
+    { icon: 'contract', title: 'Contract & Document Review', description: 'Ask about purchase agreements, clauses, conditions, amendments, and transaction documents before follow-up.', cta_text: 'Ask about contracts' },
+    { icon: 'key', title: 'Closing Support', description: 'Share closing timelines, transaction stage, mortgage status, and service needs so legal next steps are clearer.', cta_text: 'Ask about closing' },
+    { icon: 'handshake', title: 'Title & Transaction Guidance', description: 'Start an organized inquiry for title concerns, legal risks, document questions, or consultation support.', cta_text: 'Start inquiry' },
   ],
 };
 
@@ -33,14 +33,16 @@ export default function PublicServices({ services = [], professionalType, onServ
   const displayServices = services?.length ? services : (fallbackServices[professionalType] || fallbackServices.agent);
 
   return (
-    <section id="services" className="bg-slate-50/70 py-14">
+    <section id="services" className="bg-transparent py-14">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
           <div className="mb-3 inline-flex items-center rounded-full border border-primary/15 bg-primary/5 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
             Services
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-text-heading mb-4">
-            How this professional can help
+            {professionalType === 'agent' && 'Real estate guidance built around your next move'}
+            {professionalType === 'mortgage_broker' && 'Mortgage guidance from first question to next step'}
+            {professionalType === 'lawyer' && 'Legal support for clearer real estate decisions'}
           </h2>
           <p className="text-sm leading-6 text-text-muted max-w-2xl mx-auto">
             {professionalType === 'agent' && 'Personalized real estate services designed to help you achieve your goals.'}
@@ -53,7 +55,7 @@ export default function PublicServices({ services = [], professionalType, onServ
           {displayServices.map((service, index) => (
             <div
               key={index}
-              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:shadow-md transition duration-300 cursor-pointer group"
+              className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/10 transition duration-300 cursor-pointer group"
               onClick={() => onServiceClick?.(service)}
             >
               <div className="flex items-start gap-4">
@@ -68,7 +70,7 @@ export default function PublicServices({ services = [], professionalType, onServ
                   <h3 className="text-base font-bold text-text-heading mb-2">
                     {service.title}
                   </h3>
-                  <p className="text-sm leading-6 text-text-muted mb-4">
+                  <p className="text-sm leading-6 text-text-muted">
                     {service.description}
                   </p>
                 </div>

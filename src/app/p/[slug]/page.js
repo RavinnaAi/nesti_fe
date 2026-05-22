@@ -1,16 +1,13 @@
 import { notFound } from 'next/navigation';
-import { cache } from 'react';
 import { getPublicProfile } from '@/lib/publicProfileClient';
 import PublicProfileLayout from '@/components/public-profile/PublicProfileLayout';
 import AgentLandingPage from '@/components/public-profile/agent/AgentLandingPage';
 import BrokerLandingPage from '@/components/public-profile/mortgage-broker/BrokerLandingPage';
 import LawyerLandingPage from '@/components/public-profile/lawyer/LawyerLandingPage';
 
-const getCachedPublicProfile = cache((slug) => getPublicProfile(slug));
-
 export async function generateMetadata({ params }) {
   try {
-    const data = await getCachedPublicProfile(params.slug);
+    const data = await getPublicProfile(params.slug);
     const profile = data.profile;
 
     const title = profile.seo_meta?.title || 
@@ -43,7 +40,7 @@ export default async function PublicProfilePage({ params }) {
   let data;
   
   try {
-    data = await getCachedPublicProfile(params.slug);
+    data = await getPublicProfile(params.slug);
   } catch (error) {
     notFound();
   }

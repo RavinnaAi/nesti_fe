@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import PublicInquiryChatWidget from './PublicInquiryChatWidget';
 
@@ -12,6 +13,7 @@ const ROLE_LABEL = {
 
 export default function PublicChatBubble({ profile, hideWhenOpen = false, controlledOpen, onControlledToggle }) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
   const label = ROLE_LABEL[profile?.professional_type] || 'Chat Now';
   const isControlled = typeof controlledOpen === 'boolean';
@@ -31,13 +33,24 @@ export default function PublicChatBubble({ profile, hideWhenOpen = false, contro
     setOpen(true);
   };
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // If the professional has no embed token configured, hide everything
+  if (!profile?.embed_token) return null;
+
   // Hide bubble entirely when another chat widget is already open on the page
   if (hideWhenOpen) return null;
 
-  return (
+  // Hide the floating bubble once any public chat panel is open.
+  // The chat widget's own X button handles closing, matching embed chatbot behaviour.
+  const hideBubble = isOpen;
+
+  const bubbleLayer = (
     <>
       {/* Floating bubble */}
-      <div className="fixed bottom-6 right-6 z-[10000] flex flex-col items-end gap-2">
+      {!hideBubble && <div className="fixed bottom-6 right-6 z-[10060] flex flex-col items-end gap-2">
         {/* Tooltip label — only when this bubble's own chat is closed */}
         {!isOpen && (
           <button
@@ -56,7 +69,7 @@ export default function PublicChatBubble({ profile, hideWhenOpen = false, contro
         <div className="relative">
           <button
             onClick={toggleOpen}
-            aria-label={isOpen ? 'Close chat' : label}
+            aria-label={label}
             className="relative h-16 w-16 rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
             style={{ padding: '3px', background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)', boxShadow: '0 8px 28px rgba(0,0,0,0.25)' }}
           >
@@ -77,17 +90,8 @@ export default function PublicChatBubble({ profile, hideWhenOpen = false, contro
             </div>
           </button>
 
-          {/* Online dot */}
-          <span className="absolute bottom-0.5 right-0.5 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-emerald-500">
-            <span className="h-1.5 w-1.5 rounded-full bg-white" />
-          </span>
-          {isOpen && (
-            <span className="absolute -right-1 -top-1 grid h-6 w-6 place-items-center rounded-full border border-slate-200 bg-white text-[13px] font-bold leading-none text-slate-600 shadow-sm">
-              ×
-            </span>
-          )}
         </div>
-      </div>
+      </div>}
 
       {/* Chat widget modal */}
       {!isControlled && (
@@ -100,5 +104,11 @@ export default function PublicChatBubble({ profile, hideWhenOpen = false, contro
       )}
     </>
   );
+
+  if (mounted) {
+    return createPortal(bubbleLayer, document.body);
+  }
+
+  return bubbleLayer;
 }
 

@@ -50,7 +50,7 @@ export default function PublicCTA({ profile }) {
   const content = ROLE_CONTENT[profile.professional_type] || ROLE_CONTENT.agent;
 
   return (
-    <section id="contact" className="bg-white py-12">
+    <section id="contact" className="bg-transparent py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="relative overflow-hidden rounded-[2rem] border border-slate-200/80 bg-white p-5 shadow-[0_20px_70px_rgba(15,23,42,0.06)] sm:p-7 lg:p-8">
           <div className="absolute right-10 top-10 h-32 w-32 rounded-full bg-primary/5 blur-3xl" />

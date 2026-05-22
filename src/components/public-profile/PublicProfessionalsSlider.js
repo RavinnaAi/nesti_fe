@@ -116,8 +116,13 @@ export default function PublicProfessionalsSlider({ currentSlug }) {
   const [page, setPage] = useState(0);
   const [fading, setFading] = useState(false);
   const timerRef = useRef(null);
+  const fetchedSlugRef = useRef('');
 
   useEffect(() => {
+    const key = currentSlug || '';
+    if (fetchedSlugRef.current === key) return;
+    fetchedSlugRef.current = key;
+
     getPublicProfessionalNetwork({ limit: 60, exclude: currentSlug })
       .then((data) => setProfessionals(data.professionals || []))
       .catch(() => setProfessionals([]))
@@ -157,7 +162,7 @@ export default function PublicProfessionalsSlider({ currentSlug }) {
 
   if (loading) {
     return (
-      <section id="network" className="bg-slate-50/70 py-14">
+      <section id="network" className="bg-transparent py-14">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="mb-8 h-12 w-64 animate-pulse rounded-xl bg-slate-200" />
           <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -175,7 +180,7 @@ export default function PublicProfessionalsSlider({ currentSlug }) {
   const visible = cycledAll.slice(page * CARDS_PER_PAGE, page * CARDS_PER_PAGE + CARDS_PER_PAGE);
 
   return (
-    <section id="network" className="bg-slate-50/70 py-14">
+    <section id="network" className="bg-transparent py-14">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
 
         {/* Header */}

@@ -22,8 +22,39 @@ export default function ChatSelect({
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  const scrollMenuIntoView = () => {
+    window.requestAnimationFrame(() => {
+      const el = ref.current;
+      if (!el) return;
+      const menu = el.querySelector('[role="listbox"]');
+      if (!menu) return;
+
+      const menuRect = menu.getBoundingClientRect();
+      const scrollParent = (() => {
+        let node = el.parentElement;
+        while (node) {
+          const style = window.getComputedStyle(node);
+          const canScroll = /(auto|scroll)/.test(`${style.overflowY}${style.overflow}`);
+          if (canScroll && node.scrollHeight > node.clientHeight) return node;
+          node = node.parentElement;
+        }
+        return document.scrollingElement || document.documentElement;
+      })();
+
+      const parentRect =
+        scrollParent === document.scrollingElement || scrollParent === document.documentElement
+          ? { top: 0, bottom: window.innerHeight }
+          : scrollParent.getBoundingClientRect();
+      const overflow = menuRect.bottom - parentRect.bottom + 12;
+      if (overflow > 0) {
+        scrollParent.scrollBy({ top: overflow, behavior: "smooth" });
+      }
+    });
+  };
+
   useEffect(() => {
     if (!open) return;
+    scrollMenuIntoView();
     const onDoc = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false);
     };
