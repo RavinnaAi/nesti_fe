@@ -191,6 +191,25 @@ export async function fetchChatPropertyMatches({
   return json;
 }
 
+export async function selectChatPropertyMatch({ sessionId, embedToken, property }) {
+  const payload = {
+    id: sessionId,
+    embedToken,
+    property,
+  };
+  const response = await fetch(apiUrl("/api/chat/property-matches/select"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    cache: "no-store",
+  });
+  const json = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(json));
+  }
+  return json;
+}
+
 export async function clearChatSession(sessionId) {
   const response = await fetch(
     apiUrl(`/api/chat/clear/${encodeURIComponent(String(sessionId || ""))}`),
@@ -273,17 +292,28 @@ export async function fetchConversationMessages({ token, conversationId }) {
   });
 }
 
-export async function fetchReferrals({ token, direction, page, limit, status } = {}) {
+export async function fetchReferrals({ token, direction, page, limit, status, conversationId } = {}) {
   const authToken = token || getStoredAuthToken();
   const params = new URLSearchParams();
   if (direction) params.set("direction", String(direction));
   if (page != null && page !== "") params.set("page", String(page));
   if (limit != null && limit !== "") params.set("limit", String(limit));
   if (status) params.set("status", String(status));
+  if (conversationId) params.set("conversation_id", String(conversationId));
   const qs = params.toString();
   const url = qs ? `${API_ENDPOINTS.referrals.list}?${qs}` : API_ENDPOINTS.referrals.list;
   return apiClient({
     url,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchLeadReferrals({ token, leadMatchId }) {
+  if (!leadMatchId) return [];
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.referrals.byLeadMatch(leadMatchId),
     method: "GET",
     token: authToken,
   });

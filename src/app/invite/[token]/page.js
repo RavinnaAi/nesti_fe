@@ -1,12 +1,15 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ArrowRight, ShieldCheck, UserPlus } from "lucide-react";
-import { captureInviteToken, resolveInviteToken } from "@/lib/inviteClient";
+import { toast } from "react-toastify";
+import { useAppSelector } from "@/store";
+import { captureInviteToken, finalizeInviteToken, resolveInviteToken } from "@/lib/inviteClient";
 import {
+  clearInviteAttribution,
   getOrCreateInviteSessionId,
   getOrCreateInviteVisitorId,
   saveInviteAttribution,
@@ -15,7 +18,14 @@ import {
 export default function InviteLandingPage() {
   const params = useParams();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const token = String(params?.token || "").trim();
+  const authToken = useAppSelector((state) => state.auth.token);
+  const captureStartedRef = useRef(false);
+  const captureDoneRef = useRef(false);
+  const finalizeDoneRef = useRef(false);
+  const finalizeRetryRef = useRef(false);
+  const [inviteConnecting, setInviteConnecting] = useState(false);
 
   const resolveQuery = useQuery({
     queryKey: ["invite-resolve", token],
@@ -39,6 +49,76 @@ export default function InviteLandingPage() {
         },
       }),
   });
+
+  useEffect(() => {
+    if (!token || captureStartedRef.current) return;
+    captureStartedRef.current = true;
+    saveInviteAttribution(token, {
+      sourceChannel: "direct",
+      landingPath: `/invite/${token}`,
+    });
+    captureMutation.mutate(undefined, {
+      onSettled: () => {
+        captureDoneRef.current = true;
+      },
+    });
+  }, [token, captureMutation]);
+
+  useEffect(() => {
+    if (!token || !authToken || finalizeDoneRef.current) return;
+    finalizeDoneRef.current = true;
+    setInviteConnecting(true);
+
+    (async () => {
+      try {
+        if (!captureDoneRef.current) {
+          try {
+            await captureMutation.mutateAsync();
+          } catch {
+            // best effort, AppChrome finalize fallback can still run later
+          } finally {
+            captureStartedRef.current = true;
+            captureDoneRef.current = true;
+          }
+        }
+
+        const res = await finalizeInviteToken({
+          token,
+          authToken,
+          method: "invite_page_logged_in",
+          path: `/invite/${token}`,
+        });
+        clearInviteAttribution();
+        queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
+        queryClient.invalidateQueries({ queryKey: ["lead-referrals"] });
+        queryClient.invalidateQueries({ queryKey: ["invite-metrics"] });
+        queryClient.invalidateQueries({ queryKey: ["invite-conversions"] });
+        if (res?.lead_referral?.id) {
+          router.replace(`/referrals/${encodeURIComponent(String(res.lead_referral.id))}?direction=inbound`);
+          return;
+        }
+        router.replace("/referrals?direction=inbound");
+      } catch (err) {
+        const status = Number(err?.status || 0);
+        const msg = String(err?.message || "");
+        if (status === 404 && !finalizeRetryRef.current) {
+          finalizeRetryRef.current = true;
+          finalizeDoneRef.current = false;
+          await new Promise((resolve) => setTimeout(resolve, 800));
+          return;
+        }
+        if ([400, 410].includes(status) || /self\s*referral/i.test(msg)) {
+          clearInviteAttribution();
+          toast.info("This invite is no longer active for your account.");
+          router.replace("/dashboard");
+          return;
+        }
+        finalizeDoneRef.current = false;
+      } finally {
+        setInviteConnecting(false);
+      }
+    })();
+  }, [token, authToken, router, queryClient, captureMutation]);
 
   const inviterName = useMemo(() => {
     const inviter = resolveQuery.data?.inviter;
@@ -68,10 +148,17 @@ export default function InviteLandingPage() {
     router.push(`${path}?invite=${encodeURIComponent(token)}`);
   };
 
-  if (resolveQuery.isLoading) {
+  if (resolveQuery.isLoading || (authToken && inviteConnecting)) {
     return (
-      <div className="mx-auto flex w-full max-w-3xl items-start justify-center px-6 py-8">
-        <p className="text-sm text-text-muted">Loading invite...</p>
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+        <p className="text-sm font-medium text-text-heading">
+          {authToken ? "Connecting your referral…" : "Loading invite…"}
+        </p>
+        <p className="text-xs text-text-muted">
+          {authToken
+            ? "You are already signed in — we are adding this lead to your inbound referrals."
+            : "Please wait a moment."}
+        </p>
       </div>
     );
   }

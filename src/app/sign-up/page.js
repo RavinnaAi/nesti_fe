@@ -24,7 +24,13 @@ import {
 import { useSignupFlow } from "@/hooks/useSignupFlow";
 import { useSignup, useGoogleSignup } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
-import { getInviteAttribution, saveInviteAttribution } from "@/lib/inviteAttributionStorage";
+import { captureInviteToken } from "@/lib/inviteClient";
+import {
+  getInviteAttribution,
+  getOrCreateInviteSessionId,
+  getOrCreateInviteVisitorId,
+  saveInviteAttribution,
+} from "@/lib/inviteAttributionStorage";
 
 function SignUpPageContent() {
   const router = useRouter();
@@ -50,6 +56,20 @@ function SignUpPageContent() {
     const persisted = getInviteAttribution();
     if (persisted?.token) setInviteToken(String(persisted.token).trim());
   }, [searchParams]);
+
+  useEffect(() => {
+    if (!inviteToken) return;
+    captureInviteToken({
+      token: inviteToken,
+      payload: {
+        session_id: getOrCreateInviteSessionId(),
+        visitor_id: getOrCreateInviteVisitorId(),
+        source_channel: "direct",
+        source_referrer: typeof document !== "undefined" ? document.referrer || "" : "",
+        landing_path: typeof window !== "undefined" ? window.location.pathname : "/sign-up",
+      },
+    }).catch(() => {});
+  }, [inviteToken]);
   const [loader, setLoader] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(null);

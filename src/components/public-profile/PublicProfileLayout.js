@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowUpRight, Bot, Globe, Mail, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
 import BackgroundElements from '@/components/layout/BackgroundElements';
+import CustomToastContainer from '@/components/ui/ToastContainer';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
 import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 
@@ -167,6 +168,7 @@ export default function PublicProfileLayout({ profile, children }) {
           </div>
         </div>
       </footer>
+      <CustomToastContainer />
     </div>
   );
 }

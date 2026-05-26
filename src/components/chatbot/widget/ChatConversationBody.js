@@ -26,6 +26,7 @@ export default function ChatConversationBody({
   leadFlowStep,
   error,
   messagesEndRef,
+  onPropertyMatchSelect,
 }) {
   return (
     <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4 bg-background-light scrollbar-hide">
@@ -146,7 +147,12 @@ export default function ChatConversationBody({
                           ) : null}
                           <button
                             type="button"
-                            onClick={() => handleSend(buildPropertyPickMessage(p, msg.propertyMatchesContext || "buy"))}
+                            onClick={() => {
+                              if (typeof onPropertyMatchSelect === "function") {
+                                onPropertyMatchSelect(p);
+                              }
+                              handleSend(buildPropertyPickMessage(p, msg.propertyMatchesContext || "buy"));
+                            }}
                             className="mt-1.5 w-full rounded-md bg-primary text-white text-[9px] font-semibold px-2 py-1.5 hover:brightness-95 transition"
                           >
                             Select this property

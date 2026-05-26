@@ -5,6 +5,7 @@ import Image from "next/image";
 import { LEAD_STEP_LABELS, PRE_CHAT_STEPS } from "./agentLeadCapture";
 import StepSegmentBar from "./StepSegmentBar";
 import ChatSelect from "./ChatSelect";
+import { PREFERRED_CONTACT_OPTIONS } from "./contactMethodOptions";
 
 const ONBOARDING_BAR_STEPS = PRE_CHAT_STEPS.map((key) => ({
   key,
@@ -88,16 +89,6 @@ const URGENCY_OPTIONS = [
   { value: "no", label: "No – not yet" },
 ];
 
-const PREFERRED_CONTACT_OPTIONS = [
-  { value: "", label: "Select…" },
-  { value: "phone", label: "Phone call" },
-  { value: "text", label: "Text / SMS" },
-  { value: "email", label: "Email" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "video_call", label: "Video call" },
-  { value: "in_person", label: "In-person" },
-];
-
 const BEST_TIME_OPTIONS = [
   { value: "", label: "Anytime" },
   { value: "morning", label: "Morning" },
@@ -148,6 +139,8 @@ export default function AgentLeadOnboarding({
   propertyImageFiles = [],
   onPropertyImageFilesChange,
   propertyImagesUploading = false,
+  startActionLabel = "Start chat",
+  backButtonDisabled = false,
 }) {
   const isBuy = chosenIntent === "buy";
   const rawStepIndex = PRE_CHAT_STEPS.indexOf(step);
@@ -196,6 +189,7 @@ export default function AgentLeadOnboarding({
           <button
             type="button"
             onClick={onBack}
+            disabled={backButtonDisabled}
             className="px-4 py-2 text-xs rounded-full border border-border bg-white text-text-heading hover:bg-background-light"
           >
             Back
@@ -282,7 +276,7 @@ export default function AgentLeadOnboarding({
           </div>
         ) : null}
       </div>
-      {footer(step === "reach" ? "Start chat" : "Continue", step === "reach" ? onStartChat : onForward, step === "reach")}
+      {footer(step === "reach" ? startActionLabel : "Continue", step === "reach" ? onStartChat : onForward, step === "reach")}
     </div>
   );
 

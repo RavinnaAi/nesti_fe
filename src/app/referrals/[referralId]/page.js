@@ -19,7 +19,7 @@ export default function ReferralLeadPage() {
   const listPageRaw = Number.parseInt(String(searchParams.get("list_page") || "1"), 10);
   const listPage = Number.isFinite(listPageRaw) && listPageRaw > 0 ? listPageRaw : 1;
 
-  const { isAuthenticated, profile } = useAuthGuard();
+  const { isAuthenticated, hydrated, profile } = useAuthGuard();
   const token = useAppSelector((s) => s.auth.token);
   const me = useAppSelector((s) => s.auth.user);
   const meId = useMemo(() => resolveAuthUserId(profile, me), [profile, me]);
@@ -30,6 +30,13 @@ export default function ReferralLeadPage() {
       : "/leads?pipeline=referrals"
     : `/referrals?direction=${encodeURIComponent(dirParam)}`;
 
+  if (!hydrated) {
+    return (
+      <div className="flex min-h-[40vh] items-center justify-center px-6">
+        <p className="text-sm text-text-muted">Loading referral…</p>
+      </div>
+    );
+  }
   if (!isAuthenticated) return null;
 
   return (

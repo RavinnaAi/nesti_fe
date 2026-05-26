@@ -85,7 +85,7 @@ export default function LeadsActionsTab({
         token,
         payload: {
           source_channel: "lead_referral",
-          source_conversation_id: actionConversationId,
+          source_conversation_id: actionConversationId || undefined,
           intended_role: role || undefined,
           intended_audience: "professional",
           metadata: {
@@ -127,7 +127,7 @@ export default function LeadsActionsTab({
   );
 
   const canSubmitReferral =
-    Boolean(selectedLeadId && actionConversationId && String(referralForm?.target_user_id || "").trim()) &&
+    Boolean(selectedLeadId && String(referralForm?.target_user_id || "").trim()) &&
     !hasActiveReferralForSelectedProfessional &&
     !createReferralMutation.isPending;
   const sortedReferrals = useMemo(() => {
@@ -182,7 +182,7 @@ export default function LeadsActionsTab({
               }
               createLeadInviteMutation.mutate();
             }}
-            disabled={!token || !actionConversationId || createLeadInviteMutation.isPending}
+            disabled={!token || createLeadInviteMutation.isPending}
             className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary/25 bg-white text-primary-dark transition hover:bg-primary/[0.08] disabled:opacity-50"
             aria-label="Share referral link"
             title="Share referral link"

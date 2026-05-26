@@ -14,11 +14,13 @@ import PublicProfessionalsSlider from '../PublicProfessionalsSlider';
 import PublicChatBubble from '../PublicChatBubble';
 import PublicGuidanceSection from '../PublicGuidanceSection';
 import PublicInquiryChatWidget from '../PublicInquiryChatWidget';
+import PublicLeadCaptureModal from '../PublicLeadCaptureModal';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
 import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 
 export default function LawyerLandingPage({ profile }) {
   const [chatbotOpen, setChatbotOpen] = useState(false);
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
 
   const handleCTAClick = async (ctaType) => {
     try {
@@ -54,7 +56,11 @@ export default function LawyerLandingPage({ profile }) {
 
   return (
     <div>
-      <PublicHero profile={profile} onCTAClick={handleCTAClick} />
+      <PublicHero
+        profile={profile}
+        onCTAClick={handleCTAClick}
+        onDirectLeadClick={() => setLeadModalOpen(true)}
+      />
       <PublicExpertiseBand profile={profile} onCTAClick={handleCTAClick} />
       <PublicRoleDetailSection profile={profile} />
 
@@ -87,9 +93,13 @@ export default function LawyerLandingPage({ profile }) {
 
       <PublicCTA
         profile={profile}
-        onCTAClick={handleCTAClick}
-        chatbotOpen={chatbotOpen}
-        onChatbotClose={() => setChatbotOpen(false)}
+        onDirectLeadClick={() => setLeadModalOpen(true)}
+      />
+
+      <PublicLeadCaptureModal
+        open={leadModalOpen}
+        onClose={() => setLeadModalOpen(false)}
+        profile={profile}
       />
 
       <PublicInquiryChatWidget

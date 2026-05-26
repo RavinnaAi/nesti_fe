@@ -11,6 +11,9 @@ import {
   leadScoreFallbackChipClasses,
   resolveDisplayLeadGrade,
 } from "@/lib/leadGradeUi";
+import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
+import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
+import { extractMeta, formatMetaEntries, getConversationMeta } from "@/lib/leadsPageUtils";
 
 export default function LeadsPropertyMatchesTab({
   selectedConversation,
@@ -18,6 +21,10 @@ export default function LeadsPropertyMatchesTab({
   propertyMatches = [],
   propertyMatchesQuery,
   propertyMatchesPayload = null,
+  inquiredProperty = null,
+  inquiredSellerLeadDetail = null,
+  inquiredSellerConversation = null,
+  inquiredSellerLeadQuery = null,
 }) {
   const [selectedMatch, setSelectedMatch] = useState(null); // { match, idx }
   const [page, setPage] = useState(1);
@@ -32,12 +39,15 @@ export default function LeadsPropertyMatchesTab({
     setPage(1);
   }, [selectedLeadKey, propertyMatches.length]);
 
+  const inquiredSellerConversationMeta = extractMeta(inquiredSellerConversation);
+
   useEffect(() => {
     if (!selectedMatch) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e) => {
-      if (e.key === "Escape") setSelectedMatch(null);
+      if (e.key !== "Escape") return;
+      setSelectedMatch(null);
     };
     window.addEventListener("keydown", onKey);
     return () => {
@@ -368,7 +378,51 @@ export default function LeadsPropertyMatchesTab({
     <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
       {selectedConversation ? (
         <>
-          {propertyMatchesQuery?.isLoading ? (
+          {inquiredProperty ? (
+            <div className="space-y-3">
+              <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3">
+                <div className="text-sm font-semibold text-text-heading">Inquired Property</div>
+                <p className="mt-0.5 text-[11px] text-text-muted">
+                  Seller lead profile and details linked to this buyer inquiry.
+                </p>
+                {inquiredSellerLeadQuery?.isLoading ? (
+                  <div className="mt-3 rounded-md border border-border bg-white px-3 py-2 text-xs text-text-muted">
+                    Loading seller lead details...
+                  </div>
+                ) : inquiredSellerLeadQuery?.isError ? (
+                  <div className="mt-3 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+                    Could not load the linked seller lead details.
+                  </div>
+                ) : inquiredSellerLeadDetail && inquiredSellerConversation ? (
+                  <div className="mt-4 space-y-5 rounded-lg border border-border/60 bg-white px-4 py-4">
+                    <LeadsProfileTab
+                      selectedConversation={inquiredSellerConversation}
+                      lead={inquiredSellerLeadDetail}
+                      patchLeadPending={false}
+                      embedded
+                    />
+                    <LeadsDetailsTab
+                      selectedConversation={inquiredSellerConversation}
+                      lead={inquiredSellerLeadDetail}
+                      messageMeta={{}}
+                      getConversationMeta={getConversationMeta}
+                      conversationMeta={inquiredSellerConversationMeta}
+                      formatMetaEntries={formatMetaEntries}
+                      onOpenMeta={() => {}}
+                      onCancelCalendlyAppointment={undefined}
+                      cancelCalendlyPending={false}
+                      inquiredPropertyAddress={inquiredProperty.address || inquiredProperty.location || ""}
+                      embedded
+                    />
+                  </div>
+                ) : (
+                  <div className="mt-3 rounded-md border border-border bg-white px-3 py-2 text-xs text-text-muted">
+                    Seller lead details are not available for this inquiry.
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : propertyMatchesQuery?.isLoading ? (
             <div className="text-xs text-text-muted">Loading property matches...</div>
           ) : propertyMatchesQuery?.isError ? (
             <div className="text-xs text-red-600">Failed to load property matches.</div>
@@ -740,12 +794,14 @@ export default function LeadsPropertyMatchesTab({
                     document.body,
                   )
                 : null}
+
             </>
           )}
         </>
       ) : (
         <div className="text-sm text-text-muted">Choose a lead to view property matches.</div>
       )}
+
     </div>
   );
 }

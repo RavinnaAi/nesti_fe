@@ -7,6 +7,7 @@ import {
   LAWYER_PREFLIGHT_SEGMENT_STEPS,
   MORTGAGE_PREFLIGHT_SEGMENT_STEPS,
 } from "./rolePreflightCapture";
+import { PREFERRED_CONTACT_OPTIONS, SELECT_EMPTY_OPTION } from "./contactMethodOptions";
 
 const BASE_INPUT_CLS =
   "w-full min-w-0 px-3 py-2.5 text-xs border border-border rounded-xl bg-white text-text-heading shadow-sm transition-colors placeholder:text-text-muted/75 focus:outline-none focus:ring-2";
@@ -14,7 +15,7 @@ const labelCls = "text-[11px] font-semibold text-text-heading";
 const fieldStackCls = "flex flex-col gap-1 min-w-0";
 const pairGridCls = "col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2.5";
 
-const SELECT_EMPTY = { value: "", label: "Select…" };
+const SELECT_EMPTY = SELECT_EMPTY_OPTION;
 const BEST_TIME_OPTIONS = [
   { value: "", label: "Anytime" },
   { value: "morning", label: "Morning" },
@@ -75,12 +76,7 @@ const LAWYER_LEGAL = [
   { value: "document_review", label: "Document review" },
 ];
 
-const LAWYER_CONTACT_METHOD = [
-  SELECT_EMPTY,
-  { value: "phone", label: "Phone" },
-  { value: "email", label: "Email" },
-  { value: "video_call", label: "Video meeting" },
-];
+const LAWYER_CONTACT_METHOD = PREFERRED_CONTACT_OPTIONS;
 
 const MORTGAGE_TIMELINE = [
   SELECT_EMPTY,
@@ -166,15 +162,7 @@ const MORTGAGE_URGENCY = [
   { value: "no", label: "No" },
 ];
 
-const MORTGAGE_CONTACT_METHOD = [
-  SELECT_EMPTY,
-  { value: "phone", label: "Phone call" },
-  { value: "text", label: "Text / SMS" },
-  { value: "email", label: "Email" },
-  { value: "whatsapp", label: "WhatsApp" },
-  { value: "video_call", label: "Video meeting" },
-  { value: "in_person", label: "In-person" },
-];
+const MORTGAGE_CONTACT_METHOD = PREFERRED_CONTACT_OPTIONS;
 
 function Field({ label, children, className = "" }) {
   return (
@@ -209,6 +197,7 @@ export default function RolePreflightLeadForm({
   embedTokenMissing,
   panelClassName = "",
   roleUi = {},
+  startActionLabel = "Start chat →",
 }) {
   const isLawyer = role === "lawyer";
   const isMortgageBroker = role === "mortgage_broker";
@@ -686,7 +675,7 @@ export default function RolePreflightLeadForm({
               disabled={loading || embedTokenMissing}
               className={`rounded-full text-white text-xs font-semibold px-5 py-2.5 transition disabled:opacity-45 disabled:cursor-not-allowed ${roleUi.accentBg || "bg-primary"} ${roleUi.accentBgHover || "hover:brightness-95"}`}
             >
-              {loading ? "Starting…" : "Start chat →"}
+              {loading ? "Starting…" : startActionLabel}
             </button>
           )}
         </div>

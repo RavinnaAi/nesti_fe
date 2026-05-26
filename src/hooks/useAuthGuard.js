@@ -16,5 +16,6 @@ export function useAuthGuard() {
     token,
     profile: null,
     hydrated,
+    isLoading: !hydrated,
   };
 }

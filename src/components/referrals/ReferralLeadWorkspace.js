@@ -17,6 +17,7 @@ import {
 import { toast } from "react-toastify";
 import LeadsNurtureTab from "@/components/leads/LeadsNurtureTab";
 import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
+import LeadPipelineStageControl from "@/components/leads/LeadPipelineStageControl";
 import { fetchLeadById, patchLead } from "@/lib/leadsClient";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
@@ -269,13 +270,27 @@ export default function ReferralLeadWorkspace({
     detailQuery.data?.referral?.notes,
   ]);
 
+  const referralForTargetCheck = detailQuery.data?.referral || {};
+  const normalizedTargetUserId = String(
+    referralForTargetCheck.target_user_id || referralForTargetCheck.target_professional?.id || ""
+  ).trim();
+  const normalizedViewerId = String(meId || "").trim();
+  const isTarget =
+    Boolean(normalizedTargetUserId && normalizedViewerId) &&
+    normalizedTargetUserId === normalizedViewerId;
+  const referralStatusForFetch = String(referralForTargetCheck.status || "")
+    .trim()
+    .toLowerCase();
+  const viewerOwnsLeadMatch = !isTarget || referralStatusForFetch === "accepted";
+
   const activeLeadMatchId = String(lead?.lead_match_id || "").trim();
   const activeConversationId = String(lead?.conversation_id || "").trim();
 
   const leadDetailQuery = useQuery({
-    queryKey: ["referral-lead-detail-full", token, activeLeadMatchId],
-    enabled: Boolean(token && activeLeadMatchId),
+    queryKey: ["referral-lead-detail-full", token, activeLeadMatchId, isTarget],
+    enabled: Boolean(token && activeLeadMatchId && viewerOwnsLeadMatch),
     queryFn: () => fetchLeadById({ token, id: activeLeadMatchId }),
+    retry: false,
   });
   const fullLead = leadDetailQuery.data?.lead || null;
 
@@ -419,14 +434,6 @@ export default function ReferralLeadWorkspace({
     onError: (err) => toast.error(err?.message || "Failed to build email preview"),
   });
 
-  const referralForTargetCheck = detailQuery.data?.referral || {};
-  const normalizedTargetUserId = String(
-    referralForTargetCheck.target_user_id || referralForTargetCheck.target_professional?.id || ""
-  ).trim();
-  const normalizedViewerId = String(meId || "").trim();
-  const isTarget =
-    Boolean(normalizedTargetUserId && normalizedViewerId) &&
-    normalizedTargetUserId === normalizedViewerId;
   const sourceRole = String(context?.source_role || "").toLowerCase();
 
   if (detailQuery.isLoading) {
@@ -604,6 +611,31 @@ export default function ReferralLeadWorkspace({
     />
   );
 
+  const referralPipelineManagementPanel = (
+    <div className="rounded-lg border border-primary/15 bg-gradient-to-r from-primary/[0.04] via-white to-white p-4">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:items-center">
+        <div>
+          <div className="text-sm font-semibold text-text-heading">Pipeline management</div>
+          <p className="mt-1 text-[11px] leading-relaxed text-text-muted">
+            Move this referred lead through active stages or select a final outcome with role-based close flow.
+          </p>
+        </div>
+        <LeadPipelineStageControl
+          lead={fullLead || lead || {}}
+          onPatchLead={(payload) => patchLeadMutation.mutateAsync(payload)}
+          patchLeadPending={patchLeadMutation.isPending}
+          title="Stage"
+          unboxed
+          professionalType={
+            String(context?.target_role || fullLead?.professional_type || lead?.professional_type || "")
+              .trim()
+              .toLowerCase() || undefined
+          }
+        />
+      </div>
+    </div>
+  );
+
   const toolkitTabStrip = (
     <div className="inline-flex rounded-lg border border-border bg-background-light/40 p-1">
       {[
@@ -717,6 +749,7 @@ export default function ReferralLeadWorkspace({
         ) : fromPipelineReferrals ? (
           <div className="space-y-4">
             {toolkitTabStrip}
+            {referralPipelineManagementPanel}
             {detailTab === "details" ? leadDetailsCard : null}
             {detailTab === "nurture" ? nurturePanel : null}
             {detailTab === "notes" ? notesPanel : null}

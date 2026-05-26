@@ -4,6 +4,8 @@ import { useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { recordLeadView } from "@/lib/leadsClient";
 
+const leadViewDedupeCache = new Map();
+
 /**
  * Fires a POST /api/leads/:id/view whenever `leadId` becomes truthy or changes.
  * Backend dedupes to one event per UTC day, so calling on every open is safe.
@@ -19,13 +21,21 @@ export function useRecordLeadView(leadId, { token, enabled = true } = {}) {
     if (!token || !leadId) return;
 
     const today = new Date().toISOString().slice(0, 10);
-    if (firedRef.current.leadId === String(leadId) && firedRef.current.day === today) {
+    const normalizedLeadId = String(leadId);
+    const cacheKey = `${normalizedLeadId}|${today}`;
+    const now = Date.now();
+    const cached = leadViewDedupeCache.get(cacheKey);
+    if (cached && now - cached.at < 60_000) {
       return;
     }
-    firedRef.current = { leadId: String(leadId), day: today };
+    if (firedRef.current.leadId === normalizedLeadId && firedRef.current.day === today) {
+      return;
+    }
+    firedRef.current = { leadId: normalizedLeadId, day: today };
+    leadViewDedupeCache.set(cacheKey, { at: now });
 
     let cancelled = false;
-    recordLeadView({ token, id: leadId })
+    recordLeadView({ token, id: normalizedLeadId })
       .then((res) => {
         if (cancelled) return;
         if (res?.recorded) {
@@ -34,6 +44,7 @@ export function useRecordLeadView(leadId, { token, enabled = true } = {}) {
         }
       })
       .catch(() => {
+        leadViewDedupeCache.delete(cacheKey);
       });
 
     return () => {

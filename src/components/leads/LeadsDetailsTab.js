@@ -16,6 +16,8 @@ export default function LeadsDetailsTab({
   onOpenMeta,
   onCancelCalendlyAppointment,
   cancelCalendlyPending = false,
+  inquiredPropertyAddress = "",
+  embedded = false,
 }) {
   const [showCalendlyCancelModal, setShowCalendlyCancelModal] = useState(false);
   const [calendlyCancelSubmitting, setCalendlyCancelSubmitting] = useState(false);
@@ -43,6 +45,9 @@ export default function LeadsDetailsTab({
     !isMortgageBrokerLead &&
     (String(leadData.intent || "").toLowerCase() === "sell" ||
       /seller|sell/.test(String(leadData.lead_type || "").toLowerCase()));
+  const isInquiredPropertyInlineView = Boolean(inquiredPropertyAddress);
+  const outerClassName = embedded ? "space-y-4" : "rounded-md border border-border bg-white shadow-sm p-5 space-y-4";
+  const sectionClassName = embedded ? "space-y-3 border-t border-border/60 pt-4" : "rounded-md border border-border bg-white p-4 space-y-3";
 
   const closePreview = useCallback(() => setPreviewImageIndex(null), []);
   const goPreviewPrev = useCallback(() =>
@@ -261,8 +266,55 @@ export default function LeadsDetailsTab({
     );
   })();
 
+  const qualificationSection = (
+    <div className={sectionClassName}>
+      <div className="text-sm font-semibold text-text-heading">Qualification</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+        <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
+        <KeyValue label="Realtor status" value={qualification.realtor_status} />
+        <KeyValue label="Motivation" value={qualification.motivation_reason} />
+        <KeyValue label="Viewing readiness" value={qualification.viewing_readiness} />
+        <KeyValue label="Living situation" value={qualification.living_situation} />
+        <KeyValue label="Urgency readiness" value={qualification.urgency_readiness} />
+        <KeyValue label="Lead type" value={leadData.lead_type} />
+      </div>
+    </div>
+  );
+
+  const conversionTrustSection = (
+    <div className={sectionClassName}>
+      <div className="text-sm font-semibold text-text-heading">
+        {isLawyerLead || isMortgageBrokerLead ? "Booking & follow-up" : "Conversion & trust"}
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+        <KeyValue label="Appointment status" value={appointmentStatus} />
+        <KeyValue label="Primary outcome" value={primaryOutcome} />
+        <KeyValue label="Alert" value={conversionAlert} />
+      </div>
+      {String(appointmentStatus).toLowerCase() === "booked" &&
+      typeof onCancelCalendlyAppointment === "function" ? (
+        <div className="space-y-1.5 pt-1 border-t border-border/60">
+          <button
+            type="button"
+            disabled={cancelCalendlyPending || calendlyCancelSubmitting}
+            onClick={() => setShowCalendlyCancelModal(true)}
+            className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {cancelCalendlyPending || calendlyCancelSubmitting
+              ? "Canceling…"
+              : "Cancel Calendly appointment"}
+          </button>
+          <p className="text-[11px] text-text-muted leading-snug">
+            Cancels the scheduled event via Calendly (1:1 events). Some group-style events may
+            need to be managed in Calendly.
+          </p>
+        </div>
+      ) : null}
+    </div>
+  );
+
   return (
-    <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
+    <div className={outerClassName}>
       {closeSummaryBanner}
       {selectedConversation ? (
         <>
@@ -314,7 +366,7 @@ export default function LeadsDetailsTab({
 
           {isLawyerLead ? (
             <>
-              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+              <div className={sectionClassName}>
                 <div className="text-sm font-semibold text-text-heading">Property & timing</div>
                 <p className="text-[11px] text-text-muted leading-snug">
                   From the chat intake — use with the legal qualification below.
@@ -330,7 +382,7 @@ export default function LeadsDetailsTab({
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+              <div className={sectionClassName}>
                 <div className="text-sm font-semibold text-text-heading">Legal intake</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <KeyValue label="Transaction stage" value={qualification.transaction_stage} />
@@ -345,7 +397,7 @@ export default function LeadsDetailsTab({
             </>
           ) : isMortgageBrokerLead ? (
             <>
-              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+              <div className={sectionClassName}>
                 <div className="text-sm font-semibold text-text-heading">Property & goals</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <KeyValue label="Location / area" value={property.location} />
@@ -356,7 +408,7 @@ export default function LeadsDetailsTab({
                 </div>
               </div>
 
-              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+              <div className={sectionClassName}>
                 <div className="text-sm font-semibold text-text-heading">Mortgage qualification</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                   <KeyValue label="Mortgage timeline" value={qualification.mortgage_timeline} />
@@ -372,11 +424,17 @@ export default function LeadsDetailsTab({
             </>
           ) : (
             <>
-              <div className="rounded-md border border-border bg-white p-4 space-y-3">
+              <div className={sectionClassName}>
                 <div className="text-sm font-semibold text-text-heading">Property</div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  {hideBuyerSellerIntent ? null : <KeyValue label="Intent" value={leadData.intent} />}
-                  <KeyValue label="Location" value={property.location} />
+                  {isInquiredPropertyInlineView ? (
+                    <KeyValue label="Address" value={inquiredPropertyAddress} />
+                  ) : (
+                    <>
+                      {hideBuyerSellerIntent ? null : <KeyValue label="Intent" value={leadData.intent} />}
+                      <KeyValue label="Location" value={property.location} />
+                    </>
+                  )}
                   <KeyValue label="Budget" value={budgetDisplay} />
                   <KeyValue label="Timeline" value={property.timeline} />
                   <KeyValue label="Type" value={property.property_type} />
@@ -388,8 +446,10 @@ export default function LeadsDetailsTab({
                 </div>
               </div>
 
+              {isInquiredPropertyInlineView ? qualificationSection : null}
+
               {isAgentSellerLead && propertyImages.length ? (
-                <div className="rounded-md border border-border bg-white p-4 space-y-3">
+                <div className={sectionClassName}>
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <div className="text-sm font-semibold text-text-heading">Property photos</div>
@@ -425,50 +485,11 @@ export default function LeadsDetailsTab({
                 </div>
               ) : null}
 
-              <div className="rounded-md border border-border bg-white p-4 space-y-3">
-                <div className="text-sm font-semibold text-text-heading">Qualification</div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
-                  <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
-                  <KeyValue label="Realtor status" value={qualification.realtor_status} />
-                  <KeyValue label="Motivation" value={qualification.motivation_reason} />
-                  <KeyValue label="Viewing readiness" value={qualification.viewing_readiness} />
-                  <KeyValue label="Living situation" value={qualification.living_situation} />
-                  <KeyValue label="Urgency readiness" value={qualification.urgency_readiness} />
-                  <KeyValue label="Lead type" value={leadData.lead_type} />
-                </div>
-              </div>
+              {!isInquiredPropertyInlineView ? qualificationSection : null}
             </>
           )}
 
-          <div className="rounded-md border border-border bg-white p-4 space-y-3">
-            <div className="text-sm font-semibold text-text-heading">
-              {isLawyerLead || isMortgageBrokerLead ? "Booking & follow-up" : "Conversion & trust"}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              <KeyValue label="Appointment status" value={appointmentStatus} />
-              <KeyValue label="Primary outcome" value={primaryOutcome} />
-              <KeyValue label="Alert" value={conversionAlert} />
-            </div>
-            {String(appointmentStatus).toLowerCase() === "booked" &&
-            typeof onCancelCalendlyAppointment === "function" ? (
-              <div className="space-y-1.5 pt-1 border-t border-border/60">
-                <button
-                  type="button"
-                  disabled={cancelCalendlyPending || calendlyCancelSubmitting}
-                  onClick={() => setShowCalendlyCancelModal(true)}
-                  className="inline-flex items-center justify-center rounded-md border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-700 hover:bg-red-50 disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  {cancelCalendlyPending || calendlyCancelSubmitting
-                    ? "Canceling…"
-                    : "Cancel Calendly appointment"}
-                </button>
-                <p className="text-[11px] text-text-muted leading-snug">
-                  Cancels the scheduled event via Calendly (1:1 events). Some group-style events may
-                  need to be managed in Calendly.
-                </p>
-              </div>
-            ) : null}
-          </div>
+          {!isInquiredPropertyInlineView ? conversionTrustSection : null}
 
         </>
       ) : (

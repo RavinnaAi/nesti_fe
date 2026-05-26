@@ -337,13 +337,11 @@ function LeadsPageContent() {
 
   const referrals = useMemo(() => normalizeList(referralsQuery.data), [referralsQuery.data]);
   const conversationReferrals = useMemo(() => {
-    if (!actionConversationId) return referrals;
+    if (!selectedLeadId) return referrals;
     return referrals.filter(
-      (ref) =>
-        String(ref?.conversation_id || ref?.conversationId || "") ===
-        String(actionConversationId)
+      (ref) => String(ref?.lead_match_id || ref?.leadMatchId || "") === String(selectedLeadId)
     );
-  }, [referrals, actionConversationId]);
+  }, [referrals, selectedLeadId]);
 
   const nurtureLogsQuery = useQuery({
     queryKey: ["chat-nurture-logs", token, selectedLeadId],
@@ -386,7 +384,7 @@ function LeadsPageContent() {
         payload: {
           target_vertical: referralForm.professional_role,
           target_user_id: referralForm.target_user_id,
-          conversation_id: actionConversationId || undefined,
+          lead_match_id: selectedLeadId || undefined,
           notes: referralForm.notes || "",
         },
       }),

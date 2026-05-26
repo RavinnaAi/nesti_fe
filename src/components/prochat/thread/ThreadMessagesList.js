@@ -30,6 +30,34 @@ function isEmojiOnlyMessage(value) {
   return withoutEmoji.length === 0;
 }
 
+function normalizeUrl(rawUrl) {
+  const value = String(rawUrl || "").trim();
+  if (!value) return "";
+  return /^https?:\/\//i.test(value) ? value : `https://${value}`;
+}
+
+function splitMessageWithLinks(text) {
+  const source = String(text || "");
+  if (!source) return [];
+  const urlRegex = /(https?:\/\/[^\s]+|www\.[^\s]+)/gi;
+  const chunks = [];
+  let lastIdx = 0;
+  let match;
+  while ((match = urlRegex.exec(source)) !== null) {
+    const start = match.index;
+    const end = start + String(match[0]).length;
+    if (start > lastIdx) {
+      chunks.push({ type: "text", value: source.slice(lastIdx, start) });
+    }
+    chunks.push({ type: "link", value: String(match[0]) });
+    lastIdx = end;
+  }
+  if (lastIdx < source.length) {
+    chunks.push({ type: "text", value: source.slice(lastIdx) });
+  }
+  return chunks;
+}
+
 export default function ThreadMessagesList({
   messages,
   myUserId,
@@ -149,7 +177,23 @@ export default function ThreadMessagesList({
                           emojiOnly ? "text-2xl leading-snug tracking-wide" : ""
                         }`}
                       >
-                        {m.body}
+                        {splitMessageWithLinks(m.body).map((part, idx) =>
+                          part.type === "link" ? (
+                            <a
+                              key={`msg-link-${idx}`}
+                              href={normalizeUrl(part.value)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`underline underline-offset-2 break-all ${
+                                mine ? "text-white hover:text-white/90" : "text-primary hover:text-primary-dark"
+                              }`}
+                            >
+                              {part.value}
+                            </a>
+                          ) : (
+                            <span key={`msg-text-${idx}`}>{part.value}</span>
+                          )
+                        )}
                       </p>
                     ) : null}
                     {attachments.length ? (

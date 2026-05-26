@@ -2,6 +2,7 @@
 
 // HTTP client for the Nesti API: Node.js + Express (see `node-backend` in this repo), not NestJS.
 const BASE_URL = String(process.env.NEXT_PUBLIC_API_URL || "").replace(/\/+$/, "");
+const inFlightReadRequests = new Map();
 
 /**
  * Fixes mistaken "http://hosthttp://host/path" when the API base was concatenated twice.
@@ -73,6 +74,7 @@ export const API_ENDPOINTS = {
   },
   referrals: {
     list: withBaseUrl("/api/referrals"),
+    byLeadMatch: withBaseUrl((leadMatchId) => `/api/referrals/lead-match/${leadMatchId}`),
     detail: withBaseUrl((id) => `/api/referrals/${id}`),
     lead: withBaseUrl((id) => `/api/referrals/${id}/lead`),
     process: withBaseUrl((id) => `/api/referrals/${id}/process`),
@@ -98,6 +100,7 @@ export const API_ENDPOINTS = {
     profileDetail: withBaseUrl((id) => `/api/leads/profiles/${id}`),
     profileLeads: withBaseUrl((id) => `/api/leads/profiles/${id}/leads`),
     detail: withBaseUrl((id) => `/api/leads/${id}`),
+    inquiredProperty: withBaseUrl((id) => `/api/leads/${id}/inquired-property`),
     patch: withBaseUrl((id) => `/api/leads/${id}`),
     remove: withBaseUrl((id) => `/api/leads/${id}`),
     conversation: withBaseUrl((id) => `/api/leads/${id}/conversation`),
@@ -213,6 +216,7 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
   const isAbsolute = url.startsWith("http://") || url.startsWith("https://");
   let fullUrl = isAbsolute ? url : `${BASE_URL}${url.startsWith("/") ? url : `/${url}`}`;
   fullUrl = normalizeApiUrl(fullUrl);
+  const normalizedMethod = String(method || "GET").toUpperCase();
   const isFormData = typeof FormData !== "undefined" && data instanceof FormData;
   const headers = {};
   if (!isFormData) {
@@ -225,31 +229,49 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
     headers.Authorization = rawToken ? token : `Bearer ${token}`;
   }
 
-  const response = await fetch(fullUrl, {
-    method,
-    headers,
-    body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
-    cache: "no-store",
-  });
+  const shouldDedupeInFlightRead = (normalizedMethod === "GET" || normalizedMethod === "HEAD") && !data;
+  const inFlightKey = shouldDedupeInFlightRead
+    ? `${normalizedMethod}:${fullUrl}:auth=${headers.Authorization || ""}`
+    : "";
+  const existingInFlight = inFlightKey ? inFlightReadRequests.get(inFlightKey) : null;
+  if (existingInFlight) return existingInFlight;
 
-  let json = null;
-  try {
-    json = await response.json();
-  } catch (error) {
-    // ignore parse errors, handle below
+  const requestPromise = (async () => {
+    const response = await fetch(fullUrl, {
+      method: normalizedMethod,
+      headers,
+      body: data ? (isFormData ? data : JSON.stringify(data)) : undefined,
+      cache: "no-store",
+    });
+
+    let json = null;
+    try {
+      json = await response.json();
+    } catch (error) {
+      // ignore parse errors, handle below
+    }
+
+    if (!response.ok) {
+      const message =
+        json?.detail ||
+        json?.message ||
+        json?.error ||
+        "Request failed. Please try again.";
+      const error = new Error(message);
+      error.status = response.status;
+      if (json?.code) error.code = json.code;
+      throw error;
+    }
+
+    return json || {};
+  })();
+
+  if (inFlightKey) {
+    inFlightReadRequests.set(inFlightKey, requestPromise);
+    requestPromise.finally(() => {
+      inFlightReadRequests.delete(inFlightKey);
+    });
   }
 
-  if (!response.ok) {
-    const message =
-      json?.detail ||
-      json?.message ||
-      json?.error ||
-      "Request failed. Please try again.";
-    const error = new Error(message);
-    error.status = response.status;
-    if (json?.code) error.code = json.code;
-    throw error;
-  }
-
-  return json || {};
+  return requestPromise;
 }

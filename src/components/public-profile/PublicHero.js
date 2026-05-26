@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Award, Bot, CalendarCheck, Eye, Mail, Menu, Phone, ShieldCheck, Users, X } from 'lucide-react';
+import { ArrowRight, Bot, Mail, Menu, Phone, ShieldCheck, UserPlus, X } from 'lucide-react';
 
 const ROLE_HERO = {
   agent: {
@@ -32,7 +32,7 @@ const ROLE_HERO = {
   },
 };
 
-export default function PublicHero({ profile, onCTAClick }) {
+export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const professionalType = profile.professional_type;
   const heroContent = ROLE_HERO[professionalType] || ROLE_HERO.agent;
@@ -46,47 +46,7 @@ export default function PublicHero({ profile, onCTAClick }) {
       : professionalType === 'lawyer'
         ? 'Real Estate Lawyer'
         : 'Real Estate Agent';
-  const totals = profile.dashboard_kpis?.totals || {};
-  const rates = profile.dashboard_kpis?.conversion_rates || {};
-
-  const formatInt = (value) => {
-    const number = Number(value || 0);
-    if (!Number.isFinite(number)) return '0';
-    if (number >= 1000) return `${(number / 1000).toFixed(number >= 10000 ? 0 : 1)}k`;
-    return String(Math.round(number));
-  };
-
-  const formatPercent = (value) => {
-    const number = Number(value || 0);
-    return `${Math.round(number * 100)}%`;
-  };
-
-  const getStatsConfig = () => {
-    return [
-      {
-        icon: <Users className="text-primary" size={17} />,
-        value: `${formatInt(totals.leads_created)}+`,
-        label: 'New Leads',
-      },
-      {
-        icon: <Eye className="text-primary" size={17} />,
-        value: `${formatInt(totals.lead_views)}+`,
-        label: 'Lead Views',
-      },
-      {
-        icon: <CalendarCheck className="text-primary" size={17} />,
-        value: `${formatInt(totals.appointments_booked)}+`,
-        label: 'Appointments',
-      },
-      {
-        icon: <Award className="text-primary" size={17} />,
-        value: formatPercent(rates.closed_won_from_created),
-        label: 'Win Rate',
-      },
-    ];
-  };
-
-  const statsConfig = getStatsConfig();
+  const inviteShareUrl = String(profile.invite_link?.share_url || '').trim();
   const calendlyLink = profile.professional_profile?.calendly_link || '';
   const trackedCalendlyLink = (() => {
     if (!calendlyLink) return '';
@@ -261,29 +221,32 @@ export default function PublicHero({ profile, onCTAClick }) {
 
             <div className="mt-5 flex flex-wrap gap-3">
               <button
+                type="button"
+                onClick={onDirectLeadClick}
+                className="rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-dark"
+              >
+                Submit inquiry
+              </button>
+              <button
                 onClick={handleConsultationClick}
                 className="rounded-lg bg-primary px-4 py-2.5 text-xs font-semibold text-white shadow-sm transition hover:bg-primary-dark"
               >
                 Book a Free Consultation
               </button>
-            </div>
-
-            <div className="mt-6 grid max-w-2xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {statsConfig.map((stat) => (
-                <div key={stat.label} className="flex items-center gap-2">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-white/90 shadow-sm">
-                    {stat.icon}
+              {inviteShareUrl ? (
+                <a
+                  href={inviteShareUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="group inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-white/95 px-4 py-2.5 text-xs font-bold text-primary shadow-lg shadow-primary/10 ring-1 ring-white/70 transition hover:-translate-y-0.5 hover:bg-primary hover:text-white hover:shadow-primary/20"
+                >
+                  <span className="grid h-6 w-6 place-items-center rounded-lg bg-primary/10 text-primary transition group-hover:bg-white/20 group-hover:text-white">
+                    <UserPlus size={14} />
                   </span>
-                  <div>
-                    <div className="text-xs font-semibold leading-tight text-text-heading">
-                      {stat.value}
-                    </div>
-                    <div className="text-[10px] font-medium leading-tight text-text-muted">
-                      {stat.label}
-                    </div>
-                  </div>
-                </div>
-              ))}
+                  Join Nesti
+                  <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </a>
+              ) : null}
             </div>
           </div>
 

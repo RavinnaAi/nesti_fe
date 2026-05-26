@@ -10,9 +10,9 @@ import {
   getVisitorId,
   postChatScorePreview,
   resetChatIdentity,
+  selectChatPropertyMatch,
   sendChatMessage,
   setVisitorId,
-  uploadSellerPropertyImages,
 } from "@/lib/chatClient";
 import { motion } from "framer-motion";
 import ConversationProgress from "./ConversationProgress";
@@ -45,6 +45,7 @@ import {
   hasBasicContact,
   missingDraftFields,
 } from "@/components/chatbot/widget/roleChatStrategy";
+import { attachSellerImagesToAgentFormContact } from "@/components/chatbot/widget/agentSellerImageUpload";
 
 const isDetailsConfirmationMessage = (text) => {
   const t = String(text || "").trim().toLowerCase();
@@ -341,6 +342,18 @@ export default function ChatWidget({
     [addMessage, appendPropertyMatchesMessage],
   );
 
+  const handlePropertyMatchSelect = useCallback(
+    async (property) => {
+      if (!embedToken || !sessionId || !property) return;
+      try {
+        await selectChatPropertyMatch({ sessionId, embedToken, property });
+      } catch (err) {
+        setError(err?.message || "Selected property could not be saved.");
+      }
+    },
+    [embedToken, sessionId],
+  );
+
   const runPreparedChatStart = useCallback(
     async ({ opening, summary, leadProfilePreview, formContact, fetchPropertyMatchesAfterReply = false }) => {
       setLeadFormContact(formContact);
@@ -436,21 +449,20 @@ export default function ChatWidget({
     if (chosenIntent === "sell" && sellerPropertyImageFiles.length) {
       try {
         setLoading(true);
-        const uploaded = await uploadSellerPropertyImages({
+        const uploadResult = await attachSellerImagesToAgentFormContact({
+          intent: chosenIntent,
+          formContact,
           embedToken,
           sessionId,
-          files: sellerPropertyImageFiles,
+          propertyImageFiles: sellerPropertyImageFiles,
+          messages: {
+            missingImages: "Please upload at least one property image to create a seller lead.",
+            emptyUpload: "Please upload at least one property image to create a seller lead.",
+            uploadFailed: "Property images could not be uploaded. Please try again.",
+          },
         });
-        nextFormContact = {
-          ...formContact,
-          property_images: Array.isArray(uploaded?.images) ? uploaded.images : [],
-        };
-        if (!nextFormContact.property_images.length) {
-          setFormValidationError("Please upload at least one property image to create a seller lead.");
-          setLoading(false);
-          return;
-        }
-        setLeadDraft((d) => ({ ...d, property_images: nextFormContact.property_images }));
+        nextFormContact = uploadResult.formContact;
+        setLeadDraft((d) => ({ ...d, property_images: uploadResult.uploadedImages }));
       } catch (err) {
         setFormValidationError(err?.message || "Property images could not be uploaded. Please try again.");
         setLoading(false);
@@ -649,6 +661,7 @@ export default function ChatWidget({
       leadFlowStep={leadFlowStep}
       error={error}
       messagesEndRef={messagesEndRef}
+      onPropertyMatchSelect={handlePropertyMatchSelect}
     />
   );
 
