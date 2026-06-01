@@ -8,6 +8,7 @@ import { Bot, ArrowRight, X, User, Settings, LogOut } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
+import { PUBLIC_HOME_PATH, navigateToPublicHome } from "@/lib/workspaceNavigation";
 
 export default function Header() {
   const pathname = usePathname();
@@ -92,15 +93,26 @@ export default function Header() {
   const handleLogout = () => {
     dispatch(logoutAndClearAll());
     setIsProfileOpen(false);
-    router.replace("/");
+    router.replace(PUBLIC_HOME_PATH);
   };
+
+  const goToPublicHome = () =>
+    navigateToPublicHome(router, pathname, () => {
+      setIsMenuOpen(false);
+      setIsProfileOpen(false);
+    });
 
   return (
     <header className="bg-background border-b border-border sticky top-0 z-50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group">
+          {/* Logo — public landing home */}
+          <button
+            type="button"
+            onClick={goToPublicHome}
+            className="flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md"
+            aria-label="Go to Nesti AI home"
+          >
             <motion.div
               className="h-12 w-12 rounded-md grid place-items-center transition-all group-hover:scale-110 shadow-lg bg-gradient-to-br from-primary to-primary-dark text-white"
               whileHover={{ rotate: 10 }}
@@ -115,7 +127,7 @@ export default function Header() {
                 Real Estate Intelligence
               </span>
             </div>
-          </Link>
+          </button>
 
           {/* Desktop Navigation */}
           <div className="hidden md:block">
@@ -316,7 +328,12 @@ export default function Header() {
             >
               {/* Menu header */}
               <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
-                <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={goToPublicHome}
+                  className="flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md"
+                  aria-label="Go to Nesti AI home"
+                >
                   <div className="h-10 w-10 rounded-md grid place-items-center bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg">
                     <Bot size={20} />
                   </div>
@@ -326,7 +343,7 @@ export default function Header() {
                     </span>
                     <span className="text-xs text-text-muted">Menu</span>
                   </div>
-                </div>
+                </button>
                 <motion.button
                   onClick={() => setIsMenuOpen(false)}
                   className="p-2 rounded-md text-text-body hover:text-primary hover:bg-background-light transition-colors"

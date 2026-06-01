@@ -110,6 +110,7 @@ export const API_ENDPOINTS = {
   chat: {
     /** Public embed POST (no Bearer); body includes embedToken. */
     send: withBaseUrl("/api/chat"),
+    sessionMessages: withBaseUrl("/api/chat/session-messages"),
     propertyImages: withBaseUrl("/api/chat/property-images"),
     clearSession: (sessionId) => withBaseUrl(`/api/chat/clear/${sessionId}`),
     conversations: withBaseUrl("/api/chat/conversations"),

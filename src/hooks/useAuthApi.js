@@ -3,6 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
+import { clearInviteAttribution } from "@/lib/inviteAttributionStorage";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { loginSuccess, updateProfile } from "@/store/authSlice";
 import { logoutAndClearAll } from "@/store/actions";
@@ -56,7 +57,10 @@ export function useVerifyEmail() {
         token: verificationToken,
         rawToken: true,
       }),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      if (variables?.invite_token) {
+        clearInviteAttribution();
+      }
       if (data?.token) {
         // 1. Store the session token in Redux + localStorage (shared across tabs)
         dispatch(loginSuccess({ user: null, token: data.token }));
@@ -103,9 +107,12 @@ export function useLogin() {
           invite_token: payload.invite_token || undefined,
         },
       }),
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
       const token = data.token || null;
       dispatch(loginSuccess({ user: null, token }));
+      if (variables?.invite_token) {
+        clearInviteAttribution();
+      }
 
       // Warm profile in background; do not block navigation on this request.
       if (token) {

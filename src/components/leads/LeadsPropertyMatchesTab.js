@@ -12,6 +12,12 @@ import {
   resolveDisplayLeadGrade,
 } from "@/lib/leadGradeUi";
 import LeadsDetailsTab from "@/components/leads/LeadsDetailsTab";
+import InquiredPropertyOverview from "@/components/leads/InquiredPropertyOverview";
+import {
+  hasInquiredPropertyContext,
+  inquiredPropertyDisplayAddress,
+  inquiredPropertyFromLead,
+} from "@/lib/inquiredPropertyUtils";
 import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
 import { extractMeta, formatMetaEntries, getConversationMeta } from "@/lib/leadsPageUtils";
 
@@ -30,6 +36,8 @@ export default function LeadsPropertyMatchesTab({
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 7;
 
+  const inquiredMode = hasInquiredPropertyContext(lead);
+  const inquiredPropertySnapshot = inquiredProperty || inquiredPropertyFromLead(lead);
   const selectedLeadKey = String(selectedConversation?.id || selectedConversation?.lead_match_id || "");
   useEffect(() => {
     setSelectedMatch(null);
@@ -378,12 +386,19 @@ export default function LeadsPropertyMatchesTab({
     <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
       {selectedConversation ? (
         <>
-          {inquiredProperty ? (
+          {inquiredMode ? (
             <div className="space-y-3">
-              <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3">
-                <div className="text-sm font-semibold text-text-heading">Inquired Property</div>
+              {inquiredPropertySnapshot ? (
+                <InquiredPropertyOverview property={inquiredPropertySnapshot} />
+              ) : (
+                <div className="rounded-xl border border-primary/15 bg-primary/[0.03] p-3 text-xs text-text-muted">
+                  This lead inquired about a specific listing. Seller details load below when available.
+                </div>
+              )}
+              <div className="rounded-xl border border-border/60 bg-white p-3">
+                <div className="text-sm font-semibold text-text-heading">Linked seller lead</div>
                 <p className="mt-0.5 text-[11px] text-text-muted">
-                  Seller lead profile and details linked to this buyer inquiry.
+                  Seller CRM profile and details for this listing inquiry.
                 </p>
                 {inquiredSellerLeadQuery?.isLoading ? (
                   <div className="mt-3 rounded-md border border-border bg-white px-3 py-2 text-xs text-text-muted">
@@ -411,7 +426,7 @@ export default function LeadsPropertyMatchesTab({
                       onOpenMeta={() => {}}
                       onCancelCalendlyAppointment={undefined}
                       cancelCalendlyPending={false}
-                      inquiredPropertyAddress={inquiredProperty.address || inquiredProperty.location || ""}
+                      inquiredPropertyAddress={inquiredPropertyDisplayAddress(inquiredPropertySnapshot)}
                       embedded
                     />
                   </div>

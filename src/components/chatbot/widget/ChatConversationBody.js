@@ -82,7 +82,11 @@ export default function ChatConversationBody({
                       headline={msg.leadProfilePreview.headline}
                       paragraphs={msg.leadProfilePreview.paragraphs}
                     />
-                  ) : (
+                  ) : !(
+                      !isUser &&
+                      Array.isArray(msg.propertyMatches) &&
+                      msg.propertyMatches.length > 0
+                    ) ? (
                     renderMessageSegments(
                       !isUser && resolvedRole === "lawyer"
                         ? dedupeLawyerAssistantProse(msg.content ?? "")
@@ -92,7 +96,7 @@ export default function ChatConversationBody({
                       resolvedRole,
                       parseInlineMarkdownLinks
                     )
-                  )}
+                  ) : null}
                 </div>
                 <p
                   className={`text-[8px] mt-1 font-medium tracking-wide ${
@@ -184,7 +188,7 @@ export default function ChatConversationBody({
               <MessageCircle size={14} />
             </div>
           ) : null}
-          <div className="bg-white border border-border rounded-2xl px-5 py-3 flex items-center gap-3 shadow-sm">
+          <div className="bg-white border border-border rounded-2xl px-4 py-3 flex items-center shadow-sm">
             <div className="flex gap-1">
               <span
                 className={`w-1.5 h-1.5 rounded-full animate-bounce [animation-delay:-0.3s] ${roleUi.accentDot40 || "bg-primary/40"}`}
@@ -194,7 +198,6 @@ export default function ChatConversationBody({
               />
               <span className={`w-1.5 h-1.5 rounded-full animate-bounce ${roleUi.accentDotFull || "bg-primary"}`} />
             </div>
-            <span className="text-[10px] font-medium text-text-muted italic">Nesti is thinking...</span>
           </div>
         </motion.div>
       )}

@@ -22,10 +22,13 @@ export default function InviteLandingPage() {
   const token = String(params?.token || "").trim();
   const authToken = useAppSelector((state) => state.auth.token);
   const captureStartedRef = useRef(false);
-  const captureDoneRef = useRef(false);
   const finalizeDoneRef = useRef(false);
   const finalizeRetryRef = useRef(false);
-  const [inviteConnecting, setInviteConnecting] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
 
   const resolveQuery = useQuery({
     queryKey: ["invite-resolve", token],
@@ -57,55 +60,42 @@ export default function InviteLandingPage() {
       sourceChannel: "direct",
       landingPath: `/invite/${token}`,
     });
-    captureMutation.mutate(undefined, {
-      onSettled: () => {
-        captureDoneRef.current = true;
-      },
-    });
+    captureMutation.mutate();
   }, [token, captureMutation]);
 
   useEffect(() => {
-    if (!token || !authToken || finalizeDoneRef.current) return;
+    if (!hydrated || !token || !authToken || finalizeDoneRef.current) return;
     finalizeDoneRef.current = true;
-    setInviteConnecting(true);
 
-    (async () => {
+    const completeFinalize = (res) => {
+      clearInviteAttribution();
+      queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["invite-metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["invite-conversions"] });
+      if (res?.lead_referral?.id) {
+        router.replace(`/referrals/${encodeURIComponent(String(res.lead_referral.id))}?direction=inbound`);
+        return;
+      }
+      router.replace("/referrals?direction=inbound");
+    };
+
+    const runFinalize = async (allowRetry) => {
       try {
-        if (!captureDoneRef.current) {
-          try {
-            await captureMutation.mutateAsync();
-          } catch {
-            // best effort, AppChrome finalize fallback can still run later
-          } finally {
-            captureStartedRef.current = true;
-            captureDoneRef.current = true;
-          }
-        }
-
         const res = await finalizeInviteToken({
           token,
           authToken,
           method: "invite_page_logged_in",
           path: `/invite/${token}`,
         });
-        clearInviteAttribution();
-        queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
-        queryClient.invalidateQueries({ queryKey: ["lead-referrals"] });
-        queryClient.invalidateQueries({ queryKey: ["invite-metrics"] });
-        queryClient.invalidateQueries({ queryKey: ["invite-conversions"] });
-        if (res?.lead_referral?.id) {
-          router.replace(`/referrals/${encodeURIComponent(String(res.lead_referral.id))}?direction=inbound`);
-          return;
-        }
-        router.replace("/referrals?direction=inbound");
+        completeFinalize(res);
       } catch (err) {
         const status = Number(err?.status || 0);
         const msg = String(err?.message || "");
-        if (status === 404 && !finalizeRetryRef.current) {
+        if (status === 404 && allowRetry && !finalizeRetryRef.current) {
           finalizeRetryRef.current = true;
-          finalizeDoneRef.current = false;
           await new Promise((resolve) => setTimeout(resolve, 800));
-          return;
+          return runFinalize(false);
         }
         if ([400, 410].includes(status) || /self\s*referral/i.test(msg)) {
           clearInviteAttribution();
@@ -114,11 +104,13 @@ export default function InviteLandingPage() {
           return;
         }
         finalizeDoneRef.current = false;
-      } finally {
-        setInviteConnecting(false);
       }
-    })();
-  }, [token, authToken, router, queryClient, captureMutation]);
+    };
+
+    runFinalize(true);
+  }, [hydrated, token, authToken, router, queryClient]);
+
+  const isLoggedIn = hydrated && Boolean(authToken);
 
   const inviterName = useMemo(() => {
     const inviter = resolveQuery.data?.inviter;
@@ -135,12 +127,7 @@ export default function InviteLandingPage() {
       String(inviteMeta?.source_channel || "").trim().toLowerCase() === "lead_referral"
   );
 
-  const forwardWithInvite = async (path) => {
-    try {
-      await captureMutation.mutateAsync();
-    } catch {
-      // best effort capture; don't block conversion path
-    }
+  const forwardWithInvite = (path) => {
     saveInviteAttribution(token, {
       sourceChannel: "direct",
       landingPath: `/invite/${token}`,
@@ -148,17 +135,11 @@ export default function InviteLandingPage() {
     router.push(`${path}?invite=${encodeURIComponent(token)}`);
   };
 
-  if (resolveQuery.isLoading || (authToken && inviteConnecting)) {
+  if (!hydrated || resolveQuery.isLoading) {
     return (
       <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-2 px-6 py-12 text-center">
-        <p className="text-sm font-medium text-text-heading">
-          {authToken ? "Connecting your referral…" : "Loading invite…"}
-        </p>
-        <p className="text-xs text-text-muted">
-          {authToken
-            ? "You are already signed in — we are adding this lead to your inbound referrals."
-            : "Please wait a moment."}
-        </p>
+        <p className="text-sm font-medium text-text-heading">Loading invite…</p>
+        <p className="text-xs text-text-muted">Please wait a moment.</p>
       </div>
     );
   }
@@ -177,6 +158,17 @@ export default function InviteLandingPage() {
           Go to sign up
           <ArrowRight size={14} />
         </Link>
+      </div>
+    );
+  }
+
+  if (isLoggedIn) {
+    return (
+      <div className="mx-auto flex w-full max-w-3xl flex-col items-center justify-center gap-2 px-6 py-12 text-center">
+        <p className="text-sm font-medium text-text-heading">Connecting your referral…</p>
+        <p className="text-xs text-text-muted">
+          You are already signed in — we are adding this lead to your inbound referrals.
+        </p>
       </div>
     );
   }

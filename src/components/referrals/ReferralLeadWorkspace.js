@@ -20,6 +20,11 @@ import LeadPipelineNotesPanel from "@/components/leads/LeadPipelineNotesPanel";
 import LeadPipelineStageControl from "@/components/leads/LeadPipelineStageControl";
 import { fetchLeadById, patchLead } from "@/lib/leadsClient";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
+import {
+  hasInquiredPropertyContext,
+  inquiredPropertyFromLead,
+} from "@/lib/inquiredPropertyUtils";
+import InquiredPropertyOverview from "@/components/leads/InquiredPropertyOverview";
 
 function roleLabel(v) {
   const raw = String(v || "").trim().toLowerCase();
@@ -460,6 +465,8 @@ export default function ReferralLeadWorkspace({
     );
   }
 
+  const inquiredProperty = inquiredPropertyFromLead(lead);
+  const showInquiredProperty = hasInquiredPropertyContext(lead);
   const lawyerQual = lawyerQualificationSlice(lead.qualification);
   const mortgageQual = mortgageQualificationSlice(lead.qualification);
   const contact = lead.contact && typeof lead.contact === "object" ? lead.contact : {};
@@ -513,6 +520,12 @@ export default function ReferralLeadWorkspace({
           ) : null;
         })()}
       </DetailFieldsSection>
+
+      {showInquiredProperty ? (
+        <div className="border-t border-border/45 pt-3">
+          <InquiredPropertyOverview property={inquiredProperty} />
+        </div>
+      ) : null}
 
       {sourceRole === "agent" ? (
         <>

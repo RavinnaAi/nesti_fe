@@ -159,6 +159,33 @@ export async function postChatScorePreview({ formContact, professionalType }) {
   }
 }
 
+/** Load full transcript for an embed session (widget restore on reopen). */
+export async function fetchChatSessionMessages({ sessionId, embedToken }) {
+  const response = await fetch(apiUrl("/api/chat/session-messages"), {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      id: sessionId,
+      embedToken,
+    }),
+    cache: "no-store",
+  });
+  const json = await parseJson(response);
+  if (!response.ok) {
+    throw new Error(apiErrorMessage(json));
+  }
+  return json;
+}
+
+export function mapServerChatMessagesToWidget(messages) {
+  if (!Array.isArray(messages)) return [];
+  return messages.map((m) => ({
+    role: m.role === "user" ? "user" : "assistant",
+    content: String(m.content ?? ""),
+    timestamp: m.created_at ? new Date(m.created_at) : new Date(),
+  }));
+}
+
 export async function fetchChatPropertyMatches({
   sessionId,
   embedToken,

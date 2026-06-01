@@ -8,6 +8,7 @@ import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 import AgentPublicLeadForm from '@/components/public-profile/lead-capture/AgentPublicLeadForm';
 import BrokerPublicLeadForm from '@/components/public-profile/lead-capture/BrokerPublicLeadForm';
 import LawyerPublicLeadForm from '@/components/public-profile/lead-capture/LawyerPublicLeadForm';
+import { buildInquiredPropertyPayload } from '@/lib/inquiredPropertyUtils';
 
 function buildAgentPrefillFromProperty(property) {
   if (!property || typeof property !== 'object') return { prefillIntent: null, prefillLeadDraft: null };
@@ -22,28 +23,6 @@ function buildAgentPrefillFromProperty(property) {
       budget: property.expected_price || '',
       timeline: property.timeline || '',
     },
-  };
-}
-
-function buildInquiredPropertyPayload(property, profile) {
-  if (!property || typeof property !== 'object') return null;
-  const images = Array.isArray(property.images) ? property.images.filter(Boolean).slice(0, 8) : [];
-  const professionalProfile = profile?.professional_profile || {};
-  return {
-    id: property.id || null,
-    title: property.title || null,
-    address: property.address || '',
-    location: property.location || '',
-    expected_price: property.expected_price || '',
-    property_type: property.property_type || '',
-    bedrooms: property.bedrooms || '',
-    bathrooms: property.bathrooms || '',
-    square_footage: property.square_footage || '',
-    seller_name: property.seller_name || '',
-    seller_email: profile?.email || '',
-    seller_phone: professionalProfile?.phone || profile?.phone || '',
-    listed_by_name: profile?.professional_name || '',
-    images,
   };
 }
 

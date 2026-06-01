@@ -20,11 +20,12 @@ import {
 import {
   fetchLeads,
   fetchLeadById,
-  fetchLeadConversation,
   fetchLeadPropertyMatches,
+  fetchLeadInquiredProperty,
   deleteLeadById,
   patchLead,
 } from "@/lib/leadsClient";
+import { fetchAllLeadConversationMessages } from "@/lib/leadConversationClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
@@ -48,9 +49,16 @@ import {
   getActionConversationId,
   getConversationMeta,
   getLeadMatchId,
+  isDirectInquiryLead,
   matchesSearch,
   normalizeList,
+  normalizeLeadId,
 } from "@/lib/leadsPageUtils";
+import {
+  hasInquiredPropertyContext,
+  inquiredPropertyFromLead,
+  needsInquiredPropertySellerFetch,
+} from "@/lib/inquiredPropertyUtils";
 import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
 function stripListingBulletRows(text) {
@@ -96,7 +104,7 @@ function LeadsPageContent() {
     .replace(/[\s-]+/g, "_") === "mortgage_broker";
   const queryClient = useQueryClient();
   const searchParams = useSearchParams();
-  const leadFromUrl = String(searchParams.get("lead") || "").trim();
+  const leadFromUrl = normalizeLeadId(searchParams.get("lead") || "");
   const pageFromUrl = Number(searchParams.get("page") || "1");
   const [hydrated, setHydrated] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
@@ -292,12 +300,16 @@ function LeadsPageContent() {
 
   const actionConversationId = getActionConversationId(selectedConversation);
   const leadDetail = leadDetailQuery.data?.lead || null;
+  const leadDetailLoaded = Boolean(leadDetailQuery.isSuccess && leadDetail);
+  const inquiredProperty = inquiredPropertyFromLead(leadDetail);
+  const hasInquiredProperty = hasInquiredPropertyContext(leadDetail);
+  const needsSellerLeadFetch = needsInquiredPropertySellerFetch(leadDetail);
 
   const messagesQuery = useQuery({
     queryKey: ["lead-conversation", token, selectedLeadId],
     enabled: Boolean(token && selectedLeadId),
     queryFn: () =>
-      fetchLeadConversation({ token, leadId: selectedLeadId, page: 1, limit: 200 }),
+      fetchAllLeadConversationMessages({ token, leadId: selectedLeadId }),
   });
 
   const messages = useMemo(() => {
@@ -308,9 +320,23 @@ function LeadsPageContent() {
 
   const propertyMatchesQuery = useQuery({
     queryKey: ["lead-property-matches", token, selectedLeadId],
-    enabled: Boolean(token && selectedLeadId && activeTab === "property_matches"),
+    enabled: Boolean(
+      token &&
+        selectedLeadId &&
+        leadDetailLoaded &&
+        activeTab === "property_matches" &&
+        !hasInquiredProperty
+    ),
     queryFn: () =>
       fetchLeadPropertyMatches({ token, leadId: selectedLeadId, page: 1, limit: 100 }),
+  });
+
+  const inquiredPropertyQuery = useQuery({
+    queryKey: ["lead-inquired-property", token, selectedLeadId],
+    enabled: Boolean(
+      token && selectedLeadId && needsSellerLeadFetch && activeTab === "property_matches"
+    ),
+    queryFn: () => fetchLeadInquiredProperty({ token, id: selectedLeadId }),
   });
 
   const propertyMatches = useMemo(() => {
@@ -320,6 +346,30 @@ function LeadsPageContent() {
     if (Array.isArray(d)) return d;
     return normalizeList(d);
   }, [propertyMatchesQuery.data]);
+
+  const inquiredSellerLeadDetail = inquiredPropertyQuery.data?.seller_lead || null;
+  const inquiredSellerConversation = useMemo(() => {
+    if (!inquiredSellerLeadDetail) return null;
+    return leadApiRowToConversationShape(inquiredSellerLeadDetail);
+  }, [inquiredSellerLeadDetail]);
+
+  const hideConversationTab = useMemo(() => isDirectInquiryLead(leadDetail), [leadDetail]);
+  const visibleWorkspaceTabs = useMemo(() => {
+    let tabs = roleFilteredTabs;
+    if (hideConversationTab) {
+      tabs = tabs.filter((tab) => tab.id !== "conversation");
+    }
+    if (!hasInquiredProperty) return tabs;
+    return tabs.map((tab) =>
+      tab.id === "property_matches" ? { ...tab, label: "Inquired Property" } : tab,
+    );
+  }, [roleFilteredTabs, hideConversationTab, hasInquiredProperty]);
+
+  useEffect(() => {
+    if (!hideConversationTab) return;
+    if (activeTab !== "conversation") return;
+    setActiveTab("lead_profile");
+  }, [hideConversationTab, activeTab]);
 
   const messageMeta = useMemo(() => {
     const latestWithMeta = [...messages].reverse().find((msg) => {
@@ -669,7 +719,7 @@ function LeadsPageContent() {
               token={token}
               activeTab={activeTab}
               onActiveTabChange={setActiveTab}
-              roleFilteredTabs={roleFilteredTabs}
+              roleFilteredTabs={visibleWorkspaceTabs}
               selectedLeadId={selectedLeadId}
               selectedConversation={selectedConversation}
               leadDetail={leadDetail}
@@ -702,6 +752,10 @@ function LeadsPageContent() {
               nurtureLogsLoading={nurtureLogsQuery.isLoading}
               deleteLeadMutation={deleteLeadMutation}
               onDeleteClick={handleDeleteLead}
+              inquiredProperty={inquiredProperty}
+              inquiredSellerLeadDetail={inquiredSellerLeadDetail}
+              inquiredSellerConversation={inquiredSellerConversation}
+              inquiredSellerLeadQuery={inquiredPropertyQuery}
             />
           ) : null}
         </div>

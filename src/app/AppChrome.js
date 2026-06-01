@@ -105,6 +105,9 @@ export default function AppChrome({ children }) {
 
   useEffect(() => {
     if (!token || !isMounted) return;
+    // `/invite/[token]` finalizes on the landing page for logged-in users; running
+    // session_finalize here as well races and can create duplicate lead referrals.
+    if (pathname.startsWith("/invite/")) return;
     if (inviteFinalizeAttemptedRef.current) return;
     const attr = getInviteAttribution();
     if (!attr?.token) return;

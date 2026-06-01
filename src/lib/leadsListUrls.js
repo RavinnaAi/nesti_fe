@@ -1,4 +1,5 @@
 import { LEAD_WORKSPACE_TAB_IDS, normalizeLeadWorkspaceTabId } from "@/lib/leadWorkspaceTabsMeta";
+import { normalizeLeadId } from "@/lib/leadsPageUtils";
 
 /** Build `/leads?page=&status=&pipeline=&referral=` for list + pagination. */
 export function buildLeadsListHref({ page = 1, status = "", pipeline = "", referral = "" } = {}) {
@@ -23,7 +24,8 @@ export function buildLeadWorkspaceHref(
   leadId,
   { page = 1, status = "", pipeline = "", referral = "", tab = "lead_profile" } = {}
 ) {
-  const id = encodeURIComponent(String(leadId || "").trim());
+  const canonicalId = normalizeLeadId(leadId) || String(leadId || "").trim();
+  const id = encodeURIComponent(canonicalId);
   if (!id) return "/leads";
   const p = new URLSearchParams();
   p.set("page", String(Math.max(1, Number(page) || 1)));

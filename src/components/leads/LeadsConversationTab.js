@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Info } from "lucide-react";
 import MessageBubble from "@/components/leads/MessageBubble";
 
@@ -11,6 +12,15 @@ export default function LeadsConversationTab({
   formatMetaEntries,
   onOpenMeta,
 }) {
+  const scrollRef = useRef(null);
+
+  useEffect(() => {
+    if (!messages.length || messagesQuery.isLoading) return;
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, messagesQuery.isLoading, selectedConversation?.id]);
+
   return (
     <div className="rounded-md border border-border bg-white shadow-sm p-4 space-y-3">
       <div>
@@ -39,7 +49,10 @@ export default function LeadsConversationTab({
             </div>
           ) : null}
 
-          <div className="h-[390px] overflow-y-auto rounded-md border border-border/60 bg-background-light/30 p-3 space-y-2.5 scroll-smooth">
+          <div
+            ref={scrollRef}
+            className="h-[390px] overflow-y-auto rounded-md border border-border/60 bg-background-light/30 p-3 space-y-2.5 scroll-smooth"
+          >
             {messagesQuery.isLoading ? (
               <div className="text-sm text-text-muted">Loading messages...</div>
             ) : messagesQuery.isError ? (

@@ -20,12 +20,12 @@ import {
 } from "@/lib/chatClient";
 import {
   fetchLeadById,
-  fetchLeadConversation,
   fetchLeadInquiredProperty,
   fetchLeadPropertyMatches,
   deleteLeadById,
   patchLead,
 } from "@/lib/leadsClient";
+import { fetchAllLeadConversationMessages } from "@/lib/leadConversationClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
@@ -37,9 +37,15 @@ import {
   extractMessageMeta,
   getActionConversationId,
   normalizeLeadId,
+  isDirectInquiryLead,
   normalizeList,
   sanitizeInternalReturnPath,
 } from "@/lib/leadsPageUtils";
+import {
+  hasInquiredPropertyContext,
+  inquiredPropertyFromLead,
+  needsInquiredPropertySellerFetch,
+} from "@/lib/inquiredPropertyUtils";
 
 const LEAD_WORKSPACE_QUERY_STALE_MS = 15_000;
 
@@ -70,13 +76,6 @@ function stripListingBulletRows(text) {
     i += 1;
   }
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trim();
-}
-
-function isDirectInquiryLead(lead) {
-  if (!lead || typeof lead !== "object") return false;
-  if (lead.is_direct_public_inquiry) return true;
-  const source = String(lead.source || "").trim().toLowerCase();
-  return source === "public_web_form" || source === "public_inquiry";
 }
 
 function LeadWorkspacePageContent() {
@@ -219,7 +218,7 @@ function LeadWorkspacePageContent() {
   const messagesQuery = useQuery({
     queryKey: ["lead-conversation", token, leadId],
     enabled: Boolean(token && leadId),
-    queryFn: () => fetchLeadConversation({ token, leadId, page: 1, limit: 200 }),
+    queryFn: () => fetchAllLeadConversationMessages({ token, leadId }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,
     refetchOnWindowFocus: false,
@@ -233,19 +232,9 @@ function LeadWorkspacePageContent() {
 
   const leadDetail = leadDetailQuery.data?.lead || null;
   const leadDetailLoaded = Boolean(leadDetailQuery.isSuccess && leadDetail);
-  const inquiredProperty =
-    leadDetail?.inquired_property && typeof leadDetail.inquired_property === "object"
-      ? leadDetail.inquired_property
-      : null;
-  const hasInquiredProperty = Boolean(
-    inquiredProperty &&
-      (
-        leadDetail?.linked_seller_lead_match_id ||
-        inquiredProperty.title ||
-        inquiredProperty.address ||
-        inquiredProperty.location
-      ),
-  );
+  const inquiredProperty = inquiredPropertyFromLead(leadDetail);
+  const hasInquiredProperty = hasInquiredPropertyContext(leadDetail);
+  const needsSellerLeadFetch = needsInquiredPropertySellerFetch(leadDetail);
 
   const propertyMatchesQuery = useQuery({
     queryKey: ["lead-property-matches", token, leadId],
@@ -258,7 +247,7 @@ function LeadWorkspacePageContent() {
 
   const inquiredPropertyQuery = useQuery({
     queryKey: ["lead-inquired-property", token, leadId],
-    enabled: Boolean(token && leadId && hasInquiredProperty && activeTab === "property_matches"),
+    enabled: Boolean(token && leadId && needsSellerLeadFetch && activeTab === "property_matches"),
     queryFn: () => fetchLeadInquiredProperty({ token, id: leadId }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,
@@ -602,7 +591,7 @@ function LeadWorkspacePageContent() {
             nurtureLogsLoading={nurtureLogsQuery.isLoading}
             deleteLeadMutation={deleteLeadMutation}
             onDeleteClick={() => setShowDeleteConfirm(true)}
-            inquiredProperty={hasInquiredProperty ? inquiredPropertyQuery.data?.inquired_property || inquiredProperty : null}
+            inquiredProperty={inquiredProperty}
           />
         )}
       </div>
