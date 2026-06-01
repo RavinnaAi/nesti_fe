@@ -31,6 +31,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import LeadsPipelineSidebarNav from "@/components/leads/LeadsPipelineSidebarNav";
+import { PUBLIC_HOME_PATH, navigateToPublicHome } from "@/lib/workspaceNavigation";
 
 const REFERRAL_DIRECTION_ITEMS = [
   { id: "referral-inbound", label: "Inbound", href: "/referrals?direction=inbound", icon: Inbox },
@@ -252,6 +253,15 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
     router.push(href);
   };
 
+  const goToPublicHome = () =>
+    navigateToPublicHome(router, pathname, () => {
+      setSettingsOpen(false);
+      setPipelineNavOpen(false);
+      setProfessionalsOpen(false);
+      setReferralsOpen(false);
+      onCloseMobile?.();
+    });
+
   /** Submenu + Pipeline “selected” chrome only on /leads — never while on Calendar or other routes. */
   const pipelineExpandedUI = pipelineNavOpen && isLeadsArea;
 
@@ -289,10 +299,19 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
           aria-hidden
         />
         <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/"
-            className="group flex min-w-0 items-center gap-2 rounded-lg py-0.5 transition hover:bg-white/70"
-            onClick={() => onCloseMobile?.()}
+          <button
+            type="button"
+            onClick={goToPublicHome}
+            onMouseEnter={() => {
+              if (!shouldPrefetch) return;
+              try {
+                router.prefetch(PUBLIC_HOME_PATH);
+              } catch {
+                // best-effort
+              }
+            }}
+            className="relative z-20 group flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent py-0.5 text-left transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
+            aria-label="Go to Nesti AI home"
           >
             <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg grid place-items-center bg-gradient-to-br from-primary via-primary to-primary-dark text-white shadow-[0_4px_16px_rgba(52,199,89,0.4)] ring-1 ring-white/50 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-[0_6px_20px_rgba(52,199,89,0.45)]">
               <span
@@ -307,7 +326,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
               </div>
               <div className="text-[10px] font-medium text-text-muted">Workspace</div>
             </div>
-          </Link>
+          </button>
           {isMobileOpen ? (
             <button
               type="button"
@@ -744,7 +763,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   return (
     <>
       <div
-        className="hidden lg:block fixed inset-y-0 left-0 z-40"
+        className="hidden lg:block fixed inset-y-0 left-0 z-[100]"
         style={{
           background: "linear-gradient(135deg, #F4FCF6 0%, #E8FAEE 48%, #D8F5E2 100%)",
         }}

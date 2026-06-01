@@ -34,6 +34,23 @@ export async function getPublicProfile(slug) {
   return res.json();
 }
 
+export async function submitPublicLead(slug, payload = {}) {
+  const res = await fetch(`${API_BASE_URL}/api/public/professionals/${slug}/lead`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: 'Failed to submit inquiry' }));
+    throw new Error(error.message || 'Failed to submit inquiry');
+  }
+
+  return res.json();
+}
+
 export async function trackAnalyticsEvent({ slug, event_type, event_data = {}, session_id, visitor_id, cta_type, listing_id, service_id, duration_seconds }) {
   try {
     const analyticsKey = [

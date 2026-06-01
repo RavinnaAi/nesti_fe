@@ -9,7 +9,7 @@ import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useRecordLeadView } from "@/hooks/useRecordLeadView";
 import { useAppSelector } from "@/store";
 import {
-  fetchReferrals,
+  fetchLeadReferrals,
   createReferral,
   updateReferral,
   sendNurtureEmail,
@@ -20,11 +20,12 @@ import {
 } from "@/lib/chatClient";
 import {
   fetchLeadById,
-  fetchLeadConversation,
+  fetchLeadInquiredProperty,
   fetchLeadPropertyMatches,
   deleteLeadById,
   patchLead,
 } from "@/lib/leadsClient";
+import { fetchAllLeadConversationMessages } from "@/lib/leadConversationClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
@@ -36,9 +37,17 @@ import {
   extractMessageMeta,
   getActionConversationId,
   normalizeLeadId,
+  isDirectInquiryLead,
   normalizeList,
   sanitizeInternalReturnPath,
 } from "@/lib/leadsPageUtils";
+import {
+  hasInquiredPropertyContext,
+  inquiredPropertyFromLead,
+  needsInquiredPropertySellerFetch,
+} from "@/lib/inquiredPropertyUtils";
+
+const LEAD_WORKSPACE_QUERY_STALE_MS = 15_000;
 
 function stripListingBulletRows(text) {
   const raw = String(text || "");
@@ -191,6 +200,9 @@ function LeadWorkspacePageContent() {
     queryKey: ["lead-detail", token, leadId],
     enabled: Boolean(token && leadId),
     queryFn: () => fetchLeadById({ token, id: leadId }),
+    staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   useRecordLeadView(leadId, { token, enabled: Boolean(leadId) });
@@ -206,7 +218,10 @@ function LeadWorkspacePageContent() {
   const messagesQuery = useQuery({
     queryKey: ["lead-conversation", token, leadId],
     enabled: Boolean(token && leadId),
-    queryFn: () => fetchLeadConversation({ token, leadId, page: 1, limit: 200 }),
+    queryFn: () => fetchAllLeadConversationMessages({ token, leadId }),
+    staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
 
   const messages = useMemo(() => {
@@ -215,11 +230,35 @@ function LeadWorkspacePageContent() {
     return normalizeList(messagesQuery.data);
   }, [messagesQuery.data]);
 
+  const leadDetail = leadDetailQuery.data?.lead || null;
+  const leadDetailLoaded = Boolean(leadDetailQuery.isSuccess && leadDetail);
+  const inquiredProperty = inquiredPropertyFromLead(leadDetail);
+  const hasInquiredProperty = hasInquiredPropertyContext(leadDetail);
+  const needsSellerLeadFetch = needsInquiredPropertySellerFetch(leadDetail);
+
   const propertyMatchesQuery = useQuery({
     queryKey: ["lead-property-matches", token, leadId],
-    enabled: Boolean(token && leadId && activeTab === "property_matches"),
+    enabled: Boolean(token && leadId && leadDetailLoaded && activeTab === "property_matches" && !hasInquiredProperty),
     queryFn: () => fetchLeadPropertyMatches({ token, leadId, page: 1, limit: 100 }),
+    staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
+
+  const inquiredPropertyQuery = useQuery({
+    queryKey: ["lead-inquired-property", token, leadId],
+    enabled: Boolean(token && leadId && needsSellerLeadFetch && activeTab === "property_matches"),
+    queryFn: () => fetchLeadInquiredProperty({ token, id: leadId }),
+    staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+  });
+
+  const inquiredSellerLeadDetail = inquiredPropertyQuery.data?.seller_lead || null;
+  const inquiredSellerConversation = useMemo(() => {
+    if (!inquiredSellerLeadDetail) return null;
+    return leadApiRowToConversationShape(inquiredSellerLeadDetail);
+  }, [inquiredSellerLeadDetail]);
 
   const propertyMatches = useMemo(() => {
     const d = propertyMatchesQuery.data;
@@ -228,8 +267,35 @@ function LeadWorkspacePageContent() {
     if (Array.isArray(d)) return d;
     return normalizeList(d);
   }, [propertyMatchesQuery.data]);
+  const hideConversationTab = useMemo(() => isDirectInquiryLead(leadDetail), [leadDetail]);
+  const visibleWorkspaceTabs = useMemo(() => {
+    let tabs = roleFilteredTabs;
+    if (hideConversationTab) {
+      tabs = tabs.filter((tab) => tab.id !== "conversation");
+    }
+    if (!hasInquiredProperty) return tabs;
+    return tabs.map((tab) =>
+      tab.id === "property_matches" ? { ...tab, label: "Inquired Property" } : tab,
+    );
+  }, [roleFilteredTabs, hideConversationTab, hasInquiredProperty]);
 
-  const leadDetail = leadDetailQuery.data?.lead || null;
+  useEffect(() => {
+    if (!hideConversationTab) return;
+    const tabIsConversation = tabFromUrl === "conversation" || activeTab === "conversation";
+    if (!tabIsConversation) return;
+    setActiveTab(defaultWorkspaceTab);
+    const p = new URLSearchParams(searchParams.toString());
+    p.set("tab", defaultWorkspaceTab);
+    router.replace(`${pathname}?${p.toString()}`, { scroll: false });
+  }, [
+    hideConversationTab,
+    tabFromUrl,
+    activeTab,
+    defaultWorkspaceTab,
+    searchParams,
+    pathname,
+    router,
+  ]);
 
   const messageMeta = useMemo(() => {
     const latestWithMeta = [...messages].reverse().find((msg) => {
@@ -240,24 +306,23 @@ function LeadWorkspacePageContent() {
   }, [messages]);
 
   const referralsQuery = useQuery({
-    queryKey: ["chat-referrals", token],
-    enabled: Boolean(token),
-    queryFn: () => fetchReferrals({ token }),
+    queryKey: ["lead-referrals", token, leadId],
+    enabled: Boolean(token && leadId),
+    queryFn: () => fetchLeadReferrals({ token, leadMatchId: leadId }),
+    staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
   const referrals = useMemo(() => normalizeList(referralsQuery.data), [referralsQuery.data]);
-  const conversationReferrals = useMemo(() => {
-    if (!actionConversationId) return referrals;
-    return referrals.filter(
-      (ref) =>
-        String(ref?.conversation_id || ref?.conversationId || "") ===
-        String(actionConversationId)
-    );
-  }, [referrals, actionConversationId]);
+  const conversationReferrals = useMemo(() => referrals, [referrals]);
 
   const nurtureLogsQuery = useQuery({
     queryKey: ["chat-nurture-logs", token, leadId],
     enabled: Boolean(token && leadId),
     queryFn: () => fetchNurtureLogs({ token, leadMatchId: leadId }),
+    staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
   });
   const nurtureLogs = useMemo(() => normalizeList(nurtureLogsQuery.data), [nurtureLogsQuery.data]);
 
@@ -283,7 +348,7 @@ function LeadWorkspacePageContent() {
         payload: {
           target_vertical: referralForm.professional_role,
           target_user_id: referralForm.target_user_id,
-          conversation_id: actionConversationId || undefined,
+          lead_match_id: leadId || undefined,
           notes: referralForm.notes || "",
         },
       }),
@@ -294,7 +359,7 @@ function LeadWorkspacePageContent() {
         target_user_id: "",
         notes: "",
       });
-      queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-referrals", token, leadId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to create referral"),
   });
@@ -309,7 +374,7 @@ function LeadWorkspacePageContent() {
     onSuccess: () => {
       toast.success("Referral updated");
       setReferralUpdate({ status: "", notes: "" });
-      queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-referrals", token, leadId] });
     },
     onError: (err) => toast.error(err?.message || "Failed to update referral"),
   });
@@ -418,7 +483,13 @@ function LeadWorkspacePageContent() {
       p.set("tab", next);
       router.replace(`${pathname}?${p.toString()}`, { scroll: false });
     },
-    [pathname, router, searchParams, allowedWorkspaceTabIds, defaultWorkspaceTab],
+    [
+      pathname,
+      router,
+      searchParams,
+      allowedWorkspaceTabIds,
+      defaultWorkspaceTab,
+    ],
   );
 
   const patchLeadMutation = useMutation({
@@ -485,7 +556,7 @@ function LeadWorkspacePageContent() {
             token={token}
             activeTab={activeTab}
             onActiveTabChange={selectTab}
-            roleFilteredTabs={roleFilteredTabs}
+            roleFilteredTabs={visibleWorkspaceTabs}
             selectedLeadId={leadId}
             selectedConversation={selectedConversation}
             leadDetail={leadDetail}
@@ -494,6 +565,9 @@ function LeadWorkspacePageContent() {
             messagesQuery={messagesQuery}
             propertyMatches={propertyMatches}
             propertyMatchesQuery={propertyMatchesQuery}
+            inquiredSellerLeadDetail={inquiredSellerLeadDetail}
+            inquiredSellerConversation={inquiredSellerConversation}
+            inquiredSellerLeadQuery={inquiredPropertyQuery}
             cancelCalendlyMutation={cancelCalendlyMutation}
             patchLeadMutation={patchLeadMutation}
             onConsultationGoToNurture={() => selectTab("nurture")}
@@ -517,6 +591,7 @@ function LeadWorkspacePageContent() {
             nurtureLogsLoading={nurtureLogsQuery.isLoading}
             deleteLeadMutation={deleteLeadMutation}
             onDeleteClick={() => setShowDeleteConfirm(true)}
+            inquiredProperty={inquiredProperty}
           />
         )}
       </div>

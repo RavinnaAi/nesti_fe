@@ -135,6 +135,13 @@ export function getLeadMatchId(lead) {
   return lead?.lead_match_id || lead?.id || "";
 }
 
+export function isDirectInquiryLead(lead) {
+  if (!lead || typeof lead !== "object") return false;
+  if (lead.is_direct_public_inquiry) return true;
+  const source = String(lead.source || "").trim().toLowerCase();
+  return source === "public_web_form" || source === "public_inquiry";
+}
+
 export function getConversationMeta(conversation) {
   let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
   if (isMatched === null) {

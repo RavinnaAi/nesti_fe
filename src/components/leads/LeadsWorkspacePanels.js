@@ -52,6 +52,10 @@ export default function LeadsWorkspacePanels({
   deleteLeadMutation,
   onDeleteClick,
   token,
+  inquiredProperty = null,
+  inquiredSellerLeadDetail = null,
+  inquiredSellerConversation = null,
+  inquiredSellerLeadQuery = null,
 }) {
   const conversationMeta = extractMeta(selectedConversation);
   const goToNurture =
@@ -123,6 +127,10 @@ export default function LeadsWorkspacePanels({
           propertyMatches={propertyMatches}
           propertyMatchesQuery={propertyMatchesQuery}
           propertyMatchesPayload={propertyMatchesQuery.data || null}
+          inquiredProperty={inquiredProperty}
+          inquiredSellerLeadDetail={inquiredSellerLeadDetail}
+          inquiredSellerConversation={inquiredSellerConversation}
+          inquiredSellerLeadQuery={inquiredSellerLeadQuery}
         />
       ) : null}
 

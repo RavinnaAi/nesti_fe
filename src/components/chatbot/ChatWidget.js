@@ -5,14 +5,16 @@ import { createPortal } from "react-dom";
 import { MessageCircle } from "lucide-react";
 import {
   clearChatSession,
+  fetchChatSessionMessages,
+  mapServerChatMessagesToWidget,
   fetchChatPropertyMatches,
   getOrCreateSessionId,
   getVisitorId,
   postChatScorePreview,
   resetChatIdentity,
+  selectChatPropertyMatch,
   sendChatMessage,
   setVisitorId,
-  uploadSellerPropertyImages,
 } from "@/lib/chatClient";
 import { motion } from "framer-motion";
 import ConversationProgress from "./ConversationProgress";
@@ -45,6 +47,12 @@ import {
   hasBasicContact,
   missingDraftFields,
 } from "@/components/chatbot/widget/roleChatStrategy";
+import { attachSellerImagesToAgentFormContact } from "@/components/chatbot/widget/agentSellerImageUpload";
+import { isPropertyMatchesRequestMessage } from "@/lib/chatPropertyMatchesIntent";
+import {
+  assistantMessageHasPropertyMatches,
+  stripPropertyListingFromReply,
+} from "@/lib/chatReplySanitize";
 
 const isDetailsConfirmationMessage = (text) => {
   const t = String(text || "").trim().toLowerCase();
@@ -149,6 +157,7 @@ export default function ChatWidget({
   const shouldFetchMatchesOnNextAssistantReplyRef = useRef(false);
   const lastOutboundUserTextRef = useRef("");
   const latestCalendlyLinkRef = useRef("");
+  const sessionHistoryLoadedRef = useRef(false);
 
   const [leadFlowStep, setLeadFlowStep] = useState(() => {
     if (resolvedRole === "agent") return prefillIntent ? "contact" : "intent";
@@ -223,17 +232,56 @@ export default function ChatWidget({
   }, [resolvedRole, freshSessionOnMount]);
 
   useEffect(() => {
-    if (useAgentLeadForm && leadFlowStep !== "chat") return;
-    if (useRolePreflight && leadFlowStep !== "chat") return;
-    if (!displayGreeting || messages.length) return;
-    setMessages([
-      {
-        role: "assistant",
-        content: displayGreeting,
-        timestamp: new Date(),
-      },
-    ]);
-  }, [useAgentLeadForm, useRolePreflight, leadFlowStep, displayGreeting, messages.length]);
+    sessionHistoryLoadedRef.current = false;
+  }, [sessionId]);
+
+  useEffect(() => {
+    if (!embedToken || !sessionId || freshSessionOnMount) return;
+    if (leadFlowStep !== "chat") return;
+    if (sessionHistoryLoadedRef.current) return;
+    sessionHistoryLoadedRef.current = true;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetchChatSessionMessages({ sessionId, embedToken });
+        if (cancelled) return;
+        const rows = mapServerChatMessagesToWidget(res?.messages);
+        setMessages((prev) => {
+          if (prev.length > 0) return prev;
+          if (rows.length > 0) return rows;
+          if (displayGreeting) {
+            return [
+              {
+                role: "assistant",
+                content: displayGreeting,
+                timestamp: new Date(),
+              },
+            ];
+          }
+          return prev;
+        });
+      } catch {
+        if (!cancelled) {
+          setMessages((prev) => {
+            if (prev.length > 0) return prev;
+            if (!displayGreeting) return prev;
+            return [
+              {
+                role: "assistant",
+                content: displayGreeting,
+                timestamp: new Date(),
+              },
+            ];
+          });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [embedToken, sessionId, leadFlowStep, freshSessionOnMount, displayGreeting]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -251,52 +299,8 @@ export default function ChatWidget({
     ]);
   }, []);
 
-  const appendPropertyMatchesMessage = useCallback(
-    async ({ currentVisitorId, formContactSnapshot }) => {
-      if (!embedToken || !sessionId || !useAgentLeadForm) return;
-      try {
-        const payload = await fetchChatPropertyMatches({
-          sessionId,
-          embedToken,
-          visitorId: currentVisitorId || visitorId,
-          formContact: formContactSnapshot || leadFormContact || undefined,
-          page: 1,
-          limit: 5,
-        });
-        const meta = payload?.meta || {};
-        const matches = Array.isArray(meta.property_matches) ? meta.property_matches : [];
-        const signature = [
-          String(meta.property_matches_context || ""),
-          String(meta.pagination?.total || matches.length),
-          matches
-            .map((m) => String(m?.id || `${m?.title || ""}-${m?.listing_url || ""}`))
-            .join("|"),
-        ].join("::");
-        if (signature === lastPropertyMatchesSignatureRef.current) return;
-        lastPropertyMatchesSignatureRef.current = signature;
-        // No second bubble when there are no matches — the main assistant reply already covers next steps / booking.
-        if (!matches.length) return;
-        if (!showPropertyMatchesInChat) return;
-        addMessage(
-          "assistant",
-          meta.property_matches_context === "sell"
-            ? "Here are comparable properties based on your details:"
-            : "Here are properties that may match your request:",
-          {
-            propertyMatches: matches,
-            propertyMatchesContext: meta.property_matches_context || null,
-            propertyMatchesNote: meta.property_matches_note || null,
-          },
-        );
-      } catch (err) {
-        setError(err?.message || "Property matches could not be loaded.");
-      }
-    },
-    [addMessage, embedToken, sessionId, useAgentLeadForm, visitorId, leadFormContact, showPropertyMatchesInChat, setError],
-  );
-
   const applyChatPayload = useCallback(
-    (payload, currentVisitorId, formContactSnapshot = null) => {
+    async (payload, currentVisitorId, formContactSnapshot = null) => {
       const meta = payload?.meta || {};
       const reply = payload?.reply ?? payload?.response;
       const intent = meta.intent ?? payload?.intent;
@@ -325,20 +329,105 @@ export default function ChatWidget({
         latestCalendlyLinkRef.current = meta.calendly_link;
       }
 
-      addMessage("assistant", reply || "Thanks! How else can I help?");
+      const userJustAskedForMatches = isPropertyMatchesRequestMessage(lastOutboundUserTextRef.current);
       const wantsMatchesAfterConfirm =
         shouldFetchMatchesOnNextAssistantReplyRef.current ||
+        Boolean(meta.refetch_property_matches) ||
         (Boolean(meta.property_matches_available) &&
-          isDetailsConfirmationMessage(lastOutboundUserTextRef.current));
-      if (wantsMatchesAfterConfirm) {
+          (isDetailsConfirmationMessage(lastOutboundUserTextRef.current) || userJustAskedForMatches));
+      const replacePriorMatchCards =
+        userJustAskedForMatches || Boolean(meta.refetch_property_matches);
+
+      let matches = [];
+      let matchesMeta = {};
+
+      if (wantsMatchesAfterConfirm && useAgentLeadForm && embedToken && sessionId) {
         shouldFetchMatchesOnNextAssistantReplyRef.current = false;
-        appendPropertyMatchesMessage({
-          currentVisitorId: visitorForMatches,
-          formContactSnapshot,
+        try {
+          const matchPayload = await fetchChatPropertyMatches({
+            sessionId,
+            embedToken,
+            visitorId: visitorForMatches || visitorId,
+            formContact: formContactSnapshot || leadFormContact || undefined,
+            page: 1,
+            limit: 5,
+          });
+          matchesMeta = matchPayload?.meta || {};
+          matches = Array.isArray(matchesMeta.property_matches) ? matchesMeta.property_matches : [];
+          const signature = [
+            String(matchesMeta.property_matches_context || ""),
+            String(matchesMeta.pagination?.total || matches.length),
+            matches
+              .map((m) => String(m?.id || `${m?.title || ""}-${m?.listing_url || ""}`))
+              .join("|"),
+          ].join("::");
+          if (!replacePriorMatchCards && signature === lastPropertyMatchesSignatureRef.current) {
+            matches = [];
+          } else {
+            lastPropertyMatchesSignatureRef.current = signature;
+          }
+        } catch (err) {
+          setError(err?.message || "Property matches could not be loaded.");
+        }
+      }
+
+      const showMatchCards = Boolean(showPropertyMatchesInChat && matches.length);
+      let displayReply = String(reply || "Thanks! How else can I help?");
+      if (wantsMatchesAfterConfirm || showMatchCards) {
+        displayReply = stripPropertyListingFromReply(displayReply);
+      }
+      if (showMatchCards && !displayReply.trim()) {
+        displayReply = "";
+      }
+
+      const assistantExtras = showMatchCards
+        ? {
+            propertyMatches: matches,
+            propertyMatchesContext: matchesMeta.property_matches_context || null,
+            propertyMatchesNote: matchesMeta.property_matches_note || null,
+          }
+        : {};
+
+      if (showMatchCards || replacePriorMatchCards) {
+        setMessages((prev) => {
+          const withoutOldMatchCards = prev.filter((m) => !assistantMessageHasPropertyMatches(m));
+          return [
+            ...withoutOldMatchCards,
+            {
+              role: "assistant",
+              content: displayReply,
+              timestamp: new Date(),
+              ...assistantExtras,
+            },
+          ];
         });
+        return;
+      }
+
+      addMessage("assistant", displayReply, assistantExtras);
+    },
+    [
+      addMessage,
+      embedToken,
+      sessionId,
+      useAgentLeadForm,
+      visitorId,
+      leadFormContact,
+      showPropertyMatchesInChat,
+      setError,
+    ],
+  );
+
+  const handlePropertyMatchSelect = useCallback(
+    async (property) => {
+      if (!embedToken || !sessionId || !property) return;
+      try {
+        await selectChatPropertyMatch({ sessionId, embedToken, property });
+      } catch (err) {
+        setError(err?.message || "Selected property could not be saved.");
       }
     },
-    [addMessage, appendPropertyMatchesMessage],
+    [embedToken, sessionId],
   );
 
   const runPreparedChatStart = useCallback(
@@ -370,7 +459,7 @@ export default function ChatWidget({
           formContact,
         });
         const payload = response?.data || response;
-        applyChatPayload(payload, visitorId, formContact);
+        await applyChatPayload(payload, visitorId, formContact);
       } catch (err) {
         setError(err?.message || "Request failed.");
       } finally {
@@ -387,7 +476,12 @@ export default function ChatWidget({
     if (!overrideText) setInput("");
     lastOutboundUserTextRef.current = text;
     addMessage("user", text);
-    shouldFetchMatchesOnNextAssistantReplyRef.current = isDetailsConfirmationMessage(text);
+    const wantsMatchesOnReply =
+      isDetailsConfirmationMessage(text) || isPropertyMatchesRequestMessage(text);
+    shouldFetchMatchesOnNextAssistantReplyRef.current = wantsMatchesOnReply;
+    if (isPropertyMatchesRequestMessage(text)) {
+      lastPropertyMatchesSignatureRef.current = "";
+    }
     setLoading(true);
     setError("");
     setQuickReplies([]);
@@ -403,7 +497,7 @@ export default function ChatWidget({
       });
 
       const payload = response?.data || response;
-      applyChatPayload(payload, visitorId, leadFormContact);
+      await applyChatPayload(payload, visitorId, leadFormContact);
     } catch (err) {
       setError(err?.message || "Request failed.");
     } finally {
@@ -436,21 +530,20 @@ export default function ChatWidget({
     if (chosenIntent === "sell" && sellerPropertyImageFiles.length) {
       try {
         setLoading(true);
-        const uploaded = await uploadSellerPropertyImages({
+        const uploadResult = await attachSellerImagesToAgentFormContact({
+          intent: chosenIntent,
+          formContact,
           embedToken,
           sessionId,
-          files: sellerPropertyImageFiles,
+          propertyImageFiles: sellerPropertyImageFiles,
+          messages: {
+            missingImages: "Please upload at least one property image to create a seller lead.",
+            emptyUpload: "Please upload at least one property image to create a seller lead.",
+            uploadFailed: "Property images could not be uploaded. Please try again.",
+          },
         });
-        nextFormContact = {
-          ...formContact,
-          property_images: Array.isArray(uploaded?.images) ? uploaded.images : [],
-        };
-        if (!nextFormContact.property_images.length) {
-          setFormValidationError("Please upload at least one property image to create a seller lead.");
-          setLoading(false);
-          return;
-        }
-        setLeadDraft((d) => ({ ...d, property_images: nextFormContact.property_images }));
+        nextFormContact = uploadResult.formContact;
+        setLeadDraft((d) => ({ ...d, property_images: uploadResult.uploadedImages }));
       } catch (err) {
         setFormValidationError(err?.message || "Property images could not be uploaded. Please try again.");
         setLoading(false);
@@ -503,6 +596,7 @@ export default function ChatWidget({
 
   const resetConversationState = useCallback(
     ({ resetInput = false } = {}) => {
+      sessionHistoryLoadedRef.current = false;
       setMessages([]);
       setLeadFormContact(null);
       setStep(0);
@@ -649,6 +743,7 @@ export default function ChatWidget({
       leadFlowStep={leadFlowStep}
       error={error}
       messagesEndRef={messagesEndRef}
+      onPropertyMatchSelect={handlePropertyMatchSelect}
     />
   );
 

@@ -47,6 +47,12 @@ function leadDisplayName(ref) {
   if (n) return n;
   const em = String(ref?.lead_contact?.email || "").trim();
   if (em) return em;
+  const phone = String(ref?.lead_contact?.phone || "").trim();
+  if (phone) return phone;
+  const category = String(ref?.lead_summary?.lead_category || "").trim();
+  if (category) return category;
+  const notes = String(ref?.notes || "").trim();
+  if (notes && notes.length <= 40) return notes;
   return "—";
 }
 
@@ -161,9 +167,9 @@ const REFERRAL_WORKFLOW_CHIP = {
 // For list tables, we only surface a small set of "manual pipeline statuses" here; booking-related
 // stages are already represented by the Consult column.
 const ACCEPTED_PIPELINE_STATUS_OVERRIDE = {
-  nurturing: { label: "Nurturing", chipClass: "border-amber-200 bg-amber-50 text-amber-950" },
-  converted: { label: "Won", chipClass: "border-emerald-200 bg-emerald-50 text-emerald-900" },
-  closed_lost: { label: "Lost", chipClass: "border-slate-200 bg-slate-100 text-slate-800" },
+  nurturing: { chipClass: "border-amber-200 bg-amber-50 text-amber-950" },
+  converted: { chipClass: "border-emerald-200 bg-emerald-50 text-emerald-900" },
+  closed_lost: { chipClass: "border-slate-200 bg-slate-100 text-slate-800" },
 };
 
 const CHIP_WRAP =
@@ -189,16 +195,38 @@ function ReferralStatusChip({ status }) {
   return <StatusChipSpan label={label} chipClass={chipClass} title={label} />;
 }
 
-function ReferralWorkflowOrPipelineStatusChip({ row }) {
+function roleAwarePipelineStatusLabel(status, roleRaw) {
+  const statusNorm = String(status || "").trim().toLowerCase();
+  if (!statusNorm) return "";
+  if (statusNorm === "nurturing") return "Nurturing";
+  if (statusNorm === "closed_lost") return "Lost";
+  if (statusNorm !== "converted") return fmtIntent(statusNorm.replace(/_/g, " "));
+  const role = String(roleRaw || "").trim().toLowerCase();
+  if (role === "lawyer") return "Retained";
+  if (role === "mortgage_broker") return "Funded";
+  return "Won";
+}
+
+function ReferralWorkflowOrPipelineStatusChip({ row, direction }) {
   const refStatus = String(row?.status || "").trim().toLowerCase();
   if (refStatus !== "accepted") return <ReferralStatusChip status={row?.status} />;
 
   const pipelineStatus =
-    String(row?.viewer_match_status || row?.target_match_status || "")
+    String(
+      direction === "outbound"
+        ? row?.viewer_match_status ?? row?.target_match_status ?? ""
+        : row?.target_match_status ?? row?.viewer_match_status ?? ""
+    )
       .trim()
       .toLowerCase();
   const override = ACCEPTED_PIPELINE_STATUS_OVERRIDE[pipelineStatus];
   if (!override) return <ReferralStatusChip status={row?.status} />;
+
+  const statusRoleRaw =
+    direction === "outbound"
+      ? row?.referrer?.role || row?.lead_summary?.source_role || ""
+      : row?.target_professional?.role || row?.target_vertical || row?.lead_summary?.source_role || "";
+  const statusLabel = roleAwarePipelineStatusLabel(pipelineStatus, statusRoleRaw) || "Accepted";
 
   const referralUpdatedAtMs = Date.parse(String(row?.updated_at || ""));
   const matchUpdatedAtMs = Date.parse(
@@ -212,7 +240,7 @@ function ReferralWorkflowOrPipelineStatusChip({ row }) {
 
   return (
     <StatusChipSpan
-      label={override.label}
+      label={statusLabel}
       chipClass={override.chipClass}
       title="Updated in Notes (pipeline stage)"
     />
@@ -266,14 +294,16 @@ function ProfessionalCell({ user, fallbackName }) {
 function consultCell(row, direction) {
   const appt = String(row?.appointment_status ?? "").trim().toLowerCase();
   const nurture = Boolean(row?.nurture_consultation_booked);
-  const statusRaw =
+  const pipeBooked =
     direction === "outbound"
-      ? row?.viewer_match_status ?? row?.target_match_status ?? row?.status
-      : row?.target_match_status ?? row?.viewer_match_status ?? row?.status;
-  const st = String(statusRaw ?? "")
-    .trim()
-    .toLowerCase();
-  const pipeBooked = st === "consult_booked" || st === "showing_booked";
+      ? Boolean(
+          row?.viewer_has_upcoming_pipeline_booking ??
+            row?.target_has_upcoming_pipeline_booking
+        )
+      : Boolean(
+          row?.target_has_upcoming_pipeline_booking ??
+            row?.viewer_has_upcoming_pipeline_booking
+        );
 
   if (appt === "canceled") {
     return {
@@ -445,7 +475,7 @@ export default function ReferralsDataTable({
                     <td className="px-2 py-1.5 align-middle">{detailsCell(summary)}</td>
                     <td className="px-2 py-1.5 align-middle leading-snug">{categoryCell(summary)}</td>
                     <td className="px-2 py-1.5 align-middle">
-                      <ReferralWorkflowOrPipelineStatusChip row={ref} />
+                      <ReferralWorkflowOrPipelineStatusChip row={ref} direction={dir} />
                     </td>
                     {showConsultColumn ? (
                       <td className="px-2 py-1.5 align-middle">

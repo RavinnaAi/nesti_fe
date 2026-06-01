@@ -51,6 +51,14 @@ export async function fetchLeadById({ token, id }) {
   });
 }
 
+export async function fetchLeadInquiredProperty({ token, id }) {
+  return apiClient({
+    url: API_ENDPOINTS.leads.inquiredProperty(id),
+    method: "GET",
+    token,
+  });
+}
+
 export async function analyzeLeadInsights({ token, leadId, refresh = false }) {
   return apiClient({
     url: withQuery(API_ENDPOINTS.ai.analyzeLeadInsights(leadId), refresh ? { refresh: 1 } : {}),

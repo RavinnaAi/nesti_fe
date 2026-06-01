@@ -12,9 +12,15 @@ export default function AppChromeShell({ children }) {
 
   if (!mounted) {
     return (
-      <main className="flex min-h-screen w-full items-center justify-center">
-        <p className="text-sm text-text-muted">Loading workspace...</p>
-      </main>
+      <>
+        <main
+          className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-background-light/90"
+          aria-busy="true"
+        >
+          <p className="text-sm text-text-muted">Loading workspace...</p>
+        </main>
+        {children}
+      </>
     );
   }
 

@@ -20,6 +20,7 @@ import { incrementUnread } from "@/store/proChatSlice";
  */
 export function useWorkspaceSocket(token, queryClient) {
   const pathname = usePathname() || "";
+  const isProfessionalPublicPage = pathname.startsWith("/p/") || pathname.startsWith("/professional/");
   const router = useRouter();
   const dispatch = useAppDispatch();
   const myUserId = useAppSelector((s) => s.auth.user?.id || s.auth.user?._id || "");
@@ -101,6 +102,12 @@ export function useWorkspaceSocket(token, queryClient) {
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
 
+      // Public professional pages should not show workspace toasts.
+      // Keep background cache updates, but avoid UI notification noise here.
+      if (isProfessionalPublicPage) {
+        return;
+      }
+
       const title = payload?.title;
       const href = actionHref(payload?.action);
       if (href && pathname && href === pathname) {
@@ -149,6 +156,10 @@ export function useWorkspaceSocket(token, queryClient) {
     };
 
     const onProChatInbox = (payload) => {
+      if (isProfessionalPublicPage) {
+        queryClient.invalidateQueries({ queryKey: ["prochat-threads"] });
+        return;
+      }
       const threadId = String(payload?.thread_id || "").trim();
       if (threadId && pathname === `/messages/${threadId}`) {
         return; // already on this chat
@@ -220,5 +231,5 @@ export function useWorkspaceSocket(token, queryClient) {
       socket.off("disconnect");
       socket.disconnect();
     };
-  }, [token, queryClient, pathname, dispatch, myUserId, router]);
+  }, [token, queryClient, pathname, isProfessionalPublicPage, dispatch, myUserId, router]);
 }

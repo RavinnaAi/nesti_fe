@@ -105,6 +105,9 @@ export default function AppChrome({ children }) {
 
   useEffect(() => {
     if (!token || !isMounted) return;
+    // `/invite/[token]` finalizes on the landing page for logged-in users; running
+    // session_finalize here as well races and can create duplicate lead referrals.
+    if (pathname.startsWith("/invite/")) return;
     if (inviteFinalizeAttemptedRef.current) return;
     const attr = getInviteAttribution();
     if (!attr?.token) return;
@@ -120,19 +123,28 @@ export default function AppChrome({ children }) {
         if (res?.success) {
           clearInviteAttribution();
           queryClient.invalidateQueries({ queryKey: ["invite-metrics"] });
+          queryClient.invalidateQueries({ queryKey: ["invite-conversions"] });
+          queryClient.invalidateQueries({ queryKey: ["invite-role-trends"] });
+          queryClient.invalidateQueries({ queryKey: ["chat-referrals"] });
+          queryClient.invalidateQueries({ queryKey: ["lead-referrals"] });
+          if (res?.lead_referral?.id) {
+            router.replace(
+              `/referrals/${encodeURIComponent(String(res.lead_referral.id))}?direction=inbound`
+            );
+          }
         }
       })
       .catch((err) => {
         const status = err?.status;
         const msg = String(err?.message || "");
         // Self-referral (or bad/expired tokens) should not keep retrying forever.
-        if ([400, 404, 410].includes(Number(status)) || /self\s*referral/i.test(msg)) {
+        if ([400, 410].includes(Number(status)) || /self\s*referral/i.test(msg)) {
           clearInviteAttribution();
           return;
         }
         inviteFinalizeAttemptedRef.current = false;
       });
-  }, [token, isMounted, pathname, queryClient]);
+  }, [token, isMounted, pathname, queryClient, router]);
 
   const isChatbotEmbed = pathname.startsWith("/chatbot");
   const isCalendlyCallback = pathname.startsWith("/calendly-callback");

@@ -6,7 +6,6 @@ import {
   Bed, Bath, Maximize2, MapPin, Tag, X,
   ChevronLeft, ChevronRight, Calendar, MessageCircle,
 } from 'lucide-react';
-import PublicInquiryChatWidget from '../PublicInquiryChatWidget';
 import { getSellerProperties } from '@/lib/publicProfileClient';
 
 /* ─── helpers ─────────────────────────────────────────────── */
@@ -215,16 +214,13 @@ function PropertyCard({ property, onViewDetails }) {
 }
 
 /* ─── Main Section ────────────────────────────────────────── */
-export default function AgentPropertiesSection({ profile, onChatOpen, onChatClose, closeChatRequest = 0 }) {
+export default function AgentPropertiesSection({ profile, onPropertyInquiry }) {
   const PAGE_SIZE = 6;
 
   const [properties, setProperties] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modalProperty, setModalProperty] = useState(null);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [selectedProperty, setSelectedProperty] = useState(null);
   const [page, setPage] = useState(1);
-  const lastCloseChatRequestRef = useRef(closeChatRequest);
   const fetchedSlugRef = useRef('');
 
   // Fetch seller properties from the dedicated endpoint
@@ -254,14 +250,6 @@ export default function AgentPropertiesSection({ profile, onChatOpen, onChatClos
     setPage(1);
   }, [validProperties.length]);
 
-  useEffect(() => {
-    if (!closeChatRequest || closeChatRequest === lastCloseChatRequestRef.current) return;
-    lastCloseChatRequestRef.current = closeChatRequest;
-    setChatOpen(false);
-    setSelectedProperty(null);
-    onChatClose?.();
-  }, [closeChatRequest, onChatClose]);
-
   if (loading) {
     return (
       <section className="bg-transparent py-12">
@@ -283,9 +271,7 @@ export default function AgentPropertiesSection({ profile, onChatOpen, onChatClos
   if (!validProperties.length) return null;
 
   const handleInquire = (property) => {
-    setSelectedProperty(property);
-    setChatOpen(true);
-    onChatOpen?.();
+    onPropertyInquiry?.(property);
   };
 
   return (
@@ -370,17 +356,6 @@ export default function AgentPropertiesSection({ profile, onChatOpen, onChatClos
           profile={profile}
           onClose={() => setModalProperty(null)}
           onInquire={handleInquire}
-        />
-      )}
-
-      {/* Inquiry Chatbot — passes property context so buyer lead is pre-filled */}
-      {chatOpen && (
-        <PublicInquiryChatWidget
-          profile={profile}
-          isOpen={chatOpen}
-          onClose={() => { setChatOpen(false); setSelectedProperty(null); onChatClose?.(); }}
-          inquiryType="property_inquiry"
-          propertyContext={selectedProperty}
         />
       )}
     </>

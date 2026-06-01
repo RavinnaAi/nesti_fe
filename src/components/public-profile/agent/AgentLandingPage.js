@@ -14,13 +14,14 @@ import PublicProfessionalsSlider from '../PublicProfessionalsSlider';
 import PublicChatBubble from '../PublicChatBubble';
 import PublicGuidanceSection from '../PublicGuidanceSection';
 import PublicInquiryChatWidget from '../PublicInquiryChatWidget';
+import PublicLeadCaptureModal from '../PublicLeadCaptureModal';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
 import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 
 export default function AgentLandingPage({ profile }) {
   const [chatbotOpen, setChatbotOpen] = useState(false);
-  const [propertyChatOpen, setPropertyChatOpen] = useState(false);
-  const [closePropertyChatRequest, setClosePropertyChatRequest] = useState(0);
+  const [leadModalOpen, setLeadModalOpen] = useState(false);
+  const [prefillInquiryProperty, setPrefillInquiryProperty] = useState(null);
 
   const handleCTAClick = async (ctaType) => {
     try {
@@ -54,9 +55,18 @@ export default function AgentLandingPage({ profile }) {
     setChatbotOpen(true);
   };
 
+  const openDirectInquiryModal = (property = null) => {
+    setPrefillInquiryProperty(property || null);
+    setLeadModalOpen(true);
+  };
+
   return (
     <div>
-      <PublicHero profile={profile} onCTAClick={handleCTAClick} />
+      <PublicHero
+        profile={profile}
+        onCTAClick={handleCTAClick}
+        onDirectLeadClick={() => openDirectInquiryModal(null)}
+      />
       <PublicExpertiseBand profile={profile} onCTAClick={handleCTAClick} />
       <PublicRoleDetailSection profile={profile} />
 
@@ -66,9 +76,7 @@ export default function AgentLandingPage({ profile }) {
 
       <AgentPropertiesSection
         profile={profile}
-        onChatOpen={() => setPropertyChatOpen(true)}
-        onChatClose={() => setPropertyChatOpen(false)}
-        closeChatRequest={closePropertyChatRequest}
+        onPropertyInquiry={(property) => openDirectInquiryModal(property)}
       />
 
       <PublicHappyClientsSlider testimonials={profile.testimonials} profile={profile} />
@@ -112,9 +120,17 @@ export default function AgentLandingPage({ profile }) {
 
       <PublicCTA
         profile={profile}
-        onCTAClick={handleCTAClick}
-        chatbotOpen={chatbotOpen}
-        onChatbotClose={() => setChatbotOpen(false)}
+        onDirectLeadClick={() => openDirectInquiryModal(null)}
+      />
+
+      <PublicLeadCaptureModal
+        open={leadModalOpen}
+        onClose={() => {
+          setLeadModalOpen(false);
+          setPrefillInquiryProperty(null);
+        }}
+        profile={profile}
+        prefillProperty={prefillInquiryProperty}
       />
 
       <PublicInquiryChatWidget
@@ -127,13 +143,6 @@ export default function AgentLandingPage({ profile }) {
       <PublicChatBubble
         profile={profile}
         hideWhenOpen={chatbotOpen}
-        controlledOpen={propertyChatOpen ? true : undefined}
-        onControlledToggle={(open) => {
-          if (!open) {
-            setPropertyChatOpen(false);
-            setClosePropertyChatRequest((value) => value + 1);
-          }
-        }}
       />
     </div>
   );

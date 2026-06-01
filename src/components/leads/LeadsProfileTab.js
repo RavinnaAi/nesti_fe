@@ -9,6 +9,7 @@ export default function LeadsProfileTab({
   lead,
   onPatchLead,
   patchLeadPending = false,
+  embedded = false,
 }) {
   const leadData = lead && typeof lead === "object" ? lead : {};
   const profRole = leadData.professional_type;
@@ -18,6 +19,7 @@ export default function LeadsProfileTab({
   const contact = leadData.contact || {};
   const property = leadData.property || {};
   const qualification = leadData.qualification || {};
+  const locationDisplay = property.location || (leadData.intent === "sell" ? property.address : "");
 
   const readable = (value) => {
     if (value === null || value === undefined || value === "") return "—";
@@ -108,12 +110,14 @@ export default function LeadsProfileTab({
   );
 
   const pipelineInfo = getStatusDisplay(leadData.status ?? leadData.match_status);
+  const outerClassName = embedded ? "space-y-4" : "rounded-md border border-border bg-white shadow-sm p-5 space-y-4";
+  const sectionClassName = embedded ? "space-y-3" : "rounded-md border border-border bg-white p-4 space-y-3";
 
   return (
-    <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
+    <div className={outerClassName}>
       {selectedConversation ? (
         <>
-          <div className="rounded-md border border-border bg-white p-4 space-y-3">
+          <div className={sectionClassName}>
             <div className="text-sm font-semibold text-text-heading">User details</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
               <div className="lg:col-span-1">
@@ -131,9 +135,11 @@ export default function LeadsProfileTab({
               <div className="lg:col-span-1">
                 <KeyValue label="Best time to contact" value={contact.best_time_to_contact} />
               </div>
-              <div className="lg:col-span-2">
-                <KeyValue label={isLawyerLead ? "Property / area" : "Location"} value={property.location} />
-              </div>
+              {!isLawyerLead ? (
+                <div className="lg:col-span-2">
+                  <KeyValue label="Location" value={locationDisplay} />
+                </div>
+              ) : null}
               {isLawyerLead ? (
                 <div className="lg:col-span-2">
                   <KeyValue label="Property address" value={property.address} />
@@ -168,7 +174,7 @@ export default function LeadsProfileTab({
             </div>
           ) : null}
 
-          <div className="rounded-md border border-border bg-white p-4 space-y-4">
+          <div className={embedded ? "space-y-4 border-t border-border/60 pt-4" : "rounded-md border border-border bg-white p-4 space-y-4"}>
             <div>
               <div className="text-sm font-semibold text-text-heading">
                 {isLawyerLead ? "Matter summary" : isMortgageBrokerLead ? "Financing summary" : "Lead context"}

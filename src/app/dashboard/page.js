@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
-import { RefreshCw } from "lucide-react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Copy, Link2, Mail, MessageCircle, RefreshCw, Share2, X } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useProfileQuery } from "@/hooks/useAuthApi";
@@ -16,7 +17,7 @@ import {
 } from "@/lib/chatClient";
 import { fetchLeads, fetchLeadProfiles } from "@/lib/leadsClient";
 import { fetchCalendarBookings } from "@/lib/calendarClient";
-import { fetchInviteConversionRoleTrends } from "@/lib/inviteClient";
+import { createInviteLink, fetchInviteConversionRoleTrends } from "@/lib/inviteClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { formatLeadLocationLine, getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
@@ -142,6 +143,8 @@ export default function DashboardPage() {
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [secondaryQueriesReady, setSecondaryQueriesReady] = useState(false);
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [generatedInviteLink, setGeneratedInviteLink] = useState("");
 
   useEffect(() => {
     setAvatarBroken(false);
@@ -230,6 +233,60 @@ export default function DashboardPage() {
     inviteRoleTrendsQuery.isFetching ||
     profilesTopQuery.isFetching ||
     calendarBookingsQuery.isFetching;
+
+  const createInviteMutation = useMutation({
+    mutationFn: () =>
+      createInviteLink({
+        token,
+        payload: {
+          intended_audience: "professional",
+          source_channel: "dashboard",
+        },
+      }),
+    onSuccess: async (data) => {
+      const link = String(data?.share_url || data?.invite?.share_url || "").trim();
+      setGeneratedInviteLink(link);
+      if (link) {
+        try {
+          await navigator.clipboard.writeText(link);
+          toast.success("Invite link created and copied.");
+        } catch {
+          toast.success("Invite link created.");
+        }
+      } else {
+        toast.success("Invite link created.");
+      }
+    },
+    onError: (err) => toast.error(err?.message || "Could not create invite link."),
+  });
+
+  const copyGeneratedInviteLink = async () => {
+    if (!generatedInviteLink) return;
+    try {
+      await navigator.clipboard.writeText(generatedInviteLink);
+      toast.success("Invite link copied.");
+    } catch {
+      toast.error("Could not copy invite link.");
+    }
+  };
+
+  const inviteShareText = generatedInviteLink
+    ? `Join Nesti via this invite link: ${generatedInviteLink}`
+    : "";
+  const inviteShareLinks = {
+    email: generatedInviteLink
+      ? `mailto:?subject=${encodeURIComponent("Join my Nesti network")}&body=${encodeURIComponent(inviteShareText)}`
+      : "#",
+    whatsapp: generatedInviteLink
+      ? `https://wa.me/?text=${encodeURIComponent(inviteShareText)}`
+      : "#",
+    sms: generatedInviteLink
+      ? `sms:?body=${encodeURIComponent(inviteShareText)}`
+      : "#",
+    social: generatedInviteLink
+      ? `https://x.com/intent/tweet?text=${encodeURIComponent(inviteShareText)}`
+      : "#",
+  };
 
   useEffect(() => {
     setIsMounted(true);
@@ -397,15 +454,15 @@ export default function DashboardPage() {
             ) : null}
           </div>
 
-          <div className="relative flex flex-col gap-4 px-5 pb-5 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-7 sm:pb-6">
-            <div className="flex min-w-0 flex-1 items-end gap-4 sm:gap-5">
+          <div className="relative flex flex-col gap-4 px-5 pb-6 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-7 sm:pb-7">
+            <div className="flex min-w-0 flex-1 items-end gap-4 sm:gap-7">
               <motion.div
-                className="relative z-[1] -mt-8 shrink-0 sm:-mt-10"
+                className="relative z-[1] -mt-18 shrink-0 sm:-mt-24"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="relative h-[5rem] w-[5rem] overflow-hidden rounded-xl border-[3px] border-white bg-slate-50 shadow-md sm:h-[6rem] sm:w-[6rem] sm:rounded-2xl">
+                <div className="relative h-[9rem] w-[9rem] overflow-hidden rounded-[1.5rem] border-[5px] border-white bg-slate-50 shadow-[0_20px_48px_rgba(15,23,42,0.25)] ring-1 ring-black/5 sm:h-[10.5rem] sm:w-[10.5rem] sm:rounded-[1.75rem]">
                   {profileImageUrl && !avatarBroken ? (
                     <Image
                       src={profileImageUrl}
@@ -413,7 +470,7 @@ export default function DashboardPage() {
                       width={240}
                       height={240}
                       className="h-full w-full object-cover object-center"
-                      sizes="(max-width: 768px) 80px, 96px"
+                      sizes="(max-width: 768px) 144px, 168px"
                       priority
                       unoptimized={
                         profileImageUrl.startsWith("data:") || profileImageUrl.startsWith("blob:")
@@ -421,18 +478,18 @@ export default function DashboardPage() {
                       onError={() => setAvatarBroken(true)}
                     />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center text-lg font-bold text-primary-dark select-none sm:text-xl" aria-hidden>
+                    <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-primary-dark select-none sm:text-4xl" aria-hidden>
                       {avatarInitials}
                     </span>
                   )}
                 </div>
-                <span className="absolute -bottom-1 -right-1 rounded-md bg-emerald-500 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white shadow">
+                <span className="absolute -bottom-1.5 -right-1.5 rounded-lg border-2 border-white bg-emerald-500 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-white shadow-md">
                   Active
                 </span>
               </motion.div>
 
               <motion.div
-                className="min-w-0 flex-1 pb-0.5"
+                className="min-w-0 flex-1 pb-2"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
@@ -474,6 +531,15 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(true)}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15"
+              title="Create invite link"
+            >
+              <Link2 size={13} />
+              Create invite
+            </button>
             <div
               role="tablist"
               aria-label="Analytics window"
@@ -553,6 +619,147 @@ export default function DashboardPage() {
             onClose={() => setSelectedLeadId(null)}
           />
         )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {showInviteModal ? (
+          <motion.div
+            className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 px-4 py-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <motion.div
+              className="w-full max-w-md rounded-2xl border border-border bg-white p-5 shadow-2xl"
+              initial={{ opacity: 0, y: 16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 10, scale: 0.98 }}
+              transition={{ duration: 0.18 }}
+            >
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-bold text-text-heading">Create invite link</h3>
+                  <p className="mt-1 text-xs leading-relaxed text-text-muted">
+                    Generate a professional invite link you can share with your network.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="rounded-lg p-1.5 text-text-muted transition-colors hover:bg-slate-100 hover:text-text-heading"
+                  aria-label="Close invite modal"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="mt-4 rounded-xl border border-primary/15 bg-primary/[0.04] p-3">
+                <p className="text-xs font-semibold text-text-heading">Invite link</p>
+                {generatedInviteLink ? (
+                  <div className="mt-2 flex items-center gap-2">
+                    <input
+                      type="text"
+                      readOnly
+                      value={generatedInviteLink}
+                      className="min-w-0 flex-1 rounded-lg border border-border bg-white px-3 py-2 text-xs text-text-body outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={copyGeneratedInviteLink}
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-2 text-xs font-semibold text-text-heading hover:bg-primary/5"
+                    >
+                      <Copy size={13} />
+                      Copy
+                    </button>
+                  </div>
+                ) : (
+                  <p className="mt-1 text-xs text-text-muted">
+                    Click create below to generate a fresh invite link.
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-4 rounded-xl border border-border/70 bg-white p-3">
+                <p className="text-xs font-semibold text-text-heading">Share on platforms</p>
+                <p className="mt-1 text-[11px] text-text-muted">
+                  Create an invite first, then share it directly through your preferred channel.
+                </p>
+                <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <a
+                    href={inviteShareLinks.email}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                      generatedInviteLink
+                        ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                        : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                    }`}
+                  >
+                    <Mail size={12} />
+                    Email
+                  </a>
+                  <a
+                    href={inviteShareLinks.whatsapp}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                      generatedInviteLink
+                        ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                        : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                    }`}
+                  >
+                    <MessageCircle size={12} />
+                    WhatsApp
+                  </a>
+                  <a
+                    href={inviteShareLinks.sms}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                      generatedInviteLink
+                        ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                        : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                    }`}
+                  >
+                    <Share2 size={12} />
+                    SMS
+                  </a>
+                  <a
+                    href={inviteShareLinks.social}
+                    target="_blank"
+                    rel="noreferrer"
+                    className={`inline-flex h-9 items-center justify-center gap-1 rounded-md border text-xs font-semibold ${
+                      generatedInviteLink
+                        ? "border-border bg-white text-text-heading hover:bg-primary/[0.07]"
+                        : "pointer-events-none border-border/60 bg-slate-100 text-text-muted"
+                    }`}
+                  >
+                    <Share2 size={12} />
+                    Social
+                  </a>
+                </div>
+              </div>
+
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowInviteModal(false)}
+                  className="rounded-lg border border-border bg-white px-4 py-2 text-xs font-semibold text-text-heading hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => createInviteMutation.mutate()}
+                  disabled={!token || createInviteMutation.isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-white shadow-sm hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  <Link2 size={13} />
+                  {createInviteMutation.isPending ? "Creating..." : "Create invite"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        ) : null}
       </AnimatePresence>
     </div>
   );
