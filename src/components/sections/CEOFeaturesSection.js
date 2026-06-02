@@ -155,7 +155,7 @@ export default function CEOFeaturesSection() {
                 href={feature.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group relative flex h-56 w-[17.5rem] shrink-0 cursor-pointer flex-col overflow-hidden rounded-[1.35rem] border border-white/80 bg-white/92 p-4 text-left shadow-[0_14px_34px_rgba(15,23,42,0.075)] ring-1 ring-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-[0_24px_48px_rgba(15,23,42,0.12)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 md:w-[18.5rem]"
+                className="group relative flex h-56 w-[17.5rem] shrink-0 cursor-pointer flex-col overflow-hidden rounded-[1.35rem] border border-border/70 bg-white/95 p-4 text-left ring-1 ring-border/50 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:bg-white focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 md:w-[18.5rem]"
                 aria-label={`Read article about ${feature.name}`}
               >
                 <div
@@ -173,7 +173,7 @@ export default function CEOFeaturesSection() {
                   </div>
                 </div>
 
-                <div className="relative z-10 flex h-24 w-full items-center justify-center rounded-2xl bg-white px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_24px_rgba(15,23,42,0.055)] ring-1 ring-border/65 transition-transform duration-300 group-hover:scale-[1.015]">
+                <div className="relative z-10 flex h-24 w-full items-center justify-center rounded-2xl bg-white px-5 py-4 ring-1 ring-border/65 transition-transform duration-300 group-hover:scale-[1.015]">
                   <Image
                     src={feature.logo}
                     alt={`${feature.name} logo`}

@@ -1,6 +1,48 @@
 import Link from "next/link";
 import { Bot, Mail, PhoneCall, ArrowRight } from "lucide-react";
 
+function FacebookIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
+      <path d="M14.2 8.2V6.9c0-.6.4-.8.8-.8h2V2.7L14.2 2.6c-3.1 0-4.8 1.8-4.8 5v.6H6.2v3.8h3.2v9.4h3.9v-9.4h3.1l.5-3.8h-3.6Z" />
+    </svg>
+  );
+}
+
+function XIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
+      <path d="M14.4 10.4 22 2h-1.8l-6.6 7.3L8.4 2H2.3l8 11.3L2.3 22h1.8l7-7.6 5.5 7.6h6.1Zm-2.5 2.7-.8-1.1L4.7 3.4h2.9l5.1 7 .8 1.1 6.8 9.2h-2.9Z" />
+    </svg>
+  );
+}
+
+function LinkedInIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...props}>
+      <path d="M5.4 8.9H2.1V22h3.3ZM3.8 2.5a1.9 1.9 0 1 0 0 3.8 1.9 1.9 0 0 0 0-3.8ZM21.9 14.5c0-3.5-1.9-5.2-4.5-5.2a3.9 3.9 0 0 0-3.5 1.9h-.1V8.9h-3.2V22h3.3v-6.5c0-1.7.3-3.4 2.5-3.4 2.1 0 2.1 2 2.1 3.5V22h3.4Z" />
+    </svg>
+  );
+}
+
+function InstagramIcon(props) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <rect
+        x="3"
+        y="3"
+        width="18"
+        height="18"
+        rx="5"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <circle cx="12" cy="12" r="4" stroke="currentColor" strokeWidth="2" />
+      <circle cx="17.5" cy="6.5" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+
 function FooterLinkList({ title, links, ariaLabel }) {
   return (
     <nav aria-label={ariaLabel}>
@@ -52,10 +94,10 @@ export default function Footer() {
   ];
 
   const socialLinks = [
-    { icon: "Fb", label: "Facebook", href: "#" },
-    { icon: "X", label: "Twitter", href: "#" },
-    { icon: "In", label: "LinkedIn", href: "#" },
-    { icon: "Ig", label: "Instagram", href: "#" },
+    { Icon: FacebookIcon, label: "Facebook", href: "#", color: "text-[#1877F2]" },
+    { Icon: XIcon, label: "Twitter", href: "#", color: "text-[#111111]" },
+    { Icon: LinkedInIcon, label: "LinkedIn", href: "#", color: "text-[#0A66C2]" },
+    { Icon: InstagramIcon, label: "Instagram", href: "#", color: "text-[#E4405F]" },
   ];
 
   return (
@@ -133,14 +175,14 @@ export default function Footer() {
 
                 <nav className="mt-3" aria-label="Social media links">
                   <ul className="flex flex-wrap items-center gap-1.5">
-                    {socialLinks.map((social) => (
-                      <li key={social.label}>
+                    {socialLinks.map(({ Icon, label, href, color }) => (
+                      <li key={label}>
                         <a
-                          href={social.href}
-                          className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-white text-[10px] font-black text-text-body shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:text-primary hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-offset-2"
-                          aria-label={social.label}
+                          href={href}
+                          className={`grid h-8 w-8 place-items-center rounded-lg border border-border bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-offset-2 ${color}`}
+                          aria-label={label}
                         >
-                          {social.icon}
+                          <Icon className="h-4 w-4" />
                         </a>
                       </li>
                     ))}
