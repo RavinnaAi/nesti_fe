@@ -21,7 +21,7 @@ function FaqHero({ page, meta, faqs }) {
   return (
     <section className="relative overflow-hidden bg-gradient-to-br from-white via-background-light/35 to-white py-8 md:py-10">
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
-        <div className="absolute -top-24 right-0 h-[340px] w-[340px] rounded-full bg-violet-500/10 blur-3xl" />
+        <div className="absolute -top-24 right-0 h-[340px] w-[340px] rounded-full bg-primary/10 blur-3xl" />
         <div className="absolute left-[-4rem] top-24 h-[220px] w-[220px] rounded-full bg-primary/10 blur-3xl" />
       </div>
 
@@ -30,7 +30,7 @@ function FaqHero({ page, meta, faqs }) {
           {...fadeUp}
           className="relative overflow-hidden rounded-2xl border border-border bg-white/95 p-5 shadow-[0_18px_50px_rgba(15,23,42,0.07)] md:p-6"
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-violet-500 via-primary to-primary-dark" />
+          <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary via-primary-dark to-primary" />
 
           <div className="relative z-10 grid items-center gap-7 lg:grid-cols-[minmax(0,1fr)_380px] lg:gap-10">
             <div className="max-w-3xl">
@@ -100,7 +100,7 @@ function FaqList({ faqs }) {
           {...fadeUp}
           className="relative overflow-hidden rounded-2xl border border-border bg-white/95 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.06)] md:p-5"
         >
-          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-violet-500/10 blur-3xl" />
+          <div className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-primary/10 blur-3xl" />
           <div className="relative z-10 mb-5">
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-primary">
               Frequently Asked Questions
