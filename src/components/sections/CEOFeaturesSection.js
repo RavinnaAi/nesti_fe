@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Award } from "lucide-react";
+import { ArrowUpRight, Award } from "lucide-react";
 
 // Generate logo URL helper function
 const getLogoUrl = (domain) => {
@@ -103,11 +103,12 @@ const features = [
 ];
 
 export default function CEOFeaturesSection() {
+  const sliderItems = [...features, ...features];
 
   return (
-    <section className="relative py-24 md:py-32 bg-background">
+    <section className="relative bg-transparent py-10 md:py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="text-center mb-16 md:mb-20">
+        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -115,8 +116,8 @@ export default function CEOFeaturesSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
-              <Award size={16} aria-hidden="true" />
+            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
+              <Award size={14} aria-hidden="true" />
               CEO Recognition & Press Coverage
             </span>
           </motion.div>
@@ -125,7 +126,7 @@ export default function CEOFeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 leading-tight text-text-heading"
+            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
             Featured in{" "}
@@ -138,7 +139,7 @@ export default function CEOFeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-lg md:text-xl text-text-body max-w-3xl mx-auto leading-relaxed"
+            className="mx-auto max-w-2xl text-sm leading-6 text-text-body md:text-base"
             suppressHydrationWarning
           >
             Our CEO and platform have been recognized by leading business
@@ -146,60 +147,56 @@ export default function CEOFeaturesSection() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4 md:gap-6">
-          {features.map((feature, index) => (
-            <Link
-              key={`feature-${feature.name}-${index}`}
-              href={feature.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
-              aria-label={`Read article about ${feature.name}`}
-            >
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "0px" }}
-                transition={{ duration: 0.3, delay: index * 0.05 }}
-                whileHover={{
-                  y: -6,
-                  scale: 1.05,
-                  transition: { duration: 0.2 },
-                }}
-                whileFocus={{
-                  y: -6,
-                  scale: 1.05,
-                  transition: { duration: 0.2 },
-                }}
-                className="group relative rounded-md p-4 border border-border bg-background hover:shadow-lg transition-shadow duration-200 flex flex-col items-center justify-center text-center cursor-pointer h-full"
-                suppressHydrationWarning
+        <div className="relative overflow-hidden py-2">
+          <div className="press-logo-track relative flex w-max items-stretch gap-4 py-2.5">
+            {sliderItems.map((feature, index) => (
+              <Link
+                key={`feature-${feature.name}-${index}`}
+                href={feature.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative flex h-56 w-[17.5rem] shrink-0 cursor-pointer flex-col overflow-hidden rounded-[1.35rem] border border-white/80 bg-white/92 p-4 text-left shadow-[0_14px_34px_rgba(15,23,42,0.075)] ring-1 ring-border/60 transition-all duration-300 hover:-translate-y-1 hover:border-primary/25 hover:bg-white hover:shadow-[0_24px_48px_rgba(15,23,42,0.12)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 md:w-[18.5rem]"
+                aria-label={`Read article about ${feature.name}`}
               >
-                {/* Hover Gradient Background */}
                 <div
-                  className={`absolute inset-0 opacity-0 group-hover:opacity-100 group-focus:opacity-100 transition-opacity duration-200 rounded-md bg-gradient-to-br ${feature.gradient}`}
+                  className={`absolute inset-0 bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-[0.06] group-focus:opacity-[0.06]`}
                 />
 
-                {/* Logo Image */}
-                <div className="w-10 h-10 mb-4 relative z-10 flex items-center justify-center">
+                <div className="relative z-10 mb-3 min-w-0">
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-black leading-5 text-text-heading transition-colors duration-200 group-hover:text-primary-dark">
+                      {feature.name}
+                    </h3>
+                    <p className="mt-1 truncate text-xs font-medium text-text-muted">
+                      {feature.domain}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="relative z-10 flex h-24 w-full items-center justify-center rounded-2xl bg-white px-5 py-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_10px_24px_rgba(15,23,42,0.055)] ring-1 ring-border/65 transition-transform duration-300 group-hover:scale-[1.015]">
                   <Image
                     src={feature.logo}
                     alt={`${feature.name} logo`}
-                    width={50}
-                    height={50}
-                    className="object-contain w-full h-full transition-all duration-200 group-hover:scale-110"
+                    width={180}
+                    height={80}
+                    className="h-full max-h-16 w-full object-contain"
                     loading="lazy"
-                    quality={50}
-                    sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                    quality={70}
+                    sizes="260px"
                   />
                 </div>
 
-                {/* Name */}
-                <h3 className="text-sm font-semibold text-text-heading transition-colors duration-200 group-hover:text-white group-focus:text-white relative z-10">
-                  {feature.name}
-                </h3>
-              </motion.div>
-            </Link>
-          ))}
+                <div className="relative z-10 mt-auto flex items-center justify-between pt-3">
+                  <span className="text-xs font-semibold text-text-body">
+                    View coverage
+                  </span>
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-primary transition-all duration-200 group-hover:bg-primary group-hover:text-white">
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </section>

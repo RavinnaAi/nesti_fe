@@ -34,9 +34,9 @@ const userTypes = [
 
 export default function OnboardingSection() {
   return (
-    <section id="onboarding" className="relative py-24 md:py-32 bg-background">
+    <section id="onboarding" className="relative bg-transparent py-10 md:py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="text-center mb-16 md:mb-20">
+        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -44,8 +44,8 @@ export default function OnboardingSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
-              <UserCheck size={16} aria-hidden="true" />
+            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
+              <UserCheck size={14} aria-hidden="true" />
               Choose Your Path
             </span>
           </motion.div>
@@ -54,7 +54,7 @@ export default function OnboardingSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 leading-tight text-text-heading"
+            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
             I am a{" "}
@@ -67,7 +67,7 @@ export default function OnboardingSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-lg md:text-xl text-text-body max-w-3xl mx-auto leading-relaxed"
+            className="mx-auto max-w-2xl text-sm leading-6 text-text-body md:text-base"
             suppressHydrationWarning
           >
             Select your role to get personalized AI assistance and perfect
@@ -75,7 +75,7 @@ export default function OnboardingSection() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {userTypes.map((type, index) => {
             const IconComponent = type.icon;
             return (
@@ -85,31 +85,31 @@ export default function OnboardingSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "0px" }}
                 transition={{ duration: 0.3, delay: index * 0.1 }}
-                whileHover={{ y: -6, transition: { duration: 0.3 } }}
+                whileHover={{ y: -3, transition: { duration: 0.25 } }}
                 suppressHydrationWarning
               >
                 <Link
                   href={type.path}
-                  className="block focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md"
+                  className="block rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                   aria-label={`Get started as ${type.title}`}
                 >
-                  <div className="group relative rounded-md p-8 border border-border bg-background shadow-sm hover:shadow-lg transition-all duration-300 cursor-pointer h-full flex flex-col">
+                  <div className="group relative flex h-full cursor-pointer flex-col rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md">
                     <div
-                      className={`w-16 h-16 rounded-md bg-gradient-to-br ${type.gradient} p-4 mb-6 group-hover:scale-110 transition-transform duration-300 shadow-md group-hover:shadow-lg`}
+                      className={`mb-3 h-10 w-10 rounded-xl bg-gradient-to-br ${type.gradient} p-2.5 shadow-md transition-transform duration-300 group-hover:scale-105 group-hover:shadow-lg`}
                     >
                       <IconComponent className="w-full h-full text-white" aria-hidden="true" />
                     </div>
 
                     <div className="flex-grow">
-                      <h3 className="text-xl font-bold mb-3 text-text-heading group-hover:text-primary transition-colors">
+                      <h3 className="mb-1.5 text-lg font-black text-text-heading transition-colors group-hover:text-primary">
                         {type.title}
                       </h3>
-                      <p className="text-sm text-text-body leading-relaxed">
+                      <p className="text-sm leading-5 text-text-body">
                         {type.description}
                       </p>
                     </div>
 
-                    <div className="mt-6 flex items-center gap-2 text-sm font-semibold text-primary opacity-0 group-hover:opacity-100 transform translate-x-2 group-hover:translate-x-0 transition-all duration-300">
+                    <div className="mt-3 flex translate-x-2 items-center gap-2 text-sm font-semibold text-primary opacity-0 transition-all duration-300 group-hover:translate-x-0 group-hover:opacity-100">
                       <span>Get Started</span>
                       <ArrowRight size={18} aria-hidden="true" />
                     </div>

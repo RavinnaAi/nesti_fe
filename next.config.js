@@ -105,7 +105,7 @@ const nextConfig = {
         ],
       },
       {
-        source: "/publicPage/:path*",
+        source: "/:publicPage(about|mission|blog|faq|privacy|terms|refund-policy)",
         headers: [
           {
             key: "Cache-Control",

@@ -44,10 +44,10 @@ export default function TestimonialsSection() {
   return (
     <section
       id="testimonials"
-      className="relative py-24 md:py-32 bg-gradient-to-b from-background-light/30 to-background"
+      className="relative bg-transparent py-10 md:py-12"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="text-center mb-16 md:mb-20">
+        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -55,8 +55,8 @@ export default function TestimonialsSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs md:text-sm font-semibold border border-primary bg-primary/10 text-primary mb-6">
-              <Star size={16} />
+            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
+              <Star size={14} />
               Success Stories
             </span>
           </motion.div>
@@ -66,7 +66,7 @@ export default function TestimonialsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-3xl md:text-4xl lg:text-5xl font-extrabold mb-6 leading-tight text-text-heading"
+            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
             Trusted by{" "}
@@ -80,7 +80,7 @@ export default function TestimonialsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-lg md:text-xl text-text-body max-w-3xl mx-auto leading-relaxed"
+            className="mx-auto max-w-2xl text-sm leading-6 text-text-body md:text-base"
             suppressHydrationWarning
           >
             Real results from real estate professionals across USA and Canada
@@ -88,7 +88,7 @@ export default function TestimonialsSection() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {testimonials.map((testimonial, i) => (
             <motion.article
               key={`testimonial-${testimonial.name}`}
@@ -96,25 +96,25 @@ export default function TestimonialsSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              whileHover={{ y: -6, transition: { duration: 0.3 } }}
-              className="rounded-md p-8 border border-border bg-background shadow-sm hover:shadow-md transition-all duration-300 flex flex-col h-full"
+              whileHover={{ y: -3, transition: { duration: 0.25 } }}
+              className="flex h-full flex-col rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md"
               suppressHydrationWarning
             >
-              <div className="flex gap-1 mb-6">
+              <div className="mb-3 flex gap-1">
                 {[...Array(testimonial.rating)].map((_, idx) => (
                   <Star
                     key={`star-${testimonial.name}-${idx}`}
-                    size={18}
+                    size={15}
                     className="fill-primary text-primary"
                     aria-hidden="true"
                   />
                 ))}
               </div>
-              <blockquote className="text-text-body leading-relaxed mb-8 text-base flex-grow">
+              <blockquote className="mb-4 flex-grow text-sm leading-5 text-text-body">
                 &ldquo;{testimonial.testimonial}&rdquo;
               </blockquote>
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-md overflow-hidden flex-shrink-0 border-2 border-border">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 flex-shrink-0 overflow-hidden rounded-xl border-2 border-border">
                   <Image
                     src={testimonial.image}
                     alt={testimonial.name}
@@ -126,10 +126,10 @@ export default function TestimonialsSection() {
                   />
                 </div>
                 <div>
-                  <div className="font-bold text-base text-text-heading">
+                  <div className="text-sm font-bold text-text-heading">
                     {testimonial.name}
                   </div>
-                  <div className="text-sm text-text-body">{testimonial.role}</div>
+                  <div className="text-xs text-text-body">{testimonial.role}</div>
                   <div className="text-xs text-text-muted">
                     {testimonial.company}
                   </div>

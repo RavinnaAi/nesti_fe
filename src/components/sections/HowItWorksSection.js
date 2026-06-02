@@ -7,31 +7,34 @@ const steps = [
   {
     step: "01",
     icon: Home,
-    title: "Create Your Profile",
+    eyebrow: "Profile setup",
+    title: "Share your goals",
     description:
-      "Tell us about yourself - buyer, seller, realtor, lawyer, or broker. Our AI learns your preferences, goals, and requirements in minutes.",
+      "Choose your role and add the core details Nesti needs to understand your market, clients, and priorities.",
   },
   {
     step: "02",
     icon: Brain,
-    title: "AI Matches & Scores",
+    eyebrow: "AI routing",
+    title: "Prioritize the right opportunities",
     description:
-      "Our intelligent system analyzes your profile, scores leads 0-100, and matches you with perfect partners based on sophisticated compatibility algorithms.",
+      "Lead intelligence, matching, and scoring help surface the people and next steps that deserve attention first.",
   },
   {
     step: "03",
     icon: TrendingUp,
-    title: "Close More Deals",
+    eyebrow: "Growth workflow",
+    title: "Move faster with clarity",
     description:
-      "Get actionable insights, automated follow-ups, personalized recommendations, and real-time analytics to close deals 65% faster.",
+      "Automated follow-ups, recommendations, and performance insights keep the pipeline organized from first touch to conversion.",
   },
 ];
 
 export default function HowItWorksSection() {
   return (
-    <section id="how-it-works" className="relative py-24 md:py-32 bg-background">
+    <section id="how-it-works" className="relative bg-transparent py-10 md:py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="text-center mb-20 md:mb-24">
+        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -39,7 +42,7 @@ export default function HowItWorksSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
               <Target size={14} />
               Simple Process
             </span>
@@ -49,12 +52,12 @@ export default function HowItWorksSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight text-text-heading"
+            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
-            Get Started in{" "}
+            A cleaner path from{" "}
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-dark">
-              3 Easy Steps
+              setup to growth
             </span>
           </motion.h2>
           <motion.p
@@ -62,15 +65,16 @@ export default function HowItWorksSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-xl md:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed font-light"
+            className="mx-auto max-w-2xl text-sm font-light leading-6 text-text-body md:text-base"
             suppressHydrationWarning
           >
-            From onboarding to closing deals, our AI handles the heavy lifting
-            while you focus on what matters most.
+            Nesti turns onboarding, lead routing, and follow-up into a guided workflow
+            built for modern real estate teams.
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8 relative">
+        <div className="relative grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div className="pointer-events-none absolute left-[16%] right-[16%] top-7 hidden h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent md:block" />
           {steps.map((step, i) => {
             const IconComponent = step.icon;
             return (
@@ -80,23 +84,27 @@ export default function HowItWorksSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "0px" }}
                 transition={{ duration: 0.3 }}
-                whileHover={{ y: -4, transition: { duration: 0.3 } }}
-                className="relative"
+                whileHover={{ y: -3, transition: { duration: 0.25 } }}
+                className="group relative"
                 suppressHydrationWarning
               >
-                <div className="rounded-md p-10 border border-border h-full bg-background transition-all duration-300 hover:border-primary">
-                  <div className="flex items-center gap-5 mb-8">
-                    <div className="w-16 h-16 rounded-md grid place-items-center shadow-lg flex-shrink-0 bg-gradient-to-br from-primary to-primary-dark text-white">
-                      <IconComponent size={28} />
+                <div className="relative h-full overflow-hidden rounded-2xl border border-border/80 bg-white/95 p-4 shadow-[0_12px_30px_rgba(15,23,42,0.045)] transition-all duration-300 hover:border-primary/25 hover:shadow-[0_16px_38px_rgba(15,23,42,0.075)]">
+                  <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/25 to-transparent" />
+                  <div className="mb-4 flex items-start justify-between gap-3">
+                    <div className="grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl bg-primary/10 text-primary ring-1 ring-primary/10 transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
+                      <IconComponent size={19} />
                     </div>
-                    <span className="text-6xl font-black opacity-10 text-primary">
+                    <span className="rounded-full border border-primary/10 bg-primary/5 px-2.5 py-1 text-[11px] font-black text-primary">
                       {step.step}
                     </span>
                   </div>
-                  <h3 className="text-2xl font-bold mb-4 text-text-heading">
+                  <p className="mb-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-primary">
+                    {step.eyebrow}
+                  </p>
+                  <h3 className="mb-2 text-lg font-black leading-tight text-text-heading">
                     {step.title}
                   </h3>
-                  <p className="text-text-body leading-relaxed text-base">
+                  <p className="text-sm leading-5 text-text-body">
                     {step.description}
                   </p>
                 </div>

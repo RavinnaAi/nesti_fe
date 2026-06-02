@@ -37,22 +37,17 @@ export default function HeroSection() {
   ];
 
   return (
-    <section className="relative min-h-[90vh] md:min-h-[95vh] flex items-center overflow-hidden bg-gradient-to-br from-white via-background-light/30 to-white">
-      {/* Subtle Background Pattern */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 right-0 w-[600px] h-[600px] rounded-md blur-3xl opacity-5 bg-primary" />
-      </div>
-
-      <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 md:px-8 lg:px-12 relative z-10">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center py-20 md:py-28">
+    <section className="relative flex items-center overflow-hidden bg-transparent">
+      <div className="relative z-10 mx-auto w-full max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
+        <div className="grid grid-cols-1 items-center gap-6 py-8 md:py-10 lg:grid-cols-12 lg:gap-9">
           {/* Left Column - Content (7 columns) */}
-          <div className="lg:col-span-7 space-y-10">
+          <div className="space-y-5 lg:col-span-7">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.2 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary"
+              className="inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary"
               suppressHydrationWarning
             >
               <Sparkles size={14} />
@@ -64,7 +59,7 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              className="text-5xl md:text-6xl lg:text-6xl font-black leading-[1.05] tracking-tight text-text-heading"
+              className="text-4xl font-black leading-[1.05] tracking-tight text-text-heading md:text-5xl lg:text-[52px]"
               suppressHydrationWarning
             >
               Transform Real Estate
@@ -79,7 +74,7 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              className="text-lg md:text-xl text-text-body leading-relaxed max-w-2xl font-light"
+              className="max-w-2xl text-base font-light leading-6 text-text-body md:text-[17px]"
               suppressHydrationWarning
             >
               Complete AI-powered platform featuring intelligent lead scoring,
@@ -93,12 +88,12 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              className="flex flex-col sm:flex-row items-start gap-4 pt-2"
+              className="flex flex-col items-start gap-3 pt-1 sm:flex-row"
               suppressHydrationWarning
             >
               <Link
                 href="#start"
-                className="group relative inline-flex items-center justify-center gap-2 rounded-md px-10 py-5 text-base font-bold text-white shadow-xl hover:shadow-2xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] overflow-hidden bg-gradient-to-r from-primary to-primary-dark"
+                className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
               >
                 <span className="relative z-10 flex items-center gap-2">
                   Start Free Trial
@@ -112,7 +107,7 @@ export default function HeroSection() {
 
               <Link
                 href="/log-in"
-                className="group relative inline-flex items-center justify-center px-10 py-5 text-base font-semibold rounded-md text-text-heading bg-background border-2 border-border shadow-md hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] hover:border-primary/50 hover:bg-background-light"
+                className="group relative inline-flex items-center justify-center rounded-xl border border-border bg-white px-6 py-3 text-sm font-semibold text-text-heading shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-background-light hover:shadow-md"
               >
                 <span className="flex items-center gap-2">
                   Watch Demo
@@ -130,7 +125,7 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              className="flex flex-wrap items-center gap-8 pt-8"
+              className="flex flex-wrap items-center gap-4 pt-2"
               suppressHydrationWarning
             >
               <div className="flex items-center gap-3">
@@ -138,7 +133,7 @@ export default function HeroSection() {
                   {professionalImages.map((imageUrl, i) => (
                     <div
                       key={`professional-${i}`}
-                      className="relative w-10 h-10 rounded-md border-2 border-white shadow-md overflow-hidden"
+                      className="relative h-9 w-9 overflow-hidden rounded-xl border-2 border-white shadow-md"
                     >
                       <Image
                         src={imageUrl}
@@ -154,7 +149,7 @@ export default function HeroSection() {
                 </div>
                 <div>
                   <div className="flex items-center gap-1">
-                    <span className="text-2xl font-black text-text-heading">
+                    <span className="text-xl font-black text-text-heading">
                       10K+
                     </span>
                     <div className="flex gap-0.5 ml-1">
@@ -173,12 +168,12 @@ export default function HeroSection() {
                 </div>
               </div>
 
-              <div className="hidden sm:block h-10 w-px bg-border" />
+              <div className="hidden h-9 w-px bg-border sm:block" />
 
-              <div className="flex flex-wrap gap-6">
+              <div className="flex flex-wrap gap-4">
                 {trustFeatures.map((feature) => (
                   <div key={feature} className="flex items-center gap-2">
-                    <CheckCircle2 size={18} className="text-primary" />
+                    <CheckCircle2 size={16} className="text-primary" />
                     <span className="text-sm font-semibold text-text-heading">
                       {feature}
                     </span>
@@ -197,7 +192,7 @@ export default function HeroSection() {
             className="lg:col-span-5 relative"
             suppressHydrationWarning
           >
-            <div className="grid grid-cols-2 gap-5">
+            <div className="grid w-full max-w-[19rem] gap-2 lg:ml-auto">
               {stats.map((stat, i) => {
                 const IconComponent = stat.icon;
                 return (
@@ -207,18 +202,21 @@ export default function HeroSection() {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true, margin: "0px" }}
                     transition={{ duration: 0.3, delay: 0.4 + i * 0.1 }}
-                    whileHover={{ scale: 1.05, y: -4 }}
-                    className="bg-background rounded-md p-6 border border-border shadow-sm hover:shadow-lg transition-all duration-300"
+                    whileHover={{ y: -3 }}
+                    className="group relative flex w-full items-center gap-2.5 overflow-hidden rounded-xl border border-border/80 bg-white/95 px-3 py-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition-all duration-300 hover:border-primary/25 hover:shadow-[0_14px_30px_rgba(15,23,42,0.075)]"
                     suppressHydrationWarning
                   >
-                    <div className="w-12 h-12 rounded-md grid place-items-center mb-4 bg-primary/10 text-primary">
-                      <IconComponent size={24} />
+                    <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                    <div className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/10 transition-colors duration-300 group-hover:bg-primary group-hover:text-white">
+                      <IconComponent size={15} strokeWidth={1.9} />
                     </div>
-                    <div className="text-3xl md:text-4xl font-black mb-1 text-primary-dark">
-                      {stat.value}
-                    </div>
-                    <div className="text-xs md:text-sm font-medium text-text-body">
-                      {stat.label}
+                    <div className="flex min-w-0 items-baseline gap-2">
+                      <div className="text-xl font-black leading-none tracking-tight text-primary-dark">
+                        {stat.value}
+                      </div>
+                      <div className="whitespace-nowrap text-xs font-semibold leading-tight text-text-body">
+                        {stat.label}
+                      </div>
                     </div>
                   </motion.div>
                 );
@@ -228,7 +226,6 @@ export default function HeroSection() {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background via-background/95 to-transparent pointer-events-none" />
     </section>
   );
 }

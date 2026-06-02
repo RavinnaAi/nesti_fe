@@ -12,7 +12,17 @@ import CustomToastContainer from "@/components/ui/ToastContainer";
 import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import ConversationsBell from "@/components/prochat/ConversationsBell";
-import { CalendarDays, ChevronDown, Globe2, LogOut, Menu, Settings, User } from "lucide-react";
+import {
+  CalendarDays,
+  ChevronDown,
+  Globe2,
+  Home,
+  LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  User,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import {
@@ -27,6 +37,7 @@ import {
   clearInviteAttribution,
   getInviteAttribution,
 } from "@/lib/inviteAttributionStorage";
+import { isPublicMarketingRoute } from "@/lib/publicRoutes";
 
 export default function AppChrome({ children }) {
   const pathname = usePathname() || "";
@@ -149,6 +160,7 @@ export default function AppChrome({ children }) {
   const isChatbotEmbed = pathname.startsWith("/chatbot");
   const isCalendlyCallback = pathname.startsWith("/calendly-callback");
   const isProfessionalPublicPage = pathname.startsWith("/p/") || pathname.startsWith("/professional/");
+  const isPublicMarketingPage = isPublicMarketingRoute(pathname);
   const isFixedTableListRoute =
     pathname === "/leads" || pathname === "/referrals" || pathname === "/clients";
   const isPublicAuthPage = useMemo(
@@ -161,9 +173,9 @@ export default function AppChrome({ children }) {
       pathname.startsWith("/verify-reset-otp") ||
       pathname.startsWith("/reset-password") ||
       pathname.startsWith("/verify-email") ||
-      pathname.startsWith("/publicPage") ||
+      isPublicMarketingPage ||
       isProfessionalPublicPage,
-    [pathname, isProfessionalPublicPage]
+    [pathname, isPublicMarketingPage, isProfessionalPublicPage]
   );
 
   useEffect(() => {
@@ -259,6 +271,14 @@ export default function AppChrome({ children }) {
       .map((part) => part[0]?.toUpperCase())
       .join("");
   }, [displayName]);
+  const dashboardOrWebsiteItem = useMemo(
+    () =>
+      pathname === "/dashboard"
+        ? { label: "Website", href: "/", Icon: Home }
+        : { label: "Dashboard", href: "/dashboard", Icon: LayoutDashboard },
+    [pathname]
+  );
+  const DashboardOrWebsiteIcon = dashboardOrWebsiteItem.Icon;
 
   const handleLogout = useCallback(() => {
     dispatch(logoutAndClearAll());
@@ -423,6 +443,15 @@ export default function AppChrome({ children }) {
                       aria-labelledby="workspace-user-menu-button"
                       className="absolute right-0 top-full z-[100] mt-1.5 min-w-[13rem] overflow-hidden rounded-xl border border-border bg-white py-1 shadow-lg shadow-slate-900/10"
                     >
+                      <Link
+                        href={dashboardOrWebsiteItem.href}
+                        role="menuitem"
+                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
+                        onClick={() => setUserMenuOpen(false)}
+                      >
+                        <DashboardOrWebsiteIcon size={16} className="text-text-muted" />
+                        {dashboardOrWebsiteItem.label}
+                      </Link>
                       <Link
                         href="/profile"
                         role="menuitem"

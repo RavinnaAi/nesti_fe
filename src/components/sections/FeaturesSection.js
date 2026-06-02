@@ -84,10 +84,10 @@ export default function FeaturesSection() {
   return (
     <section
       id="features"
-      className="relative py-24 md:py-32 bg-gradient-to-b from-background-light/30 to-background"
+      className="relative bg-transparent py-10 md:py-12"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="text-center mb-20 md:mb-24">
+        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -95,7 +95,7 @@ export default function FeaturesSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
               <Zap size={14} />
               Platform Capabilities
             </span>
@@ -105,7 +105,7 @@ export default function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight text-text-heading"
+            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
             <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-dark">
@@ -119,7 +119,7 @@ export default function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-lg md:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed font-light tracking-wide"
+            className="mx-auto max-w-2xl text-sm font-light leading-6 text-text-body md:text-base"
             suppressHydrationWarning
           >
             A comprehensive suite of AI-powered tools designed to generate,
@@ -130,7 +130,7 @@ export default function FeaturesSection() {
 
         <div className="w-full relative">
           <div className="overflow-x-auto scrollbar-hide pb-4">
-            <div className="flex gap-6 min-w-max md:min-w-0 md:grid md:grid-cols-2 lg:grid-cols-3">
+            <div className="flex min-w-max gap-3 md:grid md:min-w-0 md:grid-cols-2 lg:grid-cols-3">
               {features.map((feature, i) => {
                 const IconComponent = feature.icon;
                 return (
@@ -141,33 +141,33 @@ export default function FeaturesSection() {
                     viewport={{ once: true, margin: "0px" }}
                     transition={{ duration: 0.3 }}
                     whileHover={{
-                      y: -4,
-                      transition: { duration: 0.3 },
+                      y: -3,
+                      transition: { duration: 0.25 },
                     }}
-                    className="group relative h-full rounded-md !overflow-hidden p-8 bg-background border border-border transition-all duration-500 min-w-[320px] md:min-w-0"
+                    className="group relative h-full min-w-[270px] !overflow-hidden rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md md:min-w-0"
                     suppressHydrationWarning
                   >
                     {/* Hover Gradient Background */}
                     <div
-                      className={`absolute inset-0 opacity-0 group-hover:opacity-100 rounded-md transition-opacity duration-500 bg-gradient-to-br ${feature.gradient}`}
+                      className={`absolute inset-0 rounded-2xl bg-gradient-to-br ${feature.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
                     />
 
                     {/* Content Wrapper */}
                     <div className="relative z-10">
                       {/* Icon */}
                       <div
-                        className={`w-16 h-16 rounded-md p-4 mb-6 bg-gradient-to-br ${feature.gradient} transition-all duration-500 group-hover:bg-white group-hover:shadow-lg group-hover:scale-110`}
+                        className={`mb-3 h-10 w-10 rounded-xl bg-gradient-to-br ${feature.gradient} p-2.5 transition-all duration-300 group-hover:scale-105 group-hover:bg-white group-hover:shadow-lg`}
                       >
                         <IconComponent className="w-full h-full text-white transition-colors duration-500 group-hover:text-gray-800" />
                       </div>
 
                       {/* Title */}
-                      <h3 className="text-xl font-bold mb-3 text-text-heading transition-colors duration-500 group-hover:text-white">
+                      <h3 className="mb-1.5 text-[17px] font-black text-text-heading transition-colors duration-300 group-hover:text-white">
                         {feature.title}
                       </h3>
 
                       {/* Description */}
-                      <p className="text-sm text-text-body leading-relaxed transition-colors duration-500 group-hover:text-white/90">
+                      <p className="text-sm leading-5 text-text-body transition-colors duration-300 group-hover:text-white/90">
                         {feature.description}
                       </p>
                     </div>

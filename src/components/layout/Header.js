@@ -4,7 +4,19 @@ import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Bot, ArrowRight, X, User, Settings, LogOut } from "lucide-react";
+import {
+  Bot,
+  ArrowRight,
+  CalendarDays,
+  ChevronDown,
+  Globe2,
+  Home,
+  LayoutDashboard,
+  X,
+  User,
+  Settings,
+  LogOut,
+} from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
@@ -15,6 +27,8 @@ export default function Header() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, token } = useAppSelector((state) => state.auth);
+  const personalInfo = useAppSelector((state) => state.profile?.personalInfo);
+  const businessInfo = useAppSelector((state) => state.profile?.businessInfo);
   const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
@@ -28,23 +42,14 @@ export default function Header() {
   const isAuthenticated = isMounted && Boolean(token) && !isInviteLanding;
 
   const NAVIGATION_ITEMS = useMemo(
-    () =>
-      isAuthenticated
-        ? [
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Leads", href: "/leads" },
-          { label: "Clients", href: "/clients" },
-          { label: "Logs", href: "/nurture-logs" },
-          { label: "Analytics", href: "/analytics" },
-        ]
-        : [
-          { label: "Home", href: "/" },
-          { label: "Features", href: "/#features" },
-          { label: "Pricing", href: "/#pricing" },
-          { label: "About", href: "/publicPage/about" },
-          { label: "Contact", href: "/publicPage/contact" },
+    () => [
+          { label: "About", href: "/about" },
+          { label: "Mission", href: "/mission" },
+          { label: "Blog", href: "/blog" },
+          { label: "FAQ", href: "/faq" },
+          { label: "Privacy Policy", href: "/privacy" },
         ],
-    [isAuthenticated]
+    []
   );
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -74,13 +79,28 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isProfileOpen]);
 
-  const displayName =
-    user?.name ||
-    [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
-    user?.email ||
-    "";
+  const displayName = useMemo(() => {
+    const fromBusiness = businessInfo?.fullName?.trim();
+    if (fromBusiness) return fromBusiness;
+    const fromPersonal = [personalInfo?.firstName, personalInfo?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (fromPersonal) return fromPersonal;
+    return (
+      user?.name ||
+      [user?.first_name, user?.last_name].filter(Boolean).join(" ").trim() ||
+      [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim() ||
+      user?.email ||
+      ""
+    );
+  }, [businessInfo, personalInfo, user]);
   const displayEmail = user?.email || "";
+  const avatarUrl = useMemo(() => {
+    const p = personalInfo?.profileImage;
+    if (typeof p === "string" && p.trim()) return p.trim();
+    return user?.profile_image || user?.img_url || "";
+  }, [personalInfo, user]);
   const initials = displayName
     ? displayName
         .split(" ")
@@ -89,6 +109,11 @@ export default function Header() {
         .map((part) => part[0]?.toUpperCase())
         .join("")
     : "?";
+  const dashboardOrWebsiteItem =
+    pathname === "/dashboard"
+      ? { label: "Website", href: PUBLIC_HOME_PATH, Icon: Home }
+      : { label: "Dashboard", href: "/dashboard", Icon: LayoutDashboard };
+  const DashboardOrWebsiteIcon = dashboardOrWebsiteItem.Icon;
 
   const handleLogout = () => {
     dispatch(logoutAndClearAll());
@@ -103,27 +128,27 @@ export default function Header() {
     });
 
   return (
-    <header className="bg-background border-b border-border sticky top-0 z-50">
-      <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
-        <div className="flex items-center justify-between h-16">
+    <header className="sticky top-0 z-50 border-b border-border/80 bg-white/90 backdrop-blur-xl">
+      <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="flex h-14 items-center justify-between">
           {/* Logo — public landing home */}
           <button
             type="button"
             onClick={goToPublicHome}
-            className="flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md"
+            className="group flex cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             aria-label="Go to Nesti AI home"
           >
             <motion.div
-              className="h-12 w-12 rounded-md grid place-items-center transition-all group-hover:scale-110 shadow-lg bg-gradient-to-br from-primary to-primary-dark text-white"
-              whileHover={{ rotate: 10 }}
+              className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/20 transition-all group-hover:scale-105"
+              whileHover={{ rotate: 6 }}
             >
-              <Bot size={24} />
+              <Bot size={20} />
             </motion.div>
             <div className="flex flex-col">
-              <span className="text-2xl font-bold tracking-tight text-text-heading">
+              <span className="text-xl font-black leading-tight tracking-tight text-text-heading">
                 Nesti AI
               </span>
-              <span className="text-lg text-text-muted font-medium -mt-1">
+              <span className="-mt-0.5 text-[13px] font-medium leading-tight text-text-muted">
                 Real Estate Intelligence
               </span>
             </div>
@@ -131,15 +156,17 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:block">
-            <div className="flex items-baseline space-x-2">
+            <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background-light/45 p-1">
               {NAVIGATION_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className={`transition-colors px-3 rounded-md py-2 text-base font-medium hover:bg-primary/10 hover:font-semibold duration-300 ${
-                      isActive ? "text-text-body bg-primary/10 font-semibold" : "text-text-body"
+                    className={`rounded-xl px-3 py-1.5 text-[15px] font-semibold transition-all duration-200 ${
+                      isActive
+                        ? "bg-white text-primary shadow-sm ring-1 ring-primary/10"
+                        : "text-text-body hover:bg-white/75 hover:text-primary"
                     }`}
                   >
                     {item.label}
@@ -150,18 +177,18 @@ export default function Header() {
           </div>
 
           {/* Desktop Right Section */}
-          <div className="hidden md:flex items-center space-x-3">
+          <div className="hidden items-center gap-2 md:flex">
             {!isAuthenticated ? (
               <>
                 <Link
                   href="/log-in"
-                  className="hidden sm:block relative px-5 py-2.5 text-base font-semibold text-gray-700 rounded-md bg-white border border-gray-200 shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
+                  className="hidden rounded-xl border border-border bg-white px-4 py-2 text-[15px] font-semibold text-text-heading shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/25 hover:text-primary hover:shadow-md sm:block"
                 >
                   Login
                 </Link>
                 <Link
                   href="/sign-up"
-                  className="group relative bg-primary-dark inline-flex items-center justify-center gap-2 overflow-hidden rounded-md px-6 py-2.5 md:px-8 md:py-3 font-bold text-sm md:text-base text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02]"
+                  className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-dark px-5 py-2 text-[15px] font-bold text-white shadow-md shadow-primary/20 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
                 >
                   <span className="relative z-10 flex items-center gap-2">
                     Get Started
@@ -178,11 +205,26 @@ export default function Header() {
                 <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => setIsProfileOpen((prev) => !prev)}
-                  className="flex items-center gap-3 bg-background-light rounded-md hover:shadow-md transition-all"
+                  aria-expanded={isProfileOpen}
+                  aria-haspopup="menu"
+                  className="group flex max-w-[17rem] items-center gap-2 rounded-xl border border-border bg-white px-2 py-1.5 shadow-sm transition hover:border-primary/30 hover:bg-primary/[0.04] hover:shadow-md"
                 >
-                  <div className="h-12 w-12 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
-                    {initials}
-                  </div>
+                  <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-primary/10 text-[11px] font-bold text-primary">
+                    {avatarUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      initials
+                    )}
+                  </span>
+                  <span className="min-w-0 max-w-[9rem] truncate text-left text-[13px] font-bold text-text-heading group-hover:text-primary">
+                    {displayName}
+                  </span>
+                  <ChevronDown
+                    size={14}
+                    className={`shrink-0 text-text-muted transition-transform ${isProfileOpen ? "rotate-180" : ""}`}
+                    aria-hidden
+                  />
                 </button>
                 <AnimatePresence>
                   {isProfileOpen && (
@@ -191,45 +233,76 @@ export default function Header() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -5 }}
                       transition={{ duration: 0.15 }}
-                      className="absolute right-0 mt-3 w-auto rounded-md border border-gray-100 bg-white shadow-xl shadow-black/10 z-50"
+                      className="absolute right-0 z-50 mt-2 w-64 overflow-hidden rounded-2xl border border-border bg-white shadow-xl shadow-slate-900/10"
                     >
-                      <div className="px-4 py-3 border-b border-gray-100">
-                        <div className="text-sm font-semibold text-text-heading">
+                      <div className="border-b border-border/80 bg-background-light/35 px-3.5 py-2.5">
+                        <div className="truncate text-sm font-bold text-text-heading">
                           {displayName}
                         </div>
                         {displayEmail && (
-                          <div className="text-xs font-medium text-primary truncate">
+                          <div className="truncate text-xs font-medium text-primary">
                             {displayEmail}
                           </div>
                         )}
                       </div>
-                      <div className="py-2 space-y-1">
+                      <div className="space-y-0.5 p-1.5">
                         <Link
-                          href="/profile"
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-md hover:bg-primary/5 transition-colors"
+                          href={dashboardOrWebsiteItem.href}
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <span className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                            <User size={16} />
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <DashboardOrWebsiteIcon size={15} />
+                          </span>
+                          <span className="font-medium">{dashboardOrWebsiteItem.label}</span>
+                        </Link>
+                        <Link
+                          href="/profile"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <User size={15} />
                           </span>
                           <span className="font-medium">Profile</span>
                         </Link>
                         <Link
                           href="/settings"
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-text-heading rounded-md hover:bg-primary/5 transition-colors"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
                           onClick={() => setIsProfileOpen(false)}
                         >
-                          <span className="h-8 w-8 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                            <Settings size={16} />
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Settings size={15} />
                           </span>
                           <span className="font-medium">Settings</span>
                         </Link>
+                        <Link
+                          href="/dashboard/public-profile"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <Globe2 size={15} />
+                          </span>
+                          <span className="font-medium">Create Web Page</span>
+                        </Link>
+                        <Link
+                          href="/calendar"
+                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
+                          onClick={() => setIsProfileOpen(false)}
+                        >
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                            <CalendarDays size={15} />
+                          </span>
+                          <span className="font-medium">Calendar</span>
+                        </Link>
+                        <div className="my-1 h-px bg-border" role="separator" />
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-3 px-4 py-2 text-sm text-red-600 rounded-md hover:bg-red-50 transition-colors"
+                          className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-red-600 transition-colors hover:bg-red-50"
                         >
-                          <span className="h-8 w-8 rounded-md bg-red-100 text-red-600 flex items-center justify-center">
-                            <LogOut size={16} />
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-red-100 text-red-600">
+                            <LogOut size={15} />
                           </span>
                           <span className="font-medium">Logout</span>
                         </button>
@@ -324,38 +397,41 @@ export default function Header() {
                 damping: 25,
                 stiffness: 200,
               }}
-              className="fixed top-0 left-0 h-full w-80 max-w-[85vw] bg-white shadow-2xl z-[70] md:hidden overflow-y-auto"
+              className="fixed inset-y-0 left-0 z-[70] h-dvh w-[min(22rem,calc(100vw-3rem))] overflow-y-auto overflow-x-hidden bg-white shadow-2xl shadow-slate-900/20 [scrollbar-width:none] [-ms-overflow-style:none] md:hidden [&::-webkit-scrollbar]:hidden"
             >
               {/* Menu header */}
-              <div className="flex items-center justify-between p-6 border-b border-border bg-gradient-to-r from-primary/5 to-transparent">
+              <div className="flex items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-primary/5 to-transparent px-4 py-3.5">
                 <button
                   type="button"
                   onClick={goToPublicHome}
-                  className="flex cursor-pointer items-center gap-3 border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 rounded-md"
+                  className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Go to Nesti AI home"
                 >
-                  <div className="h-10 w-10 rounded-md grid place-items-center bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg">
-                    <Bot size={20} />
+                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/20">
+                    <Bot size={18} />
                   </div>
-                  <div className="flex flex-col">
-                    <span className="text-lg font-bold text-text-heading">
+                  <div className="min-w-0">
+                    <span className="block truncate text-lg font-black leading-tight text-text-heading">
                       Nesti AI
                     </span>
-                    <span className="text-xs text-text-muted">Menu</span>
+                    <span className="block truncate text-[11px] font-medium leading-tight text-text-muted">
+                      Real Estate Intelligence
+                    </span>
                   </div>
                 </button>
                 <motion.button
                   onClick={() => setIsMenuOpen(false)}
-                  className="p-2 rounded-md text-text-body hover:text-primary hover:bg-background-light transition-colors"
+                  className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-border bg-white text-text-body shadow-sm transition-colors hover:bg-primary/5 hover:text-primary"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
+                  aria-label="Close menu"
                 >
-                  <X size={20} />
+                  <X size={18} />
                 </motion.button>
               </div>
 
               {/* Navigation items */}
-              <div className="p-4 space-y-2">
+              <div className="space-y-1.5 p-3.5">
                 {NAVIGATION_ITEMS.map((item, index) => {
                   const isActive = pathname === item.href;
                   return (
@@ -371,9 +447,9 @@ export default function Header() {
                     >
                       <Link
                         href={item.href}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-md text-base font-medium transition-all duration-200 ${
+                        className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all duration-200 ${
                           isActive
-                            ? "bg-primary text-white shadow-md"
+                            ? "bg-primary text-white shadow-md shadow-primary/15"
                             : "text-text-body hover:bg-primary/10 hover:text-primary"
                         }`}
                         onClick={() => setIsMenuOpen(false)}
@@ -393,7 +469,7 @@ export default function Header() {
               </div>
 
               {/* Auth / Profile section */}
-              <div className="p-4 pt-6 border-t border-border space-y-3">
+              <div className="space-y-3 border-t border-border p-3.5 pt-4">
                 {!isAuthenticated ? (
                   <>
                     <motion.div
@@ -441,8 +517,13 @@ export default function Header() {
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center gap-3 px-4 py-3 rounded-md bg-background-light border border-border">
-                      <div className="h-12 w-12 rounded-md bg-primary text-white flex items-center justify-center font-semibold">
-                        {initials}
+                      <div className="h-12 w-12 overflow-hidden rounded-full border border-border bg-primary/10 text-primary flex items-center justify-center font-semibold">
+                        {avatarUrl ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={avatarUrl} alt="" className="h-full w-full object-cover" />
+                        ) : (
+                          initials
+                        )}
                       </div>
                       <div className="flex flex-col">
                         <span className="text-sm font-semibold text-text-heading">
@@ -456,6 +537,14 @@ export default function Header() {
                       </div>
                     </div>
                     <div className="flex flex-col gap-2">
+                      <Link
+                        href={dashboardOrWebsiteItem.href}
+                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <DashboardOrWebsiteIcon size={18} />
+                        {dashboardOrWebsiteItem.label}
+                      </Link>
                       <Link
                         href="/profile"
                         className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
@@ -471,6 +560,22 @@ export default function Header() {
                       >
                         <Settings size={18} />
                         Settings
+                      </Link>
+                      <Link
+                        href="/dashboard/public-profile"
+                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <Globe2 size={18} />
+                        Create Web Page
+                      </Link>
+                      <Link
+                        href="/calendar"
+                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        <CalendarDays size={18} />
+                        Calendar
                       </Link>
                       <button
                         onClick={() => {

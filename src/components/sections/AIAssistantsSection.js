@@ -101,9 +101,9 @@ const assistants = [
 
 export default function AIAssistantsSection() {
   return (
-    <section className="relative py-24 md:py-32 bg-background">
+    <section className="relative bg-transparent py-10 md:py-12">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="text-center mb-20 md:mb-24">
+        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -111,7 +111,7 @@ export default function AIAssistantsSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="inline-flex items-center gap-2 px-4 py-2 rounded-md text-xs font-semibold border border-primary bg-primary/10 text-primary mb-6">
+            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
               <Bot size={14} />
               AI-Powered Assistant Network
             </span>
@@ -121,7 +121,7 @@ export default function AIAssistantsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-4xl md:text-5xl lg:text-6xl font-black mb-6 leading-tight text-text-heading"
+            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
             Meet Your{" "}
@@ -134,7 +134,7 @@ export default function AIAssistantsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="text-xl md:text-2xl text-text-body max-w-3xl mx-auto leading-relaxed font-light"
+            className="mx-auto max-w-2xl text-sm font-light leading-6 text-text-body md:text-base"
             suppressHydrationWarning
           >
             Multiple specialized AI agents working 24/7 to qualify leads, match
@@ -143,7 +143,7 @@ export default function AIAssistantsSection() {
           </motion.p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {assistants.map((assistant) => {
             const IconComponent = assistant.icon;
             return (
@@ -153,45 +153,45 @@ export default function AIAssistantsSection() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "0px" }}
                 transition={{ duration: 0.3 }}
-                whileHover={{ y: -6, transition: { duration: 0.3 } }}
-                className="group relative h-full rounded-md p-8 bg-background border-2 border-border shadow-sm hover:shadow-md hover:border-primary transition-all duration-300"
+                whileHover={{ y: -3, transition: { duration: 0.25 } }}
+                className="group relative h-full rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md"
                 suppressHydrationWarning
               >
                 {/* Icon */}
                 <div
-                  className={`w-16 h-16 rounded-md bg-gradient-to-br ${assistant.gradient} p-4 mb-6 group-hover:scale-105 transition-transform duration-300 shadow-lg`}
+                  className={`mb-3 h-10 w-10 rounded-xl bg-gradient-to-br ${assistant.gradient} p-2.5 shadow-md transition-transform duration-300 group-hover:scale-105`}
                 >
                   <IconComponent className={`w-full h-full text-white `} />
                 </div>
 
                 {/* Content */}
-                <div className="space-y-4">
+                <div className="space-y-2.5">
                   <div>
-                    <h3 className="text-2xl font-bold mb-2 text-text-heading">
+                    <h3 className="mb-1 text-lg font-black text-text-heading">
                       {assistant.name}
                     </h3>
-                    <p className="text-base font-semibold text-text-muted uppercase tracking-wider">
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">
                       {assistant.role}
                     </p>
                   </div>
 
-                  <p className="text-base text-text-body leading-relaxed">
+                  <p className="text-sm leading-5 text-text-body">
                     {assistant.description}
                   </p>
 
                   {/* Features list */}
-                  <div className="space-y-3 pt-4 border-t border-border">
+                  <div className="space-y-2 border-t border-border pt-2.5">
                     {assistant.features.map((feature) => (
                       <div
                         key={`${assistant.name}-${feature}`}
-                        className="flex items-start gap-3"
+                        className="flex items-start gap-2.5"
                       >
                         <CheckCircle2
                           size={16}
                           className="mt-0.5 flex-shrink-0 text-primary"
                           aria-hidden="true"
                         />
-                        <span className="text-base text-text-body leading-relaxed">
+                        <span className="text-sm leading-5 text-text-body">
                           {feature}
                         </span>
                       </div>

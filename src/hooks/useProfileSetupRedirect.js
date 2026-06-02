@@ -6,10 +6,12 @@ import { toast } from "react-toastify";
 import { useAppSelector } from "@/store";
 import { useProfileQuery } from "@/hooks/useAuthApi";
 import { PROFESSIONAL_ROLE_VALUES } from "@/constants/auth";
+import { isPublicMarketingRoute } from "@/lib/publicRoutes";
 
 const ALLOWED_PREFIXES = ["/settings", "/calendly-callback", "/profile"];
 
 function pathAllowedDuringSetup(pathname) {
+  if (isPublicMarketingRoute(pathname)) return true;
   return ALLOWED_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 

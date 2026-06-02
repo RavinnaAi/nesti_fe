@@ -1,6 +1,33 @@
 import Link from "next/link";
 import { Bot, Mail, PhoneCall, ArrowRight } from "lucide-react";
 
+function FooterLinkList({ title, links, ariaLabel }) {
+  return (
+    <nav aria-label={ariaLabel}>
+      <h4 className="mb-3 text-[11px] font-black uppercase tracking-[0.22em] text-text-heading">
+        {title}
+      </h4>
+      <ul className="space-y-2">
+        {links.map((link) => (
+          <li key={link.href}>
+            <Link
+              href={link.href}
+              className="group inline-flex items-center gap-1.5 text-[13px] font-medium text-text-body transition-colors hover:text-primary"
+            >
+              <span>{link.label}</span>
+              <ArrowRight
+                size={12}
+                className="opacity-0 transition-all duration-200 group-hover:translate-x-0.5 group-hover:opacity-100"
+                aria-hidden
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </nav>
+  );
+}
+
 export default function Footer() {
   const currentYear = new Date().getFullYear();
 
@@ -12,220 +39,126 @@ export default function Footer() {
   ];
 
   const companyLinks = [
-    { label: "About Us", href: "/publicPage/about" },
-    { label: "Contact", href: "/publicPage/contact" },
-    { label: "Careers", href: "#" },
-    { label: "Blog", href: "#" },
+    { label: "About", href: "/about" },
+    { label: "Mission", href: "/mission" },
+    { label: "Blog", href: "/blog" },
+    { label: "FAQ", href: "/faq" },
   ];
 
   const legalLinks = [
-    { label: "Privacy Policy", href: "/publicPage/privacy" },
-    { label: "Terms of Service", href: "#" },
-    { label: "Cookie Policy", href: "#" },
-    { label: "Compliance", href: "#" },
+    { label: "Privacy Policy", href: "/privacy" },
+    { label: "Terms of Use", href: "/terms" },
+    { label: "Finance Policy", href: "/refund-policy" },
   ];
 
   const socialLinks = [
-    { icon: "📘", label: "Facebook", href: "#" },
-    { icon: "🐦", label: "Twitter", href: "#" },
-    { icon: "💼", label: "LinkedIn", href: "#" },
-    { icon: "📷", label: "Instagram", href: "#" },
+    { icon: "Fb", label: "Facebook", href: "#" },
+    { icon: "X", label: "Twitter", href: "#" },
+    { icon: "In", label: "LinkedIn", href: "#" },
+    { icon: "Ig", label: "Instagram", href: "#" },
   ];
 
   return (
-    <footer className="bg-gradient-to-b from-white to-gray-50/50 border-t border-border">
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12 md:py-16">
-        {/* Main Footer Content */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8 md:gap-10 mb-10">
-          {/* Brand Column */}
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="h-14 w-14 rounded-md grid place-items-center shadow-lg bg-gradient-to-br from-primary to-primary-dark">
-                <Bot size={28} className="text-white" />
+    <footer className="border-t border-border bg-gradient-to-b from-white via-background-light/45 to-white">
+      <div className="h-0.5 w-full bg-gradient-to-r from-primary/70 via-primary-dark to-primary/60" />
+      <div className="mx-auto max-w-7xl px-4 py-7 sm:px-6 lg:px-8 md:py-8">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)] lg:gap-12">
+            <div>
+              <div className="mb-3 flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/15">
+                  <Bot size={20} aria-hidden />
+                </div>
+                <div>
+                  <span className="block text-xl font-black tracking-tight text-text-heading">
+                    Nesti AI
+                  </span>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+                    Real Estate Intelligence
+                  </span>
+                </div>
               </div>
-              <span className="text-3xl font-bold text-text-heading">
-                Nesti AI
-              </span>
+
+              <p className="max-w-md text-sm leading-5 text-text-body">
+                AI-powered real estate intelligence for buyers, sellers, and
+                professionals across the USA and Canada.
+              </p>
+
+              <address className="mt-4 grid max-w-md gap-1.5 not-italic">
+                <a
+                  href="mailto:ravinna.raveenthiran@nesti.ca"
+                  className="group flex items-center gap-2.5 rounded-lg border border-border/80 bg-white/70 px-2.5 py-2 text-[13px] font-semibold text-text-heading transition-all hover:border-primary/25 hover:bg-white hover:text-primary"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <Mail size={14} aria-hidden />
+                  </span>
+                  <span className="min-w-0 break-all">ravinna.raveenthiran@nesti.ca</span>
+                </a>
+                <a
+                  href="tel:+14165654791"
+                  className="group flex items-center gap-2.5 rounded-lg border border-border/80 bg-white/70 px-2.5 py-2 text-[13px] font-semibold text-text-heading transition-all hover:border-primary/25 hover:bg-white hover:text-primary"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                    <PhoneCall size={14} aria-hidden />
+                  </span>
+                  <span>+1 (416) 565-4791</span>
+                </a>
+              </address>
             </div>
-            <p className="text-text-body text-base md:text-lg leading-relaxed mb-6 max-w-md">
-              AI-powered real estate intelligence platform for buyers, sellers,
-              and professionals across USA and Canada.
-            </p>
 
-            {/* Contact Info */}
-            <address className="not-italic space-y-3 mb-6">
-              <a
-                href="mailto:ravinna.raveenthiran@nesti.ca"
-                className="flex items-center gap-2 text-text-body hover:text-primary transition-colors text-base font-medium group"
-              >
-                <Mail
-                  size={20}
-                  className="group-hover:scale-110 transition-transform text-primary"
-                />
-                <span>ravinna.raveenthiran@nesti.ca</span>
-              </a>
-              <a
-                href="tel:+14165654791"
-                className="flex items-center gap-2 text-text-body hover:text-primary transition-colors text-base font-medium group"
-              >
-                <PhoneCall
-                  size={20}
-                  className="group-hover:scale-110 transition-transform text-primary"
-                />
-                <span>+1 (416) 565-4791</span>
-              </a>
-            </address>
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_0.9fr_1.2fr]">
+              <FooterLinkList
+                title="Product"
+                links={productLinks}
+                ariaLabel="Product navigation"
+              />
+              <FooterLinkList
+                title="Company"
+                links={companyLinks}
+                ariaLabel="Company navigation"
+              />
+              <FooterLinkList
+                title="Legal"
+                links={legalLinks}
+                ariaLabel="Legal navigation"
+              />
 
-            {/* Social Media */}
-            <nav aria-label="Social media links">
-              <ul className="flex items-center gap-3">
-                {socialLinks.map((social) => (
-                  <li key={social.label}>
-                    <a
-                      href={social.href}
-                      className="w-12 h-12 rounded-xl bg-background border border-border flex items-center justify-center text-xl hover:border-primary hover:shadow-md transition-all duration-300 hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-                      aria-label={social.label}
-                    >
-                      {social.icon}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </nav>
-          </div>
+              <section aria-label="Platform updates">
+                <h4 className="mb-3 text-[11px] font-black uppercase tracking-[0.22em] text-text-heading">
+                  Stay Updated
+                </h4>
+                <p className="text-[13px] leading-5 text-text-body">
+                  Get product updates, AI insights, and real estate growth ideas from
+                  Nesti.
+                </p>
 
-          {/* Product Links */}
-          <nav aria-label="Product navigation">
-            <h4 className="font-bold mb-6 text-lg text-text-heading">
-              Product
-            </h4>
-            <ul className="space-y-3">
-              {productLinks.map((link) => (
-                <li key={link.href}>
-                  <Link
-                    href={link.href}
-                    className="text-text-body hover:text-primary transition-colors text-base font-medium inline-flex items-center gap-2 group"
-                  >
-                    {link.label}
-                    <ArrowRight
-                      size={16}
-                      className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Company Links */}
-          <nav aria-label="Company navigation">
-            <h4 className="font-bold mb-6 text-lg text-text-heading">
-              Company
-            </h4>
-            <ul className="space-y-3">
-              {companyLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-text-body hover:text-primary transition-colors text-base font-medium inline-flex items-center gap-2 group"
-                  >
-                    {link.label}
-                    <ArrowRight
-                      size={16}
-                      className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Legal Links */}
-          <nav aria-label="Legal navigation">
-            <h4 className="font-bold mb-6 text-lg text-text-heading">Legal</h4>
-            <ul className="space-y-3">
-              {legalLinks.map((link) => (
-                <li key={link.label}>
-                  <Link
-                    href={link.href}
-                    className="text-text-body hover:text-primary transition-colors text-base font-medium inline-flex items-center gap-2 group"
-                  >
-                    {link.label}
-                    <ArrowRight
-                      size={16}
-                      className="opacity-0 group-hover:opacity-100 group-hover:translate-x-1 transition-all"
-                    />
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {/* Newsletter */}
-          <section aria-label="Newsletter subscription">
-            <h4 className="font-bold mb-6 text-lg text-text-heading">
-              Stay Updated
-            </h4>
-            <p className="text-text-body text-base mb-4 leading-relaxed">
-              Get the latest updates and insights delivered to your inbox.
-            </p>
-          </section>
+                <nav className="mt-3" aria-label="Social media links">
+                  <ul className="flex flex-wrap items-center gap-1.5">
+                    {socialLinks.map((social) => (
+                      <li key={social.label}>
+                        <a
+                          href={social.href}
+                          className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-white text-[10px] font-black text-text-body shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/30 hover:bg-primary/5 hover:text-primary hover:shadow-md focus:outline-none focus:ring-2 focus:ring-primary/35 focus:ring-offset-2"
+                          aria-label={social.label}
+                        >
+                          {social.icon}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </nav>
+              </section>
+            </div>
         </div>
 
-        {/* Bottom Bar */}
-        <div className="border-t border-border pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-            <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
-              <p className="text-text-body text-base">
-                &copy; {currentYear} Nesti AI. All rights reserved.
+        <div className="mt-7 border-t border-border pt-4">
+            <div className="flex flex-col gap-3 text-[13px] text-text-body md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                <p>&copy; {currentYear} Nesti AI. All rights reserved.</p>
+              </div>
+              <p className="font-medium text-text-body">
+                Built for modern real estate professionals.
               </p>
-              <nav aria-label="Footer legal links">
-                <ul className="flex items-center gap-4 text-base">
-                  <li>
-                    <Link
-                      href="/publicPage/privacy"
-                      className="text-text-body hover:text-primary transition-colors"
-                    >
-                      Privacy
-                    </Link>
-                  </li>
-                  <li>
-                    <span className="text-border" aria-hidden="true">
-                      •
-                    </span>
-                  </li>
-                  <li>
-                    <Link
-                      href="#"
-                      className="text-text-body hover:text-primary transition-colors"
-                    >
-                      Terms
-                    </Link>
-                  </li>
-                  <li>
-                    <span className="text-border" aria-hidden="true">
-                      •
-                    </span>
-                  </li>
-                  <li>
-                    <Link
-                      href="#"
-                      className="text-text-body hover:text-primary transition-colors"
-                    >
-                      Cookies
-                    </Link>
-                  </li>
-                </ul>
-              </nav>
             </div>
-            <div className="flex items-center gap-2 text-text-body text-base">
-              <span>Made with</span>
-              <span className="text-red-500" aria-label="love">
-                ❤️
-              </span>
-              <span>for Real Estate Professionals</span>
-            </div>
-          </div>
         </div>
       </div>
     </footer>

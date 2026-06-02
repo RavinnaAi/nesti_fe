@@ -6,11 +6,11 @@ import PricingSection from "@/components/sections/PricingSection";
 import TestimonialsSection from "@/components/sections/TestimonialsSection";
 import CEOFeaturesSection from "@/components/sections/CEOFeaturesSection";
 import OnboardingSection from "@/components/sections/OnboardingSection";
-import CTASection from "@/components/sections/CTASection";
+import { PageCta } from "@/components/public-pages/shared/PublicPageShared";
 
 export default function Home() {
   return (
-    <div className="relative">
+    <div className="relative overflow-hidden bg-gradient-to-br from-white via-primary/[0.08] to-white">
       <HeroSection />
       <AIAssistantsSection />
       <FeaturesSection />
@@ -19,7 +19,7 @@ export default function Home() {
       <TestimonialsSection />
       <CEOFeaturesSection />
       <OnboardingSection />
-      <CTASection />
+      <PageCta compact transparentSection />
     </div>
   );
 }

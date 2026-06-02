@@ -61,4 +61,28 @@ h6 {
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
   }
+
+  .press-logo-track {
+    animation: press-logo-marquee 70s linear infinite;
+  }
+
+  .press-logo-track:hover {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes press-logo-marquee {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(calc(-50% - 0.5rem));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .press-logo-track {
+    animation: none;
+  }
 }
