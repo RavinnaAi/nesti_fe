@@ -318,6 +318,14 @@ export default function NotificationsPage() {
                             >
                               Open referral →
                             </button>
+                          ) : n.action?.type === "open_bulk_followups" ? (
+                            <button
+                              type="button"
+                              onClick={() => onRowClick(n)}
+                              className="text-left text-xs font-semibold text-primary"
+                            >
+                              Review drafts →
+                            </button>
                           ) : null}
                         </div>
                       );

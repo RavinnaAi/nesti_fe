@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { CheckCircle2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import AuthBrandLink from "@/components/auth/AuthBrandLink";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import PasswordField from "@/components/auth/PasswordField";
@@ -113,9 +114,10 @@ function ResetPasswordPageInner() {
 
   return (
     <AuthLayout>
-      {/* Left - Form Section */}
-      <div className="w-full md:w-[45%] px-6 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16 space-y-6 bg-background">
-        <AuthHeader
+      <div className="flex w-full min-h-0 flex-1 items-center bg-background px-5 py-4 sm:px-8 md:w-[48%] md:py-5 lg:px-12">
+        <div className="mx-auto w-full max-w-[24rem] space-y-3">
+          <AuthBrandLink />
+          <AuthHeader
           title={resetSuccess ? "Password Reset! ✅" : "Reset Password 🔑"}
           subtitle={
             resetSuccess
@@ -201,9 +203,9 @@ function ResetPasswordPageInner() {
             href="/log-in"
           />
         )}
+        </div>
       </div>
 
-      {/* Right - Visual Section */}
       <AuthVisualSection variant="login" />
     </AuthLayout>
   );

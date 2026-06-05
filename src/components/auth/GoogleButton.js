@@ -12,15 +12,15 @@ export default function GoogleButton({
 }) {
   return (
     <motion.button
-      whileHover={{ scale: 1.02, y: -2 }}
+      whileHover={{ scale: 1.01, y: -1 }}
       whileTap={{ scale: 0.98 }}
       type="button"
       disabled={disabled || loading}
       onClick={onClick}
-      className={`h-14 w-full bg-background border-2 border-border rounded-md flex justify-center items-center cursor-pointer hover:border-primary hover:shadow-lg hover:bg-background-light/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 ${className}`}
+      className={`flex h-11 w-full cursor-pointer items-center justify-center rounded-xl border border-border bg-white text-sm transition-all duration-300 hover:border-primary/45 hover:bg-background-light/50 hover:shadow-sm disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100 ${className}`}
     >
-      <div className="flex items-center space-x-3">
-        <svg className="h-5 w-5" viewBox="0 0 24 24">
+      <div className="flex items-center space-x-2.5">
+        <svg className="h-4 w-4" viewBox="0 0 24 24">
           <path
             fill="currentColor"
             d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"

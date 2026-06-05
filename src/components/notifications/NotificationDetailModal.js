@@ -159,6 +159,10 @@ export default function NotificationDetailModal({ notification, onClose }) {
     display?.action?.type === "open_prochat_thread" && String(display?.action?.thread_id || "").trim()
       ? String(display.action.thread_id).trim()
       : null;
+  const openBulkFollowupsHref =
+    display?.action?.type === "open_bulk_followups"
+      ? String(display?.action?.href || "").trim() || "/clients/follow-ups"
+      : null;
   const rejoinMeta = rejoinActionMeta(display);
   const isPendingRejoinRequest = rejoinMeta?.status === "pending";
   const requesterName =
@@ -374,6 +378,18 @@ export default function NotificationDetailModal({ notification, onClose }) {
               className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:brightness-95"
             >
               Open chat
+            </button>
+          ) : null}
+          {openBulkFollowupsHref && !isLoading && !isError ? (
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                router.push(openBulkFollowupsHref);
+              }}
+              className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white hover:brightness-95"
+            >
+              Review drafts
             </button>
           ) : null}
           {isPendingRejoinRequest && !isLoading && !isError ? (

@@ -1,130 +1,59 @@
 import Image from "next/image";
-import { Home, TrendingUp, Shield } from "lucide-react";
+import { CheckCircle2, Sparkles } from "lucide-react";
+
+const FEATURES = [
+  "Secure billing",
+  "AI-assisted workflows",
+  "Built for professionals",
+];
 
 export default function AuthVisualSection({ variant = "signup" }) {
   const isSignup = variant === "signup";
 
   return (
-    <div
-      className={`w-full md:w-[55%] relative overflow-hidden ${isSignup
-        ? "bg-gradient-to-br from-primary-dark to-primary-light"
-        : "bg-gradient-to-br from-primary-light/20 via-primary/10 to-primary-dark/20"
-        }`}
-    >
-      {/* Decorative Background Elements */}
-      <div className="absolute inset-0">
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-md blur-3xl" />
-        <div className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-md blur-3xl" />
-      </div>
+    <div className="relative hidden overflow-hidden md:block md:w-[52%]">
+      <Image
+        src="/images/signup.jpg"
+        alt=""
+        fill
+        priority
+        sizes="52vw"
+        className="object-cover"
+      />
 
-      {/* Content Container */}
-      <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 md:p-12 lg:p-16">
-        {isSignup && (
-          <div className="flex items-center justify-center mb-4">
-            <Image
-              src="/logo/logo-light.png"
-              alt="signup"
-              width={100}
-              height={100}
-            />
+      <div className="absolute inset-0 bg-slate-950/5" />
+      <div className="absolute inset-0 bg-gradient-to-t from-slate-950/35 via-slate-950/10 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-br from-primary/8 via-transparent to-transparent" />
+
+      <div className="relative z-10 flex h-full flex-col items-center justify-center p-8 lg:p-10">
+        <div className="w-full max-w-md space-y-3 rounded-2xl border border-white/35 bg-white/18 p-5 shadow-xl shadow-black/10 ring-1 ring-white/20 backdrop-blur-xl">
+          <div className="inline-flex items-center gap-1.5 rounded-full border border-white/30 bg-white/15 px-2.5 py-1 text-[11px] font-bold text-white backdrop-blur-sm">
+            <Sparkles size={12} className="text-primary-light" />
+            {isSignup ? "Start with a 3-day trial" : "Welcome back"}
           </div>
-        )}
 
-        <div className="text-center mb-12">
-          <h2
-            className={`text-3xl md:text-4xl lg:text-5xl font-bold mb-4 ${isSignup ? "text-white" : "text-text-heading"
-              }`}
-          >
-            Your Dream Home
-            <br />
-            <span className={isSignup ? "text-white/90" : "text-primary"}>
-              Awaits
-            </span>
-          </h2>
-          <p
-            className={`text-base md:text-lg max-w-md mx-auto ${isSignup ? "text-white/90" : "text-text-body"
-              }`}
-          >
-            Join thousands of users finding their perfect property
-          </p>
-        </div>
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold leading-tight tracking-tight text-white drop-shadow-sm sm:text-[1.35rem]">
+              Your client workspace, organized beautifully.
+            </h2>
 
-        {!isSignup && (
-          <div className="grid grid-cols-3 gap-6 md:gap-8 mb-12">
-            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
-                <Home className="text-white text-3xl" />
-              </div>
-              <p className="text-text-heading font-semibold text-sm">
-                Find Homes
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
-                <TrendingUp className="text-white text-3xl" />
-              </div>
-              <p className="text-text-heading font-semibold text-sm">
-                Track Market
-              </p>
-            </div>
-
-            <div className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg">
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
-                <Shield className="text-white text-3xl" />
-              </div>
-              <p className="text-text-heading font-semibold text-sm">
-                Secure Deals
-              </p>
-            </div>
+            <p className="text-xs leading-4 text-white/90 drop-shadow-sm sm:text-[13px] sm:leading-5">
+              Capture leads, manage conversations, and follow-ups from one
+              professional dashboard.
+            </p>
           </div>
-        )}
 
-        <div className="grid grid-cols-3 gap-6 md:gap-8 w-full max-w-lg">
-          <div className={`text-center ${isSignup ? "flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg" : ""} `}>
-            <div
-              className={`text-3xl md:text-4xl font-bold mb-1 ${isSignup ? "text-text-heading" : "text-primary"
-                }`}
-            >
-              50K+
-            </div>
-            <div
-              className={`text-xs md:text-sm ${isSignup ? "text-text-heading/80" : "text-text-body"
-                }`}
-            >
-              Properties
-            </div>
-          </div>
-          <div
-            className={`text-center border-x border-text-muted/30 ${isSignup ? "flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg " : ""} `}
-          >
-            <div
-              className={`text-3xl md:text-4xl font-bold mb-1 ${isSignup ? "text-text-heading" : "text-primary"
-                }`}
-            >
-              100K+
-            </div>
-            <div
-              className={`text-xs md:text-sm ${isSignup ? "text-text-heading/80" : "text-text-body"
-                }`}
-            >
-              Happy Users
-            </div>
-          </div>
-          <div className={`text-center ${isSignup ? "flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg" : ""} `}>
-            <div
-              className={`text-3xl md:text-4xl font-bold mb-1 ${isSignup ? "text-text-heading" : "text-primary"
-                }`}
-            >
-              500+
-            </div>
-            <div
-              className={`text-xs md:text-sm ${isSignup ? "text-text-heading/80" : "text-text-body"
-                }`}
-            >
-              Agents
-            </div>
-          </div>
+          <ul className="space-y-2 border-t border-white/25 pt-4">
+            {FEATURES.map((feature) => (
+              <li
+                key={feature}
+                className="flex items-center gap-2 text-xs text-white/95 sm:text-[13px]"
+              >
+                <CheckCircle2 size={13} className="shrink-0 text-primary-light" />
+                {feature}
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
     </div>

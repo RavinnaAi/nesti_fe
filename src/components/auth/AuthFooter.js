@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export default function AuthFooter({ text, linkText, href }) {
   return (
-    <div className="text-center text-sm text-text-body pt-2">
+    <div className="pt-1 text-center text-sm text-text-body">
       {text}{" "}
       <Link
         href={href}

@@ -33,7 +33,7 @@ export default function RoleDropdown({
 
   return (
     <div>
-      <label className="block text-sm font-semibold text-text-heading mb-2">
+      <label className="mb-1.5 block text-xs font-bold text-text-heading">
         Sign up as a Professional{" "}
         {required && <span className="text-red-500">*</span>}
       </label>
@@ -43,9 +43,9 @@ export default function RoleDropdown({
           onClick={() => setIsOpen(!isOpen)}
           onFocus={onFocus}
           onBlur={onBlur}
-          className={`w-full h-14 border-2 rounded-md px-4 pr-12 transition-all duration-200 hover:shadow-md focus:ring-2 bg-white cursor-pointer text-left flex items-center ${error
-            ? "border-red-400 focus:border-red-500 focus:ring-red-300"
-            : "border-border hover:border-primary focus:border-primary focus:ring-primary/20"
+          className={`flex h-11 w-full cursor-pointer items-center rounded-xl border bg-white/80 px-3 pr-10 text-left text-sm transition-all duration-200 hover:bg-white hover:shadow-sm focus:ring-2 ${error
+            ? "border-red-400 focus:border-red-500 focus:ring-red-200"
+            : "border-border hover:border-primary/45 focus:border-primary focus:ring-primary/15"
             } ${value ? "text-text-heading" : "text-text-muted"}`}
         >
           {value ? (
@@ -56,9 +56,9 @@ export default function RoleDropdown({
             <span>Choose your role</span>
           )}
         </button>
-        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+        <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2">
           <svg
-            className={`w-5 h-5 text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""
+            className={`h-4 w-4 text-text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""
               }`}
             fill="none"
             stroke="currentColor"
@@ -74,7 +74,7 @@ export default function RoleDropdown({
         </div>
 
         {isOpen && (
-          <div className="absolute z-50 w-full mt-2 bg-white border-2 border-border rounded-md shadow-xl overflow-hidden">
+          <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border bg-white shadow-xl">
             {roles.map((role, index) => {
               const IconComponent = role.icon;
               const isSelected = value === role.value;
@@ -86,16 +86,16 @@ export default function RoleDropdown({
                     onChange(role.value);
                     setIsOpen(false);
                   }}
-                  className={`w-full px-4 py-3 flex items-center gap-3 transition-colors duration-150 ${isSelected ? "bg-primary/5" : "hover:bg-gray-50"
+                  className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors duration-150 ${isSelected ? "bg-primary/5" : "hover:bg-gray-50"
                     } ${index !== roles.length - 1
                       ? "border-b border-border/50"
                       : ""
                     }`}
                 >
-                  <div className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center flex-shrink-0">
-                    <IconComponent size={18} className="text-primary" />
+                  <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-green-100">
+                    <IconComponent size={16} className="text-primary" />
                   </div>
-                  <span className="font-medium text-text-heading">
+                  <span className="text-sm font-medium text-text-heading">
                     {role.label}
                   </span>
                 </button>
@@ -104,7 +104,7 @@ export default function RoleDropdown({
           </div>
         )}
       </div>
-      {error && <p className="text-xs mt-2 ml-1 text-red-600">{error}</p>}
+      {error && <p className="ml-1 mt-1.5 text-xs text-red-600">{error}</p>}
     </div>
   );
 }

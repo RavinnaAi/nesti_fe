@@ -9,6 +9,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import BackgroundElements from "@/components/layout/BackgroundElements";
 import CustomToastContainer from "@/components/ui/ToastContainer";
+import TrialCountdownBadge from "@/components/ui/TrialCountdownBadge";
 import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import ConversationsBell from "@/components/prochat/ConversationsBell";
@@ -32,6 +33,8 @@ import {
   CALENDLY_OAUTH_WINDOW_NAME,
 } from "@/lib/calendlyOAuthPopup";
 import { useProfileSetupRedirect } from "@/hooks/useProfileSetupRedirect";
+import { useTrialExpiryRedirect } from "@/hooks/useTrialExpiryRedirect";
+import { useProfileQuery } from "@/hooks/useAuthApi";
 import { finalizeInviteToken } from "@/lib/inviteClient";
 import {
   clearInviteAttribution,
@@ -56,6 +59,7 @@ export default function AppChrome({ children }) {
   const userMenuRef = useRef(null);
   const calendlyOAuthBroadcastAt = useRef(0);
   const inviteFinalizeAttemptedRef = useRef(false);
+  const profileQuery = useProfileQuery();
 
   useEffect(() => {
     setIsMounted(true);
@@ -84,6 +88,7 @@ export default function AppChrome({ children }) {
   }, [token]);
 
   useProfileSetupRedirect(isMounted);
+  useTrialExpiryRedirect(isMounted);
 
   useEffect(() => {
     if (!token || typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
@@ -160,6 +165,16 @@ export default function AppChrome({ children }) {
   const isChatbotEmbed = pathname.startsWith("/chatbot");
   const isCalendlyCallback = pathname.startsWith("/calendly-callback");
   const isProfessionalPublicPage = pathname.startsWith("/p/") || pathname.startsWith("/professional/");
+  const isStandaloneAuthPage = useMemo(
+    () =>
+      pathname === "/log-in" ||
+      pathname === "/sign-up" ||
+      pathname.startsWith("/forgot-password") ||
+      pathname.startsWith("/verify-email") ||
+      pathname.startsWith("/verify-reset-otp") ||
+      pathname.startsWith("/reset-password"),
+    [pathname]
+  );
   const isPublicMarketingPage = isPublicMarketingRoute(pathname);
   const isFixedTableListRoute =
     pathname === "/leads" || pathname === "/referrals" || pathname === "/clients";
@@ -279,6 +294,10 @@ export default function AppChrome({ children }) {
     [pathname]
   );
   const DashboardOrWebsiteIcon = dashboardOrWebsiteItem.Icon;
+  const workspaceHeaderQueriesEnabled =
+    Boolean(token) &&
+    profileQuery.isSuccess &&
+    profileQuery.data?.profile_setup?.is_complete !== false;
 
   const handleLogout = useCallback(() => {
     dispatch(logoutAndClearAll());
@@ -341,6 +360,19 @@ export default function AppChrome({ children }) {
     return <>{children}</>;
   }
 
+  // ── Login/signup own the full viewport: no marketing header/footer, no page scroll ──
+  if (isStandaloneAuthPage) {
+    return (
+      <>
+        <BackgroundElements variant="minimal" />
+        <main className="relative z-10 h-dvh overflow-hidden bg-gradient-to-br from-primary/5 via-white to-primary/10">
+          {children}
+        </main>
+        <CustomToastContainer />
+      </>
+    );
+  }
+
   // ── Not yet mounted: never render public shell on protected routes ──
   if (!isMounted) {
     if (!isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback) {
@@ -390,7 +422,7 @@ export default function AppChrome({ children }) {
             isMobileOpen={isSidebarMobileOpen}
             onCloseMobile={() => setIsSidebarMobileOpen(false)}
           />
-          <div className="flex min-h-screen w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60">
+          <div id="workspace-content" className="flex min-h-screen w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60">
             <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur sm:px-6">
               <div className="flex items-center gap-3 min-w-0">
                 <button
@@ -407,8 +439,9 @@ export default function AppChrome({ children }) {
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
-                <ConversationsBell />
-                <NotificationsBell />
+                <TrialCountdownBadge compact />
+                <ConversationsBell enabled={workspaceHeaderQueriesEnabled} />
+                <NotificationsBell enabled={workspaceHeaderQueriesEnabled} />
                 <div className="relative" ref={userMenuRef}>
                   <button
                     type="button"
@@ -507,6 +540,7 @@ export default function AppChrome({ children }) {
               </div>
             </header>
             <main
+              id="workspace-main"
               className={`relative z-0 flex min-h-0 flex-1 flex-col ${
                 isFixedTableListRoute
                   ? "overflow-hidden"

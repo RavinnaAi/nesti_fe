@@ -120,6 +120,14 @@ export const API_ENDPOINTS = {
     nurturePreview: withBaseUrl("/api/chat/nurture/preview"),
     nurtureSend: withBaseUrl("/api/chat/nurture/send"),
     nurtureLogs: withBaseUrl("/api/chat/nurture/logs"),
+    bulkNurtureDraftJobs: withBaseUrl("/api/chat/nurture/bulk/draft-jobs"),
+    bulkNurtureSendJobs: withBaseUrl("/api/chat/nurture/bulk/send-jobs"),
+    bulkNurtureJob: (id) => withBaseUrl(`/api/chat/nurture/bulk/jobs/${id}`),
+    clearBulkNurtureDrafts: (id) => withBaseUrl(`/api/chat/nurture/bulk/jobs/${id}/drafts`),
+    pauseBulkNurtureDraftJob: (id) => withBaseUrl(`/api/chat/nurture/bulk/jobs/${id}/pause`),
+    resumeBulkNurtureDraftJob: (id) => withBaseUrl(`/api/chat/nurture/bulk/jobs/${id}/resume`),
+    bulkNurtureDraftItem: (jobId, itemId) => withBaseUrl(`/api/chat/nurture/bulk/jobs/${jobId}/items/${itemId}`),
+    latestBulkNurtureJob: withBaseUrl("/api/chat/nurture/bulk/jobs/latest"),
     calculators: {
       mortgage: withBaseUrl("/api/chat/calculators/mortgage"),
       closing: withBaseUrl("/api/chat/calculators/closing"),
@@ -141,10 +149,17 @@ export const API_ENDPOINTS = {
     disconnect: (provider) => withBaseUrl(`/api/calendar/disconnect/${provider}`),
   },
   billing: {
+    plans: withBaseUrl("/api/billing/plans"),
+    checkoutSession: withBaseUrl("/api/billing/checkout-session"),
     setupIntent: withBaseUrl("/api/billing/setup-intent"),
-    subscriptions: withBaseUrl("/api/billing/subscriptions"),
+    subscriptionMe: withBaseUrl("/api/billing/subscription/me"),
+    subscriptionCancel: withBaseUrl("/api/billing/subscription/cancel"),
+    subscriptionResume: withBaseUrl("/api/billing/subscription/resume"),
+    subscriptionChangePlan: withBaseUrl("/api/billing/subscription/change-plan"),
+    invoices: withBaseUrl("/api/billing/invoices"),
     paymentMethods: withBaseUrl("/api/billing/payment-methods"),
-    taxCalculate: withBaseUrl("/api/billing/tax/calculate"),
+    enterpriseInquiry: withBaseUrl("/api/billing/enterprise-inquiry"),
+    enterpriseStatus: withBaseUrl("/api/billing/enterprise-status"),
   },
   notifications: {
     list: withBaseUrl("/api/notifications"),
@@ -269,9 +284,14 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
 
   if (inFlightKey) {
     inFlightReadRequests.set(inFlightKey, requestPromise);
-    requestPromise.finally(() => {
-      inFlightReadRequests.delete(inFlightKey);
-    });
+    requestPromise.then(
+      () => {
+        inFlightReadRequests.delete(inFlightKey);
+      },
+      () => {
+        inFlightReadRequests.delete(inFlightKey);
+      }
+    );
   }
 
   return requestPromise;

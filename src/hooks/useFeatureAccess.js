@@ -10,8 +10,8 @@ export function useFeatureAccess() {
 
   const accountStatus = useMemo(
     () =>
-      (user?.accountStatus || user?.account_status || ACCOUNT_STATUS.SUBSCRIBED)?.toLowerCase() ||
-      ACCOUNT_STATUS.SUBSCRIBED,
+      (user?.accountStatus || user?.account_status || ACCOUNT_STATUS.EXPIRED)?.toLowerCase() ||
+      ACCOUNT_STATUS.EXPIRED,
     [user]
   );
 

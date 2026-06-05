@@ -89,7 +89,7 @@ function GroupAvatarMini({ title, members_preview }) {
   );
 }
 
-export default function ConversationsBell() {
+export default function ConversationsBell({ enabled = true }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const token = useAppSelector((s) => s.auth.token);
@@ -111,7 +111,7 @@ export default function ConversationsBell() {
 
   const listQuery = useQuery({
     queryKey: ["prochat-threads", token],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && enabled,
     queryFn: () => fetchMyProChatThreads({ token }),
     staleTime: 15_000,
     gcTime: 1000 * 60 * 10,
@@ -175,7 +175,7 @@ export default function ConversationsBell() {
     [unreadByThread, validIdSet],
   );
 
-  if (!token) return null;
+  if (!token || !enabled) return null;
 
   const panel =
     open && panelPos ? (

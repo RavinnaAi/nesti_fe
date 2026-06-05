@@ -3,9 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight, User, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Mail, User, Users } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useAppSelector } from "@/store";
+import { FEATURES } from "@/constants/features";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
 import { AppointmentStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
@@ -125,7 +127,9 @@ function IcpTierDropdown({ value, onChange, disabled }) {
 export default function ClientsPage() {
   const router = useRouter();
   const { isAuthenticated } = useAuthGuard();
+  const { hasFeature } = useFeatureAccess();
   const { token, user: authUser } = useAppSelector((state) => state.auth);
+  const canBulkFollowup = hasFeature(FEATURES.LEADS_FOLLOWUP_AUTOMATED);
   const [hydrated, setHydrated] = useState(false);
   const [page, setPage] = useState(1);
   const [icpTier, setIcpTier] = useState("");
@@ -203,11 +207,24 @@ export default function ClientsPage() {
               All lead profiles for your workspace.
             </p>
           </div>
-          <IcpTierDropdown
-            value={icpTier}
-            onChange={setIcpTier}
-            disabled={clientsQuery.isFetching}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            {canBulkFollowup ? (
+              <button
+                type="button"
+                onClick={() => router.push("/clients/follow-ups")}
+                disabled={clientsQuery.isLoading || profiles.length === 0}
+                className="inline-flex h-7 items-center gap-1.5 rounded-md bg-primary px-3 text-[11px] font-semibold text-white shadow-sm transition hover:bg-primary-dark disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <Mail size={13} />
+                Follow up clients
+              </button>
+            ) : null}
+            <IcpTierDropdown
+              value={icpTier}
+              onChange={setIcpTier}
+              disabled={clientsQuery.isFetching}
+            />
+          </div>
         </div>
 
         <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">

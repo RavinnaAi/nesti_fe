@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import { Provider as ReduxProvider } from "react-redux";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -18,6 +18,7 @@ const ReactQueryDevtools = dynamic(
 );
 
 export default function Providers({ children }) {
+  const [mounted, setMounted] = useState(false);
   const [queryClient] = useState(
     () =>
       new QueryClient({
@@ -36,12 +37,20 @@ export default function Providers({ children }) {
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID";
   const isDev = process.env.NODE_ENV === "development";
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   return (
     <GoogleOAuthProvider clientId={googleClientId}>
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
           <NotificationsUiProvider>
-            <WorkspaceSocketBridge>{children}</WorkspaceSocketBridge>
+            {mounted ? (
+              <WorkspaceSocketBridge>{children}</WorkspaceSocketBridge>
+            ) : (
+              children
+            )}
           </NotificationsUiProvider>
           {isDev ? <ReactQueryDevtools initialIsOpen={false} /> : null}
         </QueryClientProvider>

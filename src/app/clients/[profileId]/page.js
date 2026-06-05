@@ -13,6 +13,7 @@ import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 import {
   fetchNurtureLogs,
   postNurtureDraft,
+  postNurturePreview,
   postNurtureRefine,
   sendNurtureEmail,
 } from "@/lib/chatClient";
@@ -277,6 +278,24 @@ export default function ClientProfileLeadsPage() {
       queryClient.invalidateQueries({ queryKey: nurtureLogsInvalidateKey });
     },
     onError: (err) => toast.error(err?.message || "Failed to send nurture email"),
+  });
+
+  const nurturePreviewMutation = useMutation({
+    mutationFn: () =>
+      postNurturePreview({
+        token,
+        payload: {
+          lead_profile_id: profileId,
+          subject: nurtureForm.subject,
+          body: nurtureForm.body,
+          include_property_cards: nurtureForm.include_property_cards,
+        },
+      }),
+    onSuccess: (data) => {
+      const mid = data?.lead_match_id;
+      if (mid) setResolvedLeadMatchId(String(mid));
+    },
+    onError: (err) => toast.error(err?.message || "Failed to build email preview"),
   });
 
   const resolvedWorkspaceLeadHref =
@@ -596,6 +615,7 @@ export default function ClientProfileLeadsPage() {
                   setNurtureForm={setNurtureForm}
                   nurtureMutation={nurtureMutation}
                   nurtureDraftMutation={nurtureDraftMutation}
+                  nurturePreviewMutation={nurturePreviewMutation}
                   nurtureRefineMutation={nurtureRefineMutation}
                   selectedLeadId={null}
                   leadProfileId={profileId}

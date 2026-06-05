@@ -9,13 +9,12 @@ import {
   CheckCircle2,
   XCircle,
   Mail,
-  Home,
-  TrendingUp,
-  Shield,
   Loader2,
 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import AuthBrandLink from "@/components/auth/AuthBrandLink";
 import AuthHeader from "@/components/auth/AuthHeader";
+import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import { useSignupFlow } from "@/hooks/useSignupFlow";
 import { useVerifyEmail, useResendVerification } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
@@ -196,14 +195,15 @@ export default function VerifyEmailPage() {
 
   return (
     <AuthLayout>
-      {/* Left - Form Section */}
-      <div className="w-full md:w-[45%] px-6 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16 space-y-6 bg-background">
-        <AuthHeader
-          title="Verify Your Email"
-          subtitle="Please enter the 5-digit code we sent to your email."
-        />
+      <div className="flex w-full min-h-0 flex-1 items-center bg-background px-5 py-4 sm:px-8 md:w-[48%] md:py-5 lg:px-12">
+        <div className="mx-auto w-full max-w-[24rem] space-y-3">
+          <AuthBrandLink />
+          <AuthHeader
+            title="Verify Your Email"
+            subtitle="Please enter the 5-digit code we sent to your email."
+          />
 
-        <div className="space-y-4">
+          <div className="space-y-4">
           {/* OTP Form */}
           {verificationStatus === "idle" && (
             <form
@@ -399,132 +399,10 @@ export default function VerifyEmailPage() {
             )}
           </div>
         )}
-      </div>
-
-      {/* Right - Visual Section */}
-      <div className="w-full md:w-[55%] relative bg-gradient-to-br from-primary-light/20 via-primary/10 to-primary-dark/20 overflow-hidden">
-        {/* Decorative Background Elements */}
-        <div className="absolute inset-0">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-md blur-3xl"
-          />
-          <motion.div
-            animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-md blur-3xl"
-          />
-        </div>
-
-        {/* Content Container */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 md:p-12 lg:p-16">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-text-heading mb-4">
-              Your Dream Home
-              <br />
-              <span className="text-primary">Awaits</span>
-            </h2>
-            <p className="text-text-body text-base md:text-lg max-w-md mx-auto">
-              Join thousands of users finding their perfect property
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-3 gap-6 md:gap-8 mb-12">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, duration: 0.5 }}
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg"
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
-                <Home className="text-white text-3xl" />
-              </div>
-              <p className="text-text-heading font-semibold text-sm">
-                Find Homes
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.4, duration: 0.5 }}
-              whileHover={{ scale: 1.1, rotate: -5 }}
-              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg"
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
-                <TrendingUp className="text-white text-3xl" />
-              </div>
-              <p className="text-text-heading font-semibold text-sm">
-                Track Market
-              </p>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              className="flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm rounded-md p-6 shadow-lg"
-            >
-              <div className="w-16 h-16 bg-gradient-to-br from-primary to-primary-dark rounded-md flex items-center justify-center mb-3">
-                <Shield className="text-white text-3xl" />
-              </div>
-              <p className="text-text-heading font-semibold text-sm">
-                Secure Deals
-              </p>
-            </motion.div>
-          </div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6, duration: 0.6 }}
-            className="grid grid-cols-3 gap-6 md:gap-8 w-full max-w-lg"
-          >
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
-                50K+
-              </div>
-              <div className="text-xs md:text-sm text-text-body">
-                Properties
-              </div>
-            </div>
-            <div className="text-center border-x border-primary/30">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
-                100K+
-              </div>
-              <div className="text-xs md:text-sm text-text-body">
-                Happy Users
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
-                500+
-              </div>
-              <div className="text-xs md:text-sm text-text-body">Agents</div>
-            </div>
-          </motion.div>
-
-          {/* Floating Elements */}
-          <motion.div
-            animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-20 right-10 w-20 h-20 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
-          />
-          <motion.div
-            animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-32 left-10 w-16 h-16 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
-          />
         </div>
       </div>
+
+      <AuthVisualSection variant="signup" />
     </AuthLayout>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAppSelector } from "@/store";
 import Link from "next/link";
 import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2, X } from "lucide-react";
 
@@ -43,6 +44,15 @@ export default function LeadsNurtureTab({
   headerDescription,
   resolvedWorkspaceLeadHref,
 }) {
+  const user = useAppSelector((state) => state.auth.user);
+  const businessInfo = useAppSelector((state) => state.profile.businessInfo);
+  const isAgentProfessional = useMemo(() => {
+    const role = String(user?.role || businessInfo?.professionalType || "")
+      .trim()
+      .toLowerCase();
+    return role === "agent";
+  }, [user?.role, businessInfo?.professionalType]);
+
   const [panelTab, setPanelTab] = useState("compose");
   const [selectedLog, setSelectedLog] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -75,6 +85,12 @@ export default function LeadsNurtureTab({
     body: String(nurtureForm.body || "").trim(),
     includeCards: Boolean(nurtureForm.include_property_cards),
   });
+
+  useEffect(() => {
+    if (!isAgentProfessional && nurtureForm.include_property_cards) {
+      setNurtureForm((prev) => ({ ...prev, include_property_cards: false }));
+    }
+  }, [isAgentProfessional, nurtureForm.include_property_cards, setNurtureForm]);
 
   useEffect(() => {
     setDraftReady(false);
@@ -339,29 +355,31 @@ export default function LeadsNurtureTab({
               </div>
             </details>
 
-            <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/90 bg-white px-3 py-2.5 text-sm shadow-sm">
-              <input
-                type="checkbox"
-                checked={nurtureForm.include_property_cards}
-                onChange={(e) =>
-                  setNurtureForm((p) => ({
-                    ...p,
-                    include_property_cards: e.target.checked,
-                  }))
-                }
-                disabled={!canAi}
-                className="mt-0.5 rounded border-border text-primary focus:ring-primary"
-              />
-              <span className="min-w-0">
-                <span className="font-medium text-text-heading text-sm">
-                  Include property match cards
+            {isAgentProfessional ? (
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-lg border border-border/90 bg-white px-3 py-2.5 text-sm shadow-sm">
+                <input
+                  type="checkbox"
+                  checked={nurtureForm.include_property_cards}
+                  onChange={(e) =>
+                    setNurtureForm((p) => ({
+                      ...p,
+                      include_property_cards: e.target.checked,
+                    }))
+                  }
+                  disabled={!canAi}
+                  className="mt-0.5 rounded border-border text-primary focus:ring-primary"
+                />
+                <span className="min-w-0">
+                  <span className="font-medium text-text-heading text-sm">
+                    Include property match cards
+                  </span>
+                  <span className="block text-[11px] text-text-muted mt-0.5 leading-snug">
+                    Attach listing cards from matched properties in HTML when
+                    sending.
+                  </span>
                 </span>
-                <span className="block text-[11px] text-text-muted mt-0.5 leading-snug">
-                  Attach listing cards from matched properties in HTML when
-                  sending.
-                </span>
-              </span>
-            </label>
+              </label>
+            ) : null}
             {hasAiDraft ? (
               <button
                 type="button"

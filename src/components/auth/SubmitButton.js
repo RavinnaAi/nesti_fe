@@ -13,14 +13,14 @@ export default function SubmitButton({
 }) {
   return (
     <motion.button
-      whileHover={{ scale: 1.02, y: -2 }}
+      whileHover={{ scale: 1.01, y: -1 }}
       whileTap={{ scale: 0.98 }}
       disabled={disabled || loading}
       type={type}
       onClick={onClick}
-      className={`h-14 w-full bg-gradient-to-r from-primary to-primary-dark rounded-md flex flex-col justify-center items-center cursor-pointer text-white font-semibold shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/50 transition-all duration-300 disabled:opacity-70 disabled:cursor-not-allowed disabled:hover:scale-100 ${className}`}
+      className={`flex h-11 w-full cursor-pointer flex-col items-center justify-center rounded-xl bg-gradient-to-r from-primary to-primary-dark text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:shadow-lg hover:shadow-primary/30 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:scale-100 ${className}`}
     >
-      {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : children}
+      {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : children}
     </motion.button>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
 // Feature identifiers used across the app.
-// Keep these in sync with backend `app/services/feature_access.py`.
+// Keep these in sync with backend `services/billing/entitlements.js`.
 
 export const ACCOUNT_STATUS = {
   FREE_TRIAL: "free_trial",
@@ -11,7 +11,8 @@ export const ACCOUNT_STATUS = {
 
 export const SUBSCRIPTION_PLAN = {
   BASIC: "basic",
-  PRO: "pro",
+  STANDARD: "standard",
+  ENTERPRISE: "enterprise",
 };
 
 export const FEATURES = {
@@ -27,8 +28,9 @@ export const FEATURES = {
   CRM_BASIC_LIST: "crm.basic.list",
   CRM_BASIC_STATUS: "crm.basic.status",
   CRM_FOLLOWUP_MANUAL: "crm.followup.manual",
+  PUBLIC_PROFILE: "public_profile.basic",
 
-  // Pro-only
+  // Standard and Enterprise
   CHATBOT_EMOTIONAL: "chatbot.emotional",
   CHATBOT_EMOTIONAL_QA: "chatbot.emotional.qa",
   CHATBOT_EMOTIONAL_TONE: "chatbot.emotional.emotion_tone",
@@ -40,5 +42,8 @@ export const FEATURES = {
   ASSISTANT_PROFESSIONAL_CLOSING: "assistant.professional.closing",
   ASSISTANT_PROFESSIONAL_FOLLOWUP: "assistant.professional.followup",
   LEADS_INSIGHTS_ADVANCED: "leads.insights.advanced",
+  REFERRALS_INVITES: "referrals.invites",
+  PROFILE_ANALYTICS: "profile.analytics",
+  PRO_CHAT: "prochat.messaging",
 };
 

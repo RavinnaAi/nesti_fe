@@ -1,13 +1,12 @@
-import Link from "next/link";
-import { Bot } from "lucide-react";
-
 export default function AuthHeader({ title, subtitle }) {
   return (
-    <div className="text-left space-y-2">
-      <h1 className="text-3xl sm:text-4xl font-bold text-text-heading tracking-tight">
+    <div className="space-y-1 text-left">
+      <h1 className="text-xl font-bold leading-tight tracking-tight text-text-heading sm:text-[1.35rem]">
         {title}
       </h1>
-      <p className="text-sm sm:text-base text-text-body">{subtitle}</p>
+      <p className="text-xs leading-4 text-text-muted sm:text-[13px] sm:leading-5">
+        {subtitle}
+      </p>
     </div>
   );
 }

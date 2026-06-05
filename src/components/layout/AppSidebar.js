@@ -47,7 +47,7 @@ const PRIMARY_ITEMS = [
   { id: "professionals", label: "Professionals", href: "/professionals?role=agent", icon: Building2 },
   { id: "analytics", label: "Analytics", href: "/analytics", icon: BarChart3 },
   { id: "logs", label: "Logs", href: "/nurture-logs", icon: ClipboardList },
-  { id: "checkout", label: "Checkout", href: "/checkout", icon: CreditCard },
+  { id: "billing", label: "Billing", href: "/checkout", icon: CreditCard },
 ];
 
 const PROFESSIONAL_ROLE_ITEMS = [

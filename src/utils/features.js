@@ -13,7 +13,7 @@ export function hasFeature(user, featureName) {
   const feature = String(featureName || "").trim();
 
   const status =
-    (user.accountStatus || user.account_status || ACCOUNT_STATUS.SUBSCRIBED).toLowerCase();
+    (user.accountStatus || user.account_status || ACCOUNT_STATUS.EXPIRED).toLowerCase();
   const plan =
     (user.subscriptionPlan || user.subscription_plan || "").toLowerCase();
 
@@ -22,9 +22,9 @@ export function hasFeature(user, featureName) {
     return feature === FEATURES.SETTINGS_SUBSCRIPTION;
   }
 
-  // Free trial: behaves like basic tier
+  // Free trial: unlock the full product during the 3-day evaluation window.
   if (status === ACCOUNT_STATUS.FREE_TRIAL) {
-    return BASIC_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
+    return ENTERPRISE_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
   }
 
   // Subscribed: check plan
@@ -32,14 +32,17 @@ export function hasFeature(user, featureName) {
     if (plan === SUBSCRIPTION_PLAN.BASIC) {
       return BASIC_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
     }
-    if (plan === SUBSCRIPTION_PLAN.PRO) {
-      return PRO_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
+    if (plan === SUBSCRIPTION_PLAN.STANDARD) {
+      return STANDARD_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
+    }
+    if (plan === SUBSCRIPTION_PLAN.ENTERPRISE) {
+      return ENTERPRISE_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
     }
   }
 
-  // Legacy / unknown state: don't block settings, otherwise allow by default
+  // Unknown states/plans should not bypass the three-tier entitlement map.
   if (feature === FEATURES.SETTINGS_SUBSCRIPTION) return true;
-  return status === ACCOUNT_STATUS.SUBSCRIBED;
+  return false;
 }
 
 // Local sets mirroring backend feature groups
@@ -52,9 +55,11 @@ const BASIC_FEATURES = new Set([
   FEATURES.CRM_BASIC_LIST,
   FEATURES.CRM_BASIC_STATUS,
   FEATURES.CRM_FOLLOWUP_MANUAL,
+  FEATURES.PUBLIC_PROFILE,
+  FEATURES.REPORTS_AI_MONTHLY,
 ]);
 
-const PRO_FEATURES = new Set([
+const STANDARD_FEATURES = new Set([
   ...BASIC_FEATURES,
   FEATURES.CHATBOT_EMOTIONAL,
   FEATURES.CHATBOT_EMOTIONAL_QA,
@@ -62,10 +67,16 @@ const PRO_FEATURES = new Set([
   FEATURES.CALENDAR_INTEGRATION,
   FEATURES.CALENDAR_VIRTUAL_CONSULT,
   FEATURES.LEADS_FOLLOWUP_AUTOMATED,
-  FEATURES.REPORTS_AI_MONTHLY,
   FEATURES.ASSISTANT_PROFESSIONAL,
   FEATURES.ASSISTANT_PROFESSIONAL_CLOSING,
   FEATURES.ASSISTANT_PROFESSIONAL_FOLLOWUP,
   FEATURES.LEADS_INSIGHTS_ADVANCED,
+  FEATURES.REFERRALS_INVITES,
+  FEATURES.PROFILE_ANALYTICS,
+  FEATURES.PRO_CHAT,
+]);
+
+const ENTERPRISE_FEATURES = new Set([
+  ...STANDARD_FEATURES,
 ]);
 

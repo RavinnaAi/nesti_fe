@@ -69,6 +69,10 @@ export function useWorkspaceSocket(token, queryClient) {
           ? `/referrals/${encodeURIComponent(rid)}?direction=${encodeURIComponent(d)}`
           : null;
       }
+      if (type === "open_bulk_followups") {
+        const href = String(action?.href || "").trim();
+        return href || "/clients/follow-ups";
+      }
       return null;
     };
 
@@ -77,6 +81,7 @@ export function useWorkspaceSocket(token, queryClient) {
       if (type === "open_prochat_thread") return "Open chat";
       if (type === "open_lead") return "Open lead";
       if (type === "open_referral") return "Open referral";
+      if (type === "open_bulk_followups") return "Review drafts";
       return "Open";
     };
 

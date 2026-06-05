@@ -6,6 +6,7 @@ import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { useGoogleLogin } from "@react-oauth/google";
 import AuthLayout from "@/components/auth/AuthLayout";
+import AuthBrandLink from "@/components/auth/AuthBrandLink";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import FormField from "@/components/auth/FormField";
@@ -187,29 +188,30 @@ function SignUpPageContent() {
   return (
     <AuthLayout>
       {/* Left - Form Section */}
-      <div className="w-full md:w-[45%] px-6 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16 space-y-6 bg-background">
-        <AuthHeader
-          title="Sign Up for Nesti AI"
-          subtitle="Create your account and start your free 14-day trial"
-        />
-
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <NameFields
-            firstName={form.firstName}
-            lastName={form.lastName}
-            onFirstNameChange={handleChange}
-            onLastNameChange={handleChange}
-            onFirstNameFocus={() => setFocusedField("firstName")}
-            onLastNameFocus={() => setFocusedField("lastName")}
-            onFirstNameBlur={() => setFocusedField("")}
-            onLastNameBlur={() => setFocusedField("")}
-            firstNameError={fieldErrors.firstName}
-            lastNameError={fieldErrors.lastName}
-            focusedField={focusedField}
+      <div className="flex w-full min-h-0 flex-1 items-center bg-background px-5 py-4 sm:px-8 md:w-[48%] md:py-5 lg:px-12">
+        <div className="mx-auto w-full max-w-[24rem] space-y-3">
+          <AuthBrandLink />
+          <AuthHeader
+            title="Create your Nesti account"
+            subtitle="Set up your workspace in minutes. No card required."
           />
 
-          <FormField
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <NameFields
+              firstName={form.firstName}
+              lastName={form.lastName}
+              onFirstNameChange={handleChange}
+              onLastNameChange={handleChange}
+              onFirstNameFocus={() => setFocusedField("firstName")}
+              onLastNameFocus={() => setFocusedField("lastName")}
+              onFirstNameBlur={() => setFocusedField("")}
+              onLastNameBlur={() => setFocusedField("")}
+              firstNameError={fieldErrors.firstName}
+              lastNameError={fieldErrors.lastName}
+              focusedField={focusedField}
+            />
+
+            <FormField
             label="Email Address"
             name="email"
             type="email"
@@ -223,9 +225,9 @@ function SignUpPageContent() {
             error={fieldErrors.email}
             required
             autoComplete="email"
-          />
+            />
 
-          <PasswordField
+            <PasswordField
             label="Password"
             name="password"
             value={form.password}
@@ -240,9 +242,9 @@ function SignUpPageContent() {
             autoComplete="new-password"
             showStrengthIndicator={true}
             passwordRequirements={passwordRequirements}
-          />
+            />
 
-          <RoleDropdown
+            <RoleDropdown
             value={form.role}
             onChange={handleRoleChange}
             onFocus={() => setFocusedField("role")}
@@ -250,29 +252,28 @@ function SignUpPageContent() {
             focusedField={focusedField}
             error={fieldErrors.role}
             required
+            />
+
+            <div className="flex flex-col space-y-2 pt-1">
+              <SubmitButton loading={isSubmitting}>Create Account</SubmitButton>
+            </div>
+
+            <Divider />
+
+            <GoogleButton
+              onClick={handleGoogleSignup}
+              loading={googleSignupMutation.isLoading}
+            >
+              Sign up with Google
+            </GoogleButton>
+          </form>
+
+          <AuthFooter
+            text="Already have an account?"
+            linkText="Login"
+            href="/log-in"
           />
-
-          {/* Submit Button */}
-          <div className="flex flex-col space-y-3 pt-2">
-            <SubmitButton loading={isSubmitting}>Create Account</SubmitButton>
-          </div>
-
-          <Divider />
-
-          {/* Google Signup Button */}
-          <GoogleButton
-            onClick={handleGoogleSignup}
-            loading={googleSignupMutation.isLoading}
-          >
-            Sign up with Google
-          </GoogleButton>
-        </form>
-
-        <AuthFooter
-          text="Already have an account?"
-          linkText="Login"
-          href="/log-in"
-        />
+        </div>
       </div>
 
       {/* Right - Visual Section */}

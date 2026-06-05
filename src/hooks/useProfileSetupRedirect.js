@@ -8,7 +8,7 @@ import { useProfileQuery } from "@/hooks/useAuthApi";
 import { PROFESSIONAL_ROLE_VALUES } from "@/constants/auth";
 import { isPublicMarketingRoute } from "@/lib/publicRoutes";
 
-const ALLOWED_PREFIXES = ["/settings", "/calendly-callback", "/profile"];
+const ALLOWED_PREFIXES = ["/settings", "/checkout", "/calendly-callback", "/profile"];
 
 function pathAllowedDuringSetup(pathname) {
   if (isPublicMarketingRoute(pathname)) return true;

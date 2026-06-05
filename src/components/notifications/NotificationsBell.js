@@ -68,7 +68,7 @@ function updateRejoinStatusCacheValue(value, meta) {
   return updateRejoinNotificationStatus(value, meta);
 }
 
-export default function NotificationsBell() {
+export default function NotificationsBell({ enabled = true }) {
   const { openNotificationDetail } = useNotificationsUi();
   const token = useAppSelector((s) => s.auth.token);
   const queryClient = useQueryClient();
@@ -90,7 +90,7 @@ export default function NotificationsBell() {
   const unreadQuery = useQuery({
     queryKey: ["notifications", "unread-count", token],
     queryFn: () => fetchNotificationsUnreadCount({ token }),
-    enabled: Boolean(token),
+    enabled: Boolean(token) && enabled,
     staleTime: 60_000,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: false,
@@ -100,7 +100,7 @@ export default function NotificationsBell() {
   const listQuery = useQuery({
     queryKey: ["notifications", "list", token, "preview"],
     queryFn: () => fetchNotifications({ token, limit: 12, offset: 0 }),
-    enabled: Boolean(token) && open,
+    enabled: Boolean(token) && enabled && open,
     staleTime: 30_000,
     gcTime: 1000 * 60 * 10,
     refetchOnMount: false,
@@ -185,7 +185,7 @@ export default function NotificationsBell() {
     });
   };
 
-  if (!token) return null;
+  if (!token || !enabled) return null;
 
   const panel =
     open && panelPos ? (
@@ -330,6 +330,14 @@ export default function NotificationsBell() {
                             className="mt-1 block text-[11px] font-semibold text-primary"
                           >
                             Open referral →
+                          </button>
+                        ) : n.action?.type === "open_bulk_followups" ? (
+                          <button
+                            type="button"
+                            onClick={() => openItem(n)}
+                            className="mt-1 block text-[11px] font-semibold text-primary"
+                          >
+                            Review drafts →
                           </button>
                         ) : null}
                       </div>

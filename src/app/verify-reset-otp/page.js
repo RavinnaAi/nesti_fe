@@ -7,6 +7,9 @@ import { motion } from "framer-motion";
 import { toast } from "react-toastify";
 import { CheckCircle2, XCircle, Mail, ArrowLeft, Loader2 } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import AuthBrandLink from "@/components/auth/AuthBrandLink";
+import AuthHeader from "@/components/auth/AuthHeader";
+import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import { useVerifyResetOTP, useForgotPassword } from "@/hooks/useAuthApi";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setResetToken, setResetEmail } from "@/store/authSlice";
@@ -200,22 +203,22 @@ function VerifyResetOTPContent() {
 
   return (
     <AuthLayout>
-      <div className="w-full md:w-[45%] px-6 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16 space-y-6 bg-background">
-        <Link
-          href="/forgot-password"
-          prefetch={false}
-          className="inline-flex items-center gap-2 text-sm text-text-body hover:text-primary transition-colors duration-200"
-        >
-          <ArrowLeft size={16} />
-          Back to Forgot Password
-        </Link>
+      <div className="flex w-full min-h-0 flex-1 items-center bg-background px-5 py-4 sm:px-8 md:w-[48%] md:py-5 lg:px-12">
+        <div className="mx-auto w-full max-w-[24rem] space-y-3">
+          <AuthBrandLink />
+          <Link
+            href="/forgot-password"
+            prefetch={false}
+            className="inline-flex items-center gap-2 text-xs text-text-body hover:text-primary transition-colors duration-200"
+          >
+            <ArrowLeft size={14} />
+            Back to Forgot Password
+          </Link>
 
-        <div className="text-left space-y-2">
-          <h1 className="text-3xl sm:text-4xl font-bold text-text-heading tracking-tight">
-            Verify Reset Code
-          </h1>
-          <p className="text-sm sm:text-base text-text-body">{getSubtitle()}</p>
-        </div>
+          <AuthHeader
+            title="Verify Reset Code"
+            subtitle={getSubtitle()}
+          />
 
         {email && (
           <div className="flex items-center gap-2 p-3 bg-background-light/50 rounded-md border border-border">
@@ -344,81 +347,10 @@ function VerifyResetOTPContent() {
             Back to Login
           </Link>
         </div>
-      </div>
-
-      <div className="w-full md:w-[55%] relative bg-gradient-to-br from-primary-light/20 via-primary/10 to-primary-dark/20 overflow-hidden">
-        <div className="absolute inset-0">
-          <motion.div
-            animate={{ scale: [1, 1.2, 1], opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -top-20 -right-20 w-80 h-80 bg-primary/20 rounded-md blur-3xl"
-          />
-          <motion.div
-            animate={{ scale: [1.2, 1, 1.2], opacity: [0.2, 0.4, 0.2] }}
-            transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute -bottom-32 -left-32 w-96 h-96 bg-primary-dark/15 rounded-md blur-3xl"
-          />
-        </div>
-
-        <div className="relative z-10 h-full flex flex-col items-center justify-center p-8 md:p-12 lg:p-16">
-          <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
-            className="text-center mb-12"
-          >
-            <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-text-heading mb-4">
-              Secure Password Reset
-              <br />
-              <span className="text-primary">Verified</span>
-            </h2>
-            <p className="text-text-body text-base md:text-lg max-w-md mx-auto">
-              Your account security is our priority
-            </p>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
-            className="grid grid-cols-3 gap-6 md:gap-8 w-full max-w-lg"
-          >
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
-                50K+
-              </div>
-              <div className="text-xs md:text-sm text-text-body">
-                Properties
-              </div>
-            </div>
-            <div className="text-center border-x border-primary/30">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
-                100K+
-              </div>
-              <div className="text-xs md:text-sm text-text-body">
-                Happy Users
-              </div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl md:text-4xl font-bold text-primary mb-1">
-                500+
-              </div>
-              <div className="text-xs md:text-sm text-text-body">Agents</div>
-            </div>
-          </motion.div>
-
-          <motion.div
-            animate={{ y: [0, -20, 0], rotate: [0, 5, 0] }}
-            transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute top-20 right-10 w-20 h-20 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
-          />
-          <motion.div
-            animate={{ y: [0, 15, 0], rotate: [0, -5, 0] }}
-            transition={{ duration: 7, repeat: Infinity, ease: "easeInOut" }}
-            className="absolute bottom-32 left-10 w-16 h-16 bg-background/40 backdrop-blur-sm rounded-md shadow-lg hidden lg:block"
-          />
         </div>
       </div>
+
+      <AuthVisualSection variant="login" />
     </AuthLayout>
   );
 }

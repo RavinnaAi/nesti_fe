@@ -443,6 +443,110 @@ export async function fetchNurtureLogs({ token, leadMatchId, leadProfileId, page
   });
 }
 
+export async function startBulkNurtureDraftJob({ token, icpTier } = {}) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.bulkNurtureDraftJobs,
+    method: "POST",
+    data: { icp_tier: icpTier || undefined },
+    token: authToken,
+  });
+}
+
+export async function startBulkNurtureSendJob({ token, sourceJobId, itemIds, sendAll = false }) {
+  const authToken = token || getStoredAuthToken();
+  return apiClient({
+    url: API_ENDPOINTS.chat.bulkNurtureSendJobs,
+    method: "POST",
+    data: {
+      source_job_id: sourceJobId,
+      send_all: sendAll,
+      item_ids: sendAll ? undefined : itemIds,
+    },
+    token: authToken,
+  });
+}
+
+export async function fetchBulkNurtureJob({ token, jobId, page, limit }) {
+  const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.bulkNurtureJob(jobId)}${qs}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function fetchLatestBulkNurtureJob({ token, type = "bulk_nurture_draft", page, limit } = {}) {
+  const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (type) params.set("type", String(type));
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.latestBulkNurtureJob}${qs}`,
+    method: "GET",
+    token: authToken,
+  });
+}
+
+export async function clearBulkNurtureDrafts({ token, jobId, page, limit }) {
+  const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.clearBulkNurtureDrafts(jobId)}${qs}`,
+    method: "DELETE",
+    token: authToken,
+  });
+}
+
+export async function pauseBulkNurtureDraftJob({ token, jobId, page, limit }) {
+  const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.pauseBulkNurtureDraftJob(jobId)}${qs}`,
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function resumeBulkNurtureDraftJob({ token, jobId, page, limit }) {
+  const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.resumeBulkNurtureDraftJob(jobId)}${qs}`,
+    method: "POST",
+    token: authToken,
+  });
+}
+
+export async function updateBulkNurtureDraftItem({ token, jobId, itemId, subject, body, page, limit }) {
+  const authToken = token || getStoredAuthToken();
+  const params = new URLSearchParams();
+  if (page != null && String(page).trim() !== "") params.set("page", String(page));
+  if (limit != null && String(limit).trim() !== "") params.set("limit", String(limit));
+  const qs = params.toString() ? `?${params.toString()}` : "";
+  return apiClient({
+    url: `${API_ENDPOINTS.chat.bulkNurtureDraftItem(jobId, itemId)}${qs}`,
+    method: "PATCH",
+    data: { subject, body },
+    token: authToken,
+  });
+}
+
 export async function runMortgageCalculator({ token, payload }) {
   const authToken = token || getStoredAuthToken();
   return apiClient({

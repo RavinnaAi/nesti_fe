@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useAppSelector } from "@/store";
 import { ACCOUNT_STATUS } from "@/constants/features";
 
-function getRemainingMs(trialEndsAt, currentTime = Date.now()) {
+export function getTrialRemainingMs(trialEndsAt, currentTime = Date.now()) {
   if (!trialEndsAt) return 0;
   try {
     const end = new Date(trialEndsAt).getTime();
@@ -14,7 +14,7 @@ function getRemainingMs(trialEndsAt, currentTime = Date.now()) {
   }
 }
 
-function formatRemaining(ms) {
+export function formatTrialRemaining(ms) {
   if (ms <= 0) return "Trial ended";
   const totalSec = Math.floor(ms / 1000);
   const days = Math.floor(totalSec / 86400);
@@ -31,7 +31,7 @@ function formatRemaining(ms) {
   return `${parts.join(" ")} left`;
 }
 
-export default function TrialCountdownBadge() {
+export default function TrialCountdownBadge({ compact = false }) {
   const user = useAppSelector((state) => state.auth.user);
   const [isMounted, setIsMounted] = useState(false);
   const [now, setNow] = useState(Date.now());
@@ -42,7 +42,7 @@ export default function TrialCountdownBadge() {
 
   const trialEndsAt = user?.trialEndsAt || user?.trial_ends_at;
 
-  const remainingMs = useMemo(() => getRemainingMs(trialEndsAt, now), [trialEndsAt, now]);
+  const remainingMs = useMemo(() => getTrialRemainingMs(trialEndsAt, now), [trialEndsAt, now]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -56,20 +56,14 @@ export default function TrialCountdownBadge() {
 
   if (!isMounted) return null;
   if (!user) return null;
-  /** Lawyers use the same workspace without this fixed pill (avoids clutter with chat/embed). */
-  if (String(user?.role || "").toLowerCase() === "lawyer") return null;
   if (accountStatus !== ACCOUNT_STATUS.FREE_TRIAL) return null;
   if (!trialEndsAt) return null;
-  if (remainingMs <= 0) return null;
 
-  /* lg:left clears fixed sidebar (w-60) + gap so Sign out stays clickable */
   return (
-    <div className="pointer-events-none fixed bottom-4 left-4 z-30 max-w-[min(calc(100vw-2rem),24rem)] lg:left-[calc(15rem+1rem)]">
-      <div className="pointer-events-auto inline-flex max-w-full flex-wrap items-center gap-2 rounded-full bg-slate-900/90 px-3 py-2 text-xs font-medium text-white shadow-lg sm:px-4">
-        <span className="inline-flex h-2 w-2 rounded-full bg-amber-400 animate-pulse" />
-        <span>Free trial</span>
-        <span className="text-amber-200 font-semibold">{formatRemaining(remainingMs)}</span>
-      </div>
+    <div className={`inline-flex max-w-full items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-semibold text-amber-800 shadow-sm ${compact ? "px-2.5 py-1 text-[11px]" : ""}`}>
+      <span className="inline-flex h-2 w-2 shrink-0 rounded-full bg-amber-500 animate-pulse" />
+      <span className="hidden sm:inline">Free trial</span>
+      <span className="text-amber-900">{formatTrialRemaining(remainingMs)}</span>
     </div>
   );
 }

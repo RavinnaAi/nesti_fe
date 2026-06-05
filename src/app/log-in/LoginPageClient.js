@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
 import AuthLayout from "@/components/auth/AuthLayout";
+import AuthBrandLink from "@/components/auth/AuthBrandLink";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import FormField from "@/components/auth/FormField";
@@ -67,8 +68,9 @@ export default function LoginPageClient() {
     password: "",
   });
   const [fieldErrors, setFieldErrors] = useState({});
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const loginMutation = useLogin();
-  const isSubmitting = loginMutation.isLoading;
+  const isSubmitting = isLoggingIn || loginMutation.isPending;
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -95,6 +97,7 @@ export default function LoginPageClient() {
     setFieldErrors(errs);
     if (errs.email || errs.password) return;
 
+    setIsLoggingIn(true);
     try {
       await loginMutation.mutateAsync({
         email: form.email.trim(),
@@ -103,67 +106,71 @@ export default function LoginPageClient() {
       });
       router.push("/dashboard");
     } catch (err) {
+      setIsLoggingIn(false);
       console.error("Login error:", err);
     }
   };
 
   return (
     <AuthLayout>
-      <div className="w-full md:w-[45%] px-6 py-8 sm:px-8 sm:py-12 lg:px-12 lg:py-16 space-y-6 bg-background">
-        <AuthHeader
-          title="Welcome Back"
-          subtitle="Sign in to continue to your account"
-        />
-
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <FormField
-            label="Email Address"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            onFocus={() => setFocusedField("email")}
-            onBlur={() => setFocusedField("")}
-            placeholder="Enter your email"
-            icon={Mail}
-            focusedField={focusedField}
-            error={fieldErrors.email}
-            autoComplete="email"
+      <div className="flex w-full min-h-0 flex-1 items-center bg-background px-5 py-4 sm:px-8 md:w-[48%] md:py-5 lg:px-12">
+        <div className="mx-auto w-full max-w-[24rem] space-y-3">
+          <AuthBrandLink />
+          <AuthHeader
+            title="Sign in to Nesti"
+            subtitle="Manage leads, clients, and follow-ups from one workspace."
           />
 
-          <PasswordField
-            label="Password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            onFocus={() => setFocusedField("password")}
-            onBlur={() => setFocusedField("")}
-            placeholder="Enter your password"
-            focusedField={focusedField}
-            error={fieldErrors.password}
-            autoComplete="current-password"
+          <form onSubmit={handleSubmit} className="space-y-3">
+            <FormField
+              label="Email Address"
+              name="email"
+              type="email"
+              value={form.email}
+              onChange={handleChange}
+              onFocus={() => setFocusedField("email")}
+              onBlur={() => setFocusedField("")}
+              placeholder="Enter your email"
+              icon={Mail}
+              focusedField={focusedField}
+              error={fieldErrors.email}
+              autoComplete="email"
+            />
+
+            <PasswordField
+              label="Password"
+              name="password"
+              value={form.password}
+              onChange={handleChange}
+              onFocus={() => setFocusedField("password")}
+              onBlur={() => setFocusedField("")}
+              placeholder="Enter your password"
+              focusedField={focusedField}
+              error={fieldErrors.password}
+              autoComplete="current-password"
+            />
+
+            <div className="text-right">
+              <Link
+                href="/forgot-password"
+                prefetch={false}
+                className="cursor-pointer text-sm font-semibold text-primary transition-all duration-200 hover:text-primary-dark hover:underline"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
+            <div className="flex flex-col space-y-2 pt-1">
+              <SubmitButton loading={isSubmitting}>Sign In</SubmitButton>
+            </div>
+          </form>
+
+          <AuthFooter
+            text="Don't have an account?"
+            linkText="Sign Up"
+            href="/sign-up"
           />
-
-          <div className="text-right">
-            <Link
-              href="/forgot-password"
-              prefetch={false}
-              className="text-sm text-primary hover:text-primary-dark hover:underline cursor-pointer transition-all duration-200 font-semibold"
-            >
-              Forgot Password?
-            </Link>
-          </div>
-
-          <div className="flex flex-col space-y-3 pt-2">
-            <SubmitButton loading={isSubmitting}>Sign In</SubmitButton>
-          </div>
-        </form>
-
-        <AuthFooter
-          text="Don't have an account?"
-          linkText="Sign Up"
-          href="/sign-up"
-        />
+        </div>
       </div>
 
       <AuthVisualSection variant="login" />
