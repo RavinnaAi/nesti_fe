@@ -80,16 +80,21 @@ function ProfileCell({ user }) {
   );
 }
 
-export default function InviteSignupsPanel({ token, days = 30, showMetrics = true, showHeader = true }) {
+export default function InviteSignupsPanel({ token, days = 30, showMetrics = true, showHeader = true, externalMetrics = null }) {
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
 
+  // Fix #7 — skip the metrics fetch when the parent already provides the data
+  // (e.g. analytics/page.js already fetches inviteMetrics and passes it as externalMetrics)
   const metricsQuery = useQuery({
     queryKey: ["invite-metrics", token, days],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && externalMetrics === null,
     queryFn: () => fetchInviteMetrics({ token, days }),
     staleTime: 30_000,
   });
+
+  // Use parent-supplied data if available, otherwise fall back to own query
+  const metricsData = externalMetrics !== null ? externalMetrics : metricsQuery.data?.metrics;
 
   const linksQuery = useQuery({
     queryKey: ["invite-links", token],
@@ -106,8 +111,8 @@ export default function InviteSignupsPanel({ token, days = 30, showMetrics = tru
     placeholderData: (prev) => prev,
   });
 
-  const totals = metricsQuery.data?.metrics?.totals || {};
-  const points = metricsQuery.data?.metrics?.points || {};
+  const totals = metricsData?.totals || {};
+  const points = metricsData?.points || {};
   const rewardsEnabled = points?.rewards_enabled !== false;
 
   const inviteLinks = useMemo(
@@ -161,7 +166,7 @@ export default function InviteSignupsPanel({ token, days = 30, showMetrics = tru
   const hasPrev = Boolean(pagination.has_prev_page) || page > 1;
   const hasNext = Boolean(pagination.has_next_page) || (totalPages > 0 && page < totalPages);
 
-  const isLoading = metricsQuery.isLoading || linksQuery.isLoading || conversionsQuery.isLoading;
+  const isLoading = (externalMetrics === null && metricsQuery.isLoading) || linksQuery.isLoading || conversionsQuery.isLoading;
   const tableRows = useMemo(() => {
     if (!Array.isArray(items)) return [];
     if (items.length >= rowsPerPage) return items;
@@ -186,7 +191,7 @@ export default function InviteSignupsPanel({ token, days = 30, showMetrics = tru
             <button
               type="button"
               onClick={() => {
-                metricsQuery.refetch();
+                if (externalMetrics === null) metricsQuery.refetch();
                 linksQuery.refetch();
                 conversionsQuery.refetch();
               }}

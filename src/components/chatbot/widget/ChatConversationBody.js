@@ -179,9 +179,21 @@ export default function ChatConversationBody({
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className={`flex justify-start items-center ${resolvedRole === "lawyer" ? "gap-0" : "gap-2"}`}
+          className="flex justify-start items-center gap-2"
         >
-          {resolvedRole !== "lawyer" ? (
+          {trimmedAvatarUrl ? (
+            <div
+              className={`w-8 h-8 rounded-full shrink-0 overflow-hidden border ${roleUi.accentBorder || "border-primary/20"}`}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={trimmedAvatarUrl}
+                alt=""
+                className="h-full w-full object-cover"
+                onError={() => setHostAvatarBroken(true)}
+              />
+            </div>
+          ) : resolvedRole !== "lawyer" ? (
             <div
               className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 animate-pulse ${roleUi.accentBgLighter || "bg-primary/10"} ${roleUi.accentText || "text-primary"}`}
             >

@@ -234,16 +234,9 @@ export default function AppChrome({ children }) {
             // best-effort prefetch
           }
         };
-        if (!isProd) {
-          // Wider staggering in dev avoids compile storms while still warming routes.
-          setTimeout(run, 700 + idx * 1200);
-          return;
-        }
-        try {
-          run();
-        } catch {
-          // best-effort prefetch
-        }
+        // Fix #12 — stagger all prefetches (prod and dev) to avoid a CPU/network burst
+        // on initial load. 400ms base + 600ms per route keeps them spread over ~6s.
+        setTimeout(run, 400 + idx * 600);
       });
     };
 

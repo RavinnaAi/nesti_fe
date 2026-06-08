@@ -381,7 +381,8 @@ function LeadsPageContent() {
 
   const referralsQuery = useQuery({
     queryKey: ["chat-referrals", token],
-    enabled: Boolean(token),
+    // Fix #8 — only fetch when the referrals panel ("others" tab) is open
+    enabled: Boolean(token && activeTab === "others"),
     queryFn: () => fetchReferrals({ token }),
   });
 
@@ -395,7 +396,8 @@ function LeadsPageContent() {
 
   const nurtureLogsQuery = useQuery({
     queryKey: ["chat-nurture-logs", token, selectedLeadId],
-    enabled: Boolean(token && selectedLeadId),
+    // Fix #8 — only fetch when the nurture panel is open
+    enabled: Boolean(token && selectedLeadId && activeTab === "nurture"),
     queryFn: () => fetchNurtureLogs({ token, leadMatchId: selectedLeadId }),
   });
 

@@ -183,8 +183,10 @@ export async function getProfileAnalytics(token, { period = 'daily', start_date,
 
 export async function getSellerProperties(slug) {
   return cachedPublicRequest(`seller-properties:${slug}`, PUBLIC_PROFILE_CACHE_MS, async () => {
+    // Fix #11 — use Next.js revalidation instead of cache: 'no-store' so the edge/CDN
+    // can serve cached responses for frequently-visited public profiles
     const res = await fetch(`${API_BASE_URL}/api/public/professionals/${slug}/properties`, {
-      cache: 'no-store',
+      next: { revalidate: 10 },
     });
     if (!res.ok) return { properties: [] };
     return res.json();

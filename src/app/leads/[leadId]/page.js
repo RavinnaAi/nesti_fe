@@ -307,7 +307,8 @@ function LeadWorkspacePageContent() {
 
   const referralsQuery = useQuery({
     queryKey: ["lead-referrals", token, leadId],
-    enabled: Boolean(token && leadId),
+    // Fix #8 — only fetch when the referrals tab ("others") is active
+    enabled: Boolean(token && leadId && activeTab === "others"),
     queryFn: () => fetchLeadReferrals({ token, leadMatchId: leadId }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,
@@ -318,7 +319,8 @@ function LeadWorkspacePageContent() {
 
   const nurtureLogsQuery = useQuery({
     queryKey: ["chat-nurture-logs", token, leadId],
-    enabled: Boolean(token && leadId),
+    // Fix #8 — only fetch when the nurture tab is active
+    enabled: Boolean(token && leadId && activeTab === "nurture"),
     queryFn: () => fetchNurtureLogs({ token, leadMatchId: leadId }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,

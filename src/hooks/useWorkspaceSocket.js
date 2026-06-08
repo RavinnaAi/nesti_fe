@@ -96,14 +96,10 @@ export function useWorkspaceSocket(token, queryClient) {
           queryClient.invalidateQueries({ queryKey: ["prochat-messages"] });
         }
       }
-      queryClient.invalidateQueries({
-        queryKey: ["leads"],
-        refetchType: "all",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["lead-detail"],
-        refetchType: "all",
-      });
+      // Fix #6 — use default refetchType ("active") so only on-screen queries refetch.
+      // refetchType: "all" was triggering 6+ simultaneous background re-fetches per notification.
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
 
@@ -148,14 +144,9 @@ export function useWorkspaceSocket(token, queryClient) {
     };
 
     const onLead = () => {
-      queryClient.invalidateQueries({
-        queryKey: ["leads"],
-        refetchType: "all",
-      });
-      queryClient.invalidateQueries({
-        queryKey: ["lead-detail"],
-        refetchType: "all",
-      });
+      // Fix #6 — use default refetchType ("active") so only on-screen queries refetch
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail"] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
       queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
     };

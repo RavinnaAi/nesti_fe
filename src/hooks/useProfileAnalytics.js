@@ -1,10 +1,11 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
 import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
 
 export function useProfileAnalytics(profileSlug) {
-  const sessionId = generateSessionId();
-  const visitorId = generateVisitorId();
+  // Fix #10 — memoize so IDs are stable across re-renders, not re-read from storage every time
+  const sessionId = useMemo(() => generateSessionId(), []);
+  const visitorId = useMemo(() => generateVisitorId(), []);
 
   const trackEvent = useCallback(
     async (eventType, eventData = {}) => {

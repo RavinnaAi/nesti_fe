@@ -139,7 +139,14 @@ export default function AnalyticsPage() {
               People who joined through your invite links and their signup details.
             </p>
           </div>
-          <InviteSignupsPanel token={token} days={windowDays} showMetrics={false} showHeader={false} />
+          {/* Fix #7 — pass already-fetched metrics to avoid a duplicate inviteMetrics API call */}
+          <InviteSignupsPanel
+            token={token}
+            days={windowDays}
+            showMetrics={false}
+            showHeader={false}
+            externalMetrics={inviteMetricsQuery.data?.metrics ?? null}
+          />
         </div>
       </div>
     </div>

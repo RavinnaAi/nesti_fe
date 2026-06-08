@@ -142,7 +142,6 @@ export default function DashboardPage() {
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
   const [avatarBroken, setAvatarBroken] = useState(false);
-  const [secondaryQueriesReady, setSecondaryQueriesReady] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [generatedInviteLink, setGeneratedInviteLink] = useState("");
 
@@ -150,14 +149,7 @@ export default function DashboardPage() {
     setAvatarBroken(false);
   }, [profileImageUrl]);
 
-  useEffect(() => {
-    if (!token) {
-      setSecondaryQueriesReady(false);
-      return;
-    }
-    const timer = setTimeout(() => setSecondaryQueriesReady(true), 180);
-    return () => clearTimeout(timer);
-  }, [token]);
+  // Fix #9 — removed artificial 180ms delay that was blocking 3 queries on every dashboard load.
 
   const leadsQuery = useQuery({
     queryKey: ["dashboard-leads", token],
@@ -175,21 +167,24 @@ export default function DashboardPage() {
 
   const analyticsTimeseriesQuery = useQuery({
     queryKey: ["dashboard-analytics-timeseries", token, windowDays],
-    enabled: Boolean(token) && secondaryQueriesReady,
+    // Fix #9 — fire immediately alongside other queries; no artificial 180ms stagger
+    enabled: Boolean(token),
     queryFn: () => fetchChatAnalyticsTimeseries({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const inviteRoleTrendsQuery = useQuery({
     queryKey: ["dashboard-invite-role-trends", token, windowDays],
-    enabled: Boolean(token) && secondaryQueriesReady,
+    // Fix #9 — fire immediately alongside other queries
+    enabled: Boolean(token),
     queryFn: () => fetchInviteConversionRoleTrends({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const profilesTopQuery = useQuery({
     queryKey: ["dashboard-top-profiles", token],
-    enabled: Boolean(token) && secondaryQueriesReady,
+    // Fix #9 — fire immediately alongside other queries
+    enabled: Boolean(token),
     queryFn: () => fetchLeadProfiles({ token, page: 1, limit: 20 }),
     staleTime: 60_000,
   });
