@@ -503,7 +503,7 @@ export default function AppChrome({ children }) {
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Globe2 size={16} className="text-text-muted" />
-                        Create Web Page
+                        Web Page
                       </Link>
                       <Link
                         href="/calendar"

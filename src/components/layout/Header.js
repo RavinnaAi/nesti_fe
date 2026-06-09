@@ -284,7 +284,7 @@ export default function Header() {
                           <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
                             <Globe2 size={15} />
                           </span>
-                          <span className="font-medium">Create Web Page</span>
+                          <span className="font-medium">Web Page</span>
                         </Link>
                         <Link
                           href="/calendar"
@@ -567,7 +567,7 @@ export default function Header() {
                         onClick={() => setIsMenuOpen(false)}
                       >
                         <Globe2 size={18} />
-                        Create Web Page
+                        Web Page
                       </Link>
                       <Link
                         href="/calendar"

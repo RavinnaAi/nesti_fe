@@ -62,7 +62,7 @@ const SETTINGS_ITEMS = [
   { id: "icp", label: "Ideal Client Profile", tab: "icp", icon: Target },
   { id: "subscription", label: "Subscription", tab: "subscription", icon: CreditCard },
   { id: "chatbot", label: "Chatbot", tab: "chatbot", icon: Code2 },
-  { id: "public-profile", label: "Create Web Page", href: "/dashboard/public-profile", icon: Globe2 },
+  { id: "public-profile", label: "Web Page", href: "/dashboard/public-profile", icon: Globe2 },
 ];
 
 /** Sidebar nav icon: gradient tile, depth, hover lift on idle state */
