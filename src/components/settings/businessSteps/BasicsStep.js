@@ -1,6 +1,7 @@
 "use client";
 
-import { User, Mail, Phone, Globe2, MapPin, Building2 } from "lucide-react";
+import { User, Mail, Globe2, MapPin, Building2 } from "lucide-react";
+import PhoneNumberField from "@/components/ui/PhoneNumberField";
 import FormField from "@/components/auth/FormField";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 
@@ -77,16 +78,11 @@ export default function BasicsStep({
           focusedField={focusedField}
           required
         />
-        <FormField
+        <PhoneNumberField
           label="Phone"
           name="phone"
           value={form.phone}
-          onChange={handleChange}
-          onFocus={() => setFocusedField("phone")}
-          onBlur={() => setFocusedField("")}
-          placeholder="+1 555 000 0000"
-          icon={Phone}
-          focusedField={focusedField}
+          onChange={() => {}}
           required
           disabled
           className="!bg-gray-100 !cursor-not-allowed"

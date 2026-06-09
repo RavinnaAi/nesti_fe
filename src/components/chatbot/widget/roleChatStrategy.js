@@ -22,6 +22,8 @@ import {
   MORTGAGE_PREFLIGHT_HEADER_LABELS,
   rolePreflightUserSummaryLine,
 } from "@/components/chatbot/rolePreflightCapture";
+import { validateEmailRequired } from "@/lib/emailUtils";
+import { validatePhoneRequired } from "@/lib/phoneUtils";
 
 const AGENT_FINAL_REQUIRED = {
   buy: [
@@ -122,11 +124,31 @@ export function missingDraftFields(draft, fields) {
   });
 }
 
-export function hasBasicContact(draft) {
+export function getBasicContactValidationErrors(draft, { requireAddress = false } = {}) {
+  const errors = [];
   const name = String(draft?.name || "").trim();
-  const phone = String(draft?.phone || "").trim();
-  const email = String(draft?.email || "").trim();
-  return Boolean(name && phone && email);
+  if (!name) errors.push("Please enter your full name.");
+
+  const phoneError = validatePhoneRequired(draft?.phone, { lenient: true });
+  if (phoneError) errors.push(phoneError);
+
+  const emailError = validateEmailRequired(draft?.email);
+  if (emailError) errors.push(emailError);
+
+  if (requireAddress && !String(draft?.address || "").trim()) {
+    errors.push("Please enter the property address or location.");
+  }
+
+  return errors;
+}
+
+export function getBasicContactValidationError(draft, options) {
+  const errors = getBasicContactValidationErrors(draft, options);
+  return errors.join(" ");
+}
+
+export function hasBasicContact(draft, options) {
+  return !getBasicContactValidationError(draft, options);
 }
 
 export function getAgentStartPayload(chosenIntent, leadDraft) {

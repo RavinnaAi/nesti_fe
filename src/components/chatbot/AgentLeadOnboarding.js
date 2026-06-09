@@ -5,6 +5,8 @@ import Image from "next/image";
 import { LEAD_STEP_LABELS, PRE_CHAT_STEPS } from "./agentLeadCapture";
 import StepSegmentBar from "./StepSegmentBar";
 import ChatSelect from "./ChatSelect";
+import PhoneNumberField from "@/components/ui/PhoneNumberField";
+import { sanitizeEmailInput } from "@/lib/emailUtils";
 import { PREFERRED_CONTACT_OPTIONS } from "./contactMethodOptions";
 
 const ONBOARDING_BAR_STEPS = PRE_CHAT_STEPS.map((key) => ({
@@ -17,6 +19,7 @@ const inputCls =
 const labelCls = "text-[11px] font-semibold text-text-heading";
 const sectionCls = "text-xs font-bold text-primary col-span-2 border-b border-border/80 pb-1.5 pt-1";
 const pairGridCls = "col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2.5";
+const infoSectionStackCls = "col-span-2 grid grid-cols-1 gap-y-2.5";
 const fieldStackCls = "flex flex-col gap-1 min-w-0";
 
 const PROPERTY_TYPES = ["Single Family", "Condo", "Townhouse", "Multi-Family", "Land"];
@@ -296,18 +299,15 @@ export default function AgentLeadOnboarding({
               autoComplete="name"
             />
           </div>
-          <div className={pairGridCls}>
+          <div className={infoSectionStackCls}>
             <div className={fieldStackCls}>
               <RequiredLabel>Phone</RequiredLabel>
-              <input
-                type="tel"
-                inputMode="numeric"
-                autoComplete="tel"
-                className={inputCls}
+              <PhoneNumberField
+                name="phone"
                 value={draft.phone}
-                onChange={(e) => onFieldChange("phone", e.target.value.replace(/\D/g, ""))}
-                placeholder="5551234567"
-                maxLength={15}
+                onChange={(value) => onFieldChange("phone", value)}
+                variant="chat"
+                autoComplete="tel"
               />
             </div>
             <div className={fieldStackCls}>
@@ -316,9 +316,11 @@ export default function AgentLeadOnboarding({
                 type="email"
                 className={inputCls}
                 value={draft.email}
-                onChange={(e) => onFieldChange("email", e.target.value)}
+                onChange={(e) => onFieldChange("email", sanitizeEmailInput(e.target.value))}
                 placeholder="you@example.com"
                 autoComplete="email"
+                inputMode="email"
+                spellCheck={false}
               />
             </div>
           </div>

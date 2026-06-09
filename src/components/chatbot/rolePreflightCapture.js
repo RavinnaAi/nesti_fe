@@ -1,5 +1,8 @@
 /** Lawyer / mortgage-broker pre-chat form → formContact + opening message (node-backend lawyer.html, mortgage-broker.html). */
 
+import { sanitizeEmailInput } from '@/lib/emailUtils';
+import { normalizePhoneForStorage } from '@/lib/phoneUtils';
+
 /** 3-step onboarding bar (mirrors agent’s multi-step pattern; agent uses 5). */
 export const LAWYER_PREFLIGHT_SEGMENT_STEPS = [
   { key: "contact", label: "Contact" },
@@ -79,8 +82,8 @@ export function buildLawyerFormData(draft) {
   return {
     intent: "unspecified",
     name: draft.name.trim(),
-    phone: draft.phone.trim(),
-    email: draft.email.trim(),
+    phone: normalizePhoneForStorage(draft.phone),
+    email: sanitizeEmailInput(draft.email),
     address: draft.address.trim(),
     professionalType: "lawyer",
     transaction_stage: draft.transaction_stage,
@@ -143,8 +146,8 @@ export function buildMortgageFormData(draft) {
   return {
     intent: "unspecified",
     name: draft.name.trim(),
-    phone: draft.phone.trim(),
-    email: draft.email.trim(),
+    phone: normalizePhoneForStorage(draft.phone),
+    email: sanitizeEmailInput(draft.email),
     address: draft.address.trim(),
     professionalType: "mortgage_broker",
     mortgage_timeline: draft.mortgage_timeline,

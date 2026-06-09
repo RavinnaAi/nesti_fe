@@ -43,8 +43,8 @@ import {
   LAWYER_PREFLIGHT_REQUIRED_FIELDS,
   agentFinalRequiredFields,
   getAgentStartPayload,
+  getBasicContactValidationError,
   getRolePreflightStartPayload,
-  hasBasicContact,
   missingDraftFields,
 } from "@/components/chatbot/widget/roleChatStrategy";
 import { attachSellerImagesToAgentFormContact } from "@/components/chatbot/widget/agentSellerImageUpload";
@@ -508,8 +508,9 @@ export default function ChatWidget({
   const handleStartChatFromForm = async () => {
     if (!chosenIntent || !sessionId || !embedToken || loading) return;
 
-    if (!hasBasicContact(leadDraft)) {
-      setFormValidationError("Please add your name, phone, and email to continue.");
+    const contactError = getBasicContactValidationError(leadDraft);
+    if (contactError) {
+      setFormValidationError(contactError);
       return;
     }
     if (missingDraftFields(leadDraft, agentFinalRequiredFields(chosenIntent)).length) {
@@ -562,8 +563,11 @@ export default function ChatWidget({
   const handleStartChatFromRolePreflight = async () => {
     if (!sessionId || !embedToken || loading || !useRolePreflight) return;
 
-    if (!hasBasicContact(rolePreflightDraft)) {
-      setFormValidationError("Please add your name, phone, and email to continue.");
+    const contactError = getBasicContactValidationError(rolePreflightDraft, {
+      requireAddress: resolvedRole === "lawyer",
+    });
+    if (contactError) {
+      setFormValidationError(contactError);
       return;
     }
     if (
@@ -666,8 +670,9 @@ export default function ChatWidget({
       return;
     }
     if (leadFlowStep === "contact") {
-      if (!hasBasicContact(leadDraft)) {
-        setFormValidationError("Please fill in your name, phone, and email.");
+      const contactError = getBasicContactValidationError(leadDraft);
+      if (contactError) {
+        setFormValidationError(contactError);
         return;
       }
       setLeadFlowStep("property");

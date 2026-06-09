@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import ChatSelect from "./ChatSelect";
+import PhoneNumberField from "@/components/ui/PhoneNumberField";
+import { sanitizeEmailInput } from "@/lib/emailUtils";
+import { getBasicContactValidationError } from "@/components/chatbot/widget/roleChatStrategy";
 import StepSegmentBar from "./StepSegmentBar";
 import {
   LAWYER_PREFLIGHT_SEGMENT_STEPS,
@@ -14,6 +17,7 @@ const BASE_INPUT_CLS =
 const labelCls = "text-[11px] font-semibold text-text-heading";
 const fieldStackCls = "flex flex-col gap-1 min-w-0";
 const pairGridCls = "col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2.5";
+const infoSectionStackCls = "col-span-2 grid grid-cols-1 gap-y-2.5";
 
 const SELECT_EMPTY = SELECT_EMPTY_OPTION;
 const BEST_TIME_OPTIONS = [
@@ -220,13 +224,9 @@ export default function RolePreflightLeadForm({
   const handleNext = () => {
     setStepError("");
     if (preflightStepIndex === 0) {
-      if (isLawyer) {
-        if (!draft.name?.trim() || !draft.phone?.trim() || !draft.email?.trim() || !draft.address?.trim()) {
-          setStepError("Please complete all contact fields to continue.");
-          return;
-        }
-      } else if (!draft.name?.trim() || !draft.phone?.trim() || !draft.email?.trim()) {
-        setStepError("Please add your name, phone, and email to continue.");
+      const contactError = getBasicContactValidationError(draft, { requireAddress: isLawyer });
+      if (contactError) {
+        setStepError(contactError);
         return;
       }
     }
@@ -272,7 +272,7 @@ export default function RolePreflightLeadForm({
   );
 
   const lawyerStep0 = (
-    <div className={pairGridCls}>
+    <div className={infoSectionStackCls}>
       <div className={sectionCls}>Contact information</div>
       <Field label={<RequiredLabel text="Full name" />}>
         <input
@@ -285,26 +285,27 @@ export default function RolePreflightLeadForm({
         />
       </Field>
       <Field label={<RequiredLabel text="Phone" />}>
-        <input
-          type="tel"
-          className={inputCls}
-          placeholder="+1 555 000 0000"
+        <PhoneNumberField
+          name="phone"
           value={draft.phone}
-          onChange={(e) => onFieldChange("phone", e.target.value)}
+          onChange={(value) => onFieldChange("phone", value)}
+          variant="chat"
           autoComplete="tel"
         />
       </Field>
-      <Field label={<RequiredLabel text="Email" />} className="sm:col-span-2">
+      <Field label={<RequiredLabel text="Email" />}>
         <input
           type="email"
           className={inputCls}
           placeholder="you@example.com"
           value={draft.email}
-          onChange={(e) => onFieldChange("email", e.target.value)}
+          onChange={(e) => onFieldChange("email", sanitizeEmailInput(e.target.value))}
           autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
         />
       </Field>
-      <Field label={<RequiredLabel text="Property address / location" />} className="sm:col-span-2">
+      <Field label={<RequiredLabel text="Property address / location" />}>
         <input
           type="text"
           className={inputCls}
@@ -429,7 +430,7 @@ export default function RolePreflightLeadForm({
   );
 
   const mortgageStep0 = (
-    <div className={pairGridCls}>
+    <div className={infoSectionStackCls}>
       <div className={sectionCls}>Contact information</div>
       <Field label="Full name *">
         <input
@@ -442,26 +443,27 @@ export default function RolePreflightLeadForm({
         />
       </Field>
       <Field label="Phone *">
-        <input
-          type="tel"
-          className={inputCls}
-          placeholder="+1 555 000 0000"
+        <PhoneNumberField
+          name="phone"
           value={draft.phone}
-          onChange={(e) => onFieldChange("phone", e.target.value)}
+          onChange={(value) => onFieldChange("phone", value)}
+          variant="chat"
           autoComplete="tel"
         />
       </Field>
-      <Field label="Email *" className="sm:col-span-2">
+      <Field label="Email *">
         <input
           type="email"
           className={inputCls}
           placeholder="you@example.com"
           value={draft.email}
-          onChange={(e) => onFieldChange("email", e.target.value)}
+          onChange={(e) => onFieldChange("email", sanitizeEmailInput(e.target.value))}
           autoComplete="email"
+          inputMode="email"
+          spellCheck={false}
         />
       </Field>
-      <Field label="Target area / address" className="sm:col-span-2">
+      <Field label="Target area / address">
         <input
           type="text"
           className={inputCls}

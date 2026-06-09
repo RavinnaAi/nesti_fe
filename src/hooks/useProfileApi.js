@@ -5,6 +5,7 @@ import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { setPersonalInfo, setBusinessInfo } from "@/store/profileSlice";
+import { normalizePhoneForStorage } from "@/lib/phoneUtils";
 
 const PERSONAL_ENDPOINT = API_ENDPOINTS.professionals.profile;
 const BUSINESS_ENDPOINT = API_ENDPOINTS.professionals.profile;
@@ -23,7 +24,7 @@ function mapBackendProfileToStore(data) {
       lastName: user?.last_name || "",
       email: user?.email || "",
       role: user?.role || profile?.professional_type || "",
-      phone: profile?.phone || "",
+      phone: normalizePhoneForStorage(profile?.phone || ""),
       calendlyUrl: profile?.calendly_link || "",
       location: profile?.location || "",
       profileImage: user?.profile_image || "",
@@ -36,7 +37,7 @@ function mapBackendProfileToStore(data) {
       professionalType: profile?.professional_type || user?.role || "",
       companyName: profile?.company_name || "",
       website: profile?.website || "",
-      phone: profile?.phone || "",
+      phone: normalizePhoneForStorage(profile?.phone || ""),
       experience: profile?.experience || "",
       licenseNumber: profile?.license_number || "",
       socialMedia: profile?.social_media || "",

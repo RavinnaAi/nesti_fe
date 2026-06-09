@@ -10,7 +10,7 @@ import {
   AGENT_QUALIFY_STEP_REQUIRED,
   AGENT_REACH_STEP_REQUIRED,
   getAgentStartPayload,
-  hasBasicContact,
+  getBasicContactValidationError,
   missingDraftFields,
 } from '@/components/chatbot/widget/roleChatStrategy';
 
@@ -51,7 +51,8 @@ export default function AgentPublicLeadForm({
       return setStep('contact');
     }
     if (step === 'contact') {
-      if (!hasBasicContact(draft)) return setValidationError('Please complete full name, phone, and email.');
+      const contactError = getBasicContactValidationError(draft);
+      if (contactError) return setValidationError(contactError);
       return setStep('property');
     }
     if (step === 'property') {
@@ -73,7 +74,8 @@ export default function AgentPublicLeadForm({
   const submit = async () => {
     setValidationError('');
     if (!chosenIntent) return setValidationError('Please choose buy or sell to continue.');
-    if (!hasBasicContact(draft)) return setValidationError('Please complete full name, phone, and email.');
+    const contactError = getBasicContactValidationError(draft);
+    if (contactError) return setValidationError(contactError);
     const propertyRequired = AGENT_PROPERTY_STEP_REQUIRED[chosenIntent === 'sell' ? 'sell' : 'buy'];
     if (missingDraftFields(draft, propertyRequired).length) return setValidationError('Please complete all property details.');
     if (missingDraftFields(draft, AGENT_QUALIFY_STEP_REQUIRED).length) return setValidationError('Please complete all qualification fields.');

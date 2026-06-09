@@ -1,5 +1,8 @@
 /** Field keys aligned with node-backend/index.html → POST /api/chat formContact */
 
+import { sanitizeEmailInput } from '@/lib/emailUtils';
+import { normalizePhoneForStorage } from '@/lib/phoneUtils';
+
 export const PRE_CHAT_STEPS = ["intent", "contact", "property", "qualify", "reach"];
 
 export const LEAD_STEP_LABELS = {
@@ -41,8 +44,8 @@ export function buildAgentFormData(intent, draft) {
   const base = {
     intent,
     name: draft.name.trim(),
-    phone: draft.phone.trim(),
-    email: draft.email.trim(),
+    phone: normalizePhoneForStorage(draft.phone),
+    email: sanitizeEmailInput(draft.email),
     timeline: draft.timeline,
     mortgage_status: draft.mortgage_status,
     realtor_status: draft.realtor_status,

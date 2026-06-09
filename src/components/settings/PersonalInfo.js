@@ -1,21 +1,18 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { User, Mail, Phone, Calendar, Pencil, ImageIcon } from "lucide-react";
+import { User, Mail, Calendar, Pencil, ImageIcon } from "lucide-react";
 import { toast } from "react-toastify";
 import FormField from "@/components/auth/FormField";
+import PhoneNumberField from "@/components/ui/PhoneNumberField";
 import SubmitButton from "@/components/auth/SubmitButton";
+import { validateEmailRequired } from "@/lib/emailUtils";
+import { normalizePhoneForStorage, validatePhoneRequired } from "@/lib/phoneUtils";
 import { useAppDispatch, useAppSelector } from "@/store";
 import { useProfileQuery } from "@/hooks/useAuthApi";
 import { useSavePersonalInfo, useUploadProfileMedia } from "@/hooks/useProfileApi";
 import { setPersonalInfo } from "@/store/profileSlice";
 import ChangePassword from "@/components/settings/ChangePassword";
-
-function phoneDigitCount(value) {
-  const s = String(value || "").trim();
-  if (!s) return 0;
-  return (s.match(/\d/g) || []).length;
-}
 
 function isValidCalendlyUrl(value) {
   const s = String(value || "").trim();
@@ -33,19 +30,10 @@ const validatePersonalInfo = (form) => {
   const errors = {};
   if (!form.firstName.trim()) errors.firstName = "First name is required";
   if (!form.lastName.trim()) errors.lastName = "Last name is required";
-  if (!form.email.trim()) {
-    errors.email = "Email is required";
-  } else {
-    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(form.email.trim())) {
-      errors.email = "Please enter a valid email";
-    }
-  }
-  if (!form.phone || !form.phone.trim()) {
-    errors.phone = "Phone is required";
-  } else if (phoneDigitCount(form.phone) < 7) {
-    errors.phone = "Phone should include at least 7 digits";
-  }
+  const emailError = validateEmailRequired(form.email);
+  if (emailError) errors.email = emailError;
+  const phoneError = validatePhoneRequired(form.phone);
+  if (phoneError) errors.phone = phoneError;
   if (!isValidCalendlyUrl(form.calendlyUrl)) {
     errors.calendlyUrl = "Please enter a valid Calendly URL (https://calendly.com/...)";
   }
@@ -114,7 +102,7 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
       first_name: form.firstName.trim(),
       last_name: form.lastName.trim(),
       full_name: `${form.firstName.trim()} ${form.lastName.trim()}`.trim(),
-      phone: form.phone.trim(),
+      phone: normalizePhoneForStorage(form.phone),
       calendly_link: form.calendlyUrl.trim(),
     };
     if (profileImage && /^https?:\/\//i.test(String(profileImage))) {
@@ -313,16 +301,15 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
             className="!h-12 bg-gray-100 text-[13px] cursor-not-allowed"
             required
           />
-          <FormField
+          <PhoneNumberField
             label="Phone"
             name="phone"
             value={form.phone}
-            onChange={handleChange}
+            onChange={(value) => setForm((prev) => ({ ...prev, phone: value }))}
             onFocus={() => setFocusedField("phone")}
             onBlur={() => setFocusedField("")}
-            placeholder="+1 555 000 0000"
-            icon={Phone}
-            focusedField={focusedField}
+            error={null}
+            required
             className="!h-12 text-[13px]"
           />
           <div className="md:col-span-2">

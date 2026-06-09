@@ -98,6 +98,83 @@ export default function ChatConversationBody({
                     )
                   ) : null}
                 </div>
+                {!isUser && Array.isArray(msg.propertyMatches) && msg.propertyMatches.length > 0 ? (
+                  <div className="mt-3 border-t border-border/50 pt-3">
+                    <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
+                      {msg.propertyMatchesContext === "sell" ? "Comparable properties" : "Matching properties"}
+                    </p>
+                    <ul className="space-y-2">
+                      {msg.propertyMatches.map((p, pIdx) => {
+                        const reasons = Array.isArray(p?.match_reasons)
+                          ? p.match_reasons
+                          : Array.isArray(p?.reasons_for_matching)
+                            ? p.reasons_for_matching
+                            : [];
+                        const title = p?.title || "Property";
+                        const location = p?.address || p?.location || "";
+                        const showTypeInMeta =
+                          p?.property_type && !String(title).toLowerCase().includes(String(p.property_type).toLowerCase());
+                        const meta = [location, showTypeInMeta ? p.property_type : ""].filter(Boolean).join(" · ");
+                        const priceLabel =
+                          p?.price != null ? formatPrice(p.price) || `$${p.price}` : null;
+
+                        return (
+                          <li
+                            key={`${p?.id || "pm"}-${pIdx}`}
+                            className="rounded-xl border border-primary/10 bg-primary/[0.03] p-3"
+                          >
+                            <div className="flex items-start justify-between gap-3">
+                              <h4 className="min-w-0 text-[12px] font-semibold leading-snug text-text-heading line-clamp-2">
+                                {title}
+                              </h4>
+                              {priceLabel ? (
+                                <span className="shrink-0 text-[12px] font-bold text-primary">{priceLabel}</span>
+                              ) : null}
+                            </div>
+                            {meta ? (
+                              <p className="mt-1 text-[10px] text-text-muted line-clamp-1">{meta}</p>
+                            ) : null}
+                            {reasons.length ? (
+                              <p className="mt-1.5 text-[10px] font-medium text-primary/75">
+                                {reasons.slice(0, 2).join(" · ")}
+                              </p>
+                            ) : null}
+                            {p?.listing_url ? (
+                              <a
+                                href={p.listing_url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="mt-2 inline-block text-[10px] font-semibold text-primary underline-offset-2 hover:underline"
+                              >
+                                View listing
+                              </a>
+                            ) : null}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (typeof onPropertyMatchSelect === "function") {
+                                  onPropertyMatchSelect(p);
+                                }
+                                handleSend(buildPropertyPickMessage(p, msg.propertyMatchesContext || "buy"));
+                              }}
+                              className="mt-2 w-full rounded-lg bg-primary px-3 py-2 text-[10px] font-semibold text-white shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
+                            >
+                              Select property
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                    {msg.propertyMatchesNote ? (
+                      <p className="mt-2 text-[10px] text-text-muted">{msg.propertyMatchesNote}</p>
+                    ) : null}
+                  </div>
+                ) : null}
+
+                {!isUser && idx === messages.length - 1 && quickReplies.length > 0 && (
+                  <QuickReplyButtons options={quickReplies} onSelect={(opt) => handleSend(opt)} />
+                )}
+
                 <p
                   className={`text-[8px] mt-1 font-medium tracking-wide ${
                     isUser ? "text-white/70" : "text-text-muted text-right"
@@ -105,70 +182,6 @@ export default function ChatConversationBody({
                 >
                   {formatTime(msg.timestamp || new Date())}
                 </p>
-
-                {!isUser && idx === messages.length - 1 && quickReplies.length > 0 && (
-                  <QuickReplyButtons options={quickReplies} onSelect={(opt) => handleSend(opt)} />
-                )}
-                {!isUser && Array.isArray(msg.propertyMatches) && msg.propertyMatches.length > 0 ? (
-                  <div className="mt-3 rounded-lg border border-border bg-background-light/70 p-2 space-y-1.5">
-                    <div className="text-[10px] font-semibold text-text-heading">
-                      {msg.propertyMatchesContext === "sell" ? "Comparable properties" : "Matching properties"}
-                    </div>
-                    {msg.propertyMatches.map((p, pIdx) => {
-                      const reasons = Array.isArray(p?.match_reasons)
-                        ? p.match_reasons
-                        : Array.isArray(p?.reasons_for_matching)
-                          ? p.reasons_for_matching
-                          : [];
-                      return (
-                        <div
-                          key={`${p?.id || "pm"}-${pIdx}`}
-                          className="rounded-md border border-border bg-white p-2"
-                        >
-                          <div className="text-[10px] font-semibold text-text-heading">{p?.title || "Property"}</div>
-                          <div className="text-[9px] text-text-muted mt-0.5">
-                            {[p?.address || p?.location, p?.property_type].filter(Boolean).join(" • ")}
-                          </div>
-                          {p?.price != null ? (
-                            <div className="text-[10px] font-semibold text-primary mt-1">
-                              {formatPrice(p.price) || `$${p.price}`}
-                            </div>
-                          ) : null}
-                          {reasons.length ? (
-                            <div className="text-[9px] text-emerald-700 mt-1">
-                              {reasons.slice(0, 2).join(" • ")}
-                            </div>
-                          ) : null}
-                          {p?.listing_url ? (
-                            <a
-                              href={p.listing_url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="inline-block text-[9px] text-primary underline mt-1"
-                            >
-                              View listing
-                            </a>
-                          ) : null}
-                          <button
-                            type="button"
-                            onClick={() => {
-                              if (typeof onPropertyMatchSelect === "function") {
-                                onPropertyMatchSelect(p);
-                              }
-                              handleSend(buildPropertyPickMessage(p, msg.propertyMatchesContext || "buy"));
-                            }}
-                            className="mt-1.5 w-full rounded-md bg-primary text-white text-[9px] font-semibold px-2 py-1.5 hover:brightness-95 transition"
-                          >
-                            Select this property
-                          </button>
-                        </div>
-                      );
-                    })}
-                    {msg.propertyMatchesNote ? (
-                      <div className="text-[9px] text-text-muted">{msg.propertyMatchesNote}</div>
-                    ) : null}
-                  </div>
-                ) : null}
               </div>
             </motion.div>
           );

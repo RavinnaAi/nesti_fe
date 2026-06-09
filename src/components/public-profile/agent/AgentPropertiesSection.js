@@ -173,39 +173,41 @@ function PropertyCard({ property, onViewDetails }) {
           </div>
         )}
 
-        {/* Property type badge */}
+        {/* Property type badge — top-right, opposite price */}
         {property.property_type && (
-          <div className="absolute bottom-3 right-3 rounded-full bg-black/50 px-2.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
+          <div className="absolute right-3 top-3 rounded-full border border-primary/15 bg-white/95 px-2.5 py-0.5 text-[11px] font-semibold text-primary shadow-sm backdrop-blur-sm">
             {property.property_type}
           </div>
         )}
       </div>
 
       {/* Card body */}
-      <div className="flex flex-1 flex-col p-4">
+      <div className="flex flex-col gap-2 p-3.5">
         {/* Location */}
-        {(property.location || property.address) && (
-          <div className="mb-2 flex items-start gap-1 text-[13px] font-medium text-text-heading">
+        {(property.location || property.address) ? (
+          <div className="flex items-start gap-1 text-[13px] font-medium text-text-heading">
             <MapPin size={13} className="mt-0.5 shrink-0 text-primary" />
             <span className="line-clamp-1">{property.address || property.location}</span>
           </div>
-        )}
+        ) : null}
 
         {/* Stats */}
-        <div className="mt-auto flex items-center gap-3 pt-2 text-[12px] text-text-muted">
-          {property.bedrooms && (
-            <span className="flex items-center gap-1"><Bed size={12} className="text-primary" /> {property.bedrooms} bd</span>
-          )}
-          {property.bathrooms && (
-            <span className="flex items-center gap-1"><Bath size={12} className="text-primary" /> {property.bathrooms} ba</span>
-          )}
-          {property.square_footage && (
-            <span className="flex items-center gap-1"><Maximize2 size={12} className="text-primary" /> {property.square_footage} sqft</span>
-          )}
-        </div>
+        {(property.bedrooms || property.bathrooms || property.square_footage) ? (
+          <div className="flex items-center gap-3 text-[12px] text-text-muted">
+            {property.bedrooms ? (
+              <span className="flex items-center gap-1"><Bed size={12} className="text-primary" /> {property.bedrooms} bd</span>
+            ) : null}
+            {property.bathrooms ? (
+              <span className="flex items-center gap-1"><Bath size={12} className="text-primary" /> {property.bathrooms} ba</span>
+            ) : null}
+            {property.square_footage ? (
+              <span className="flex items-center gap-1"><Maximize2 size={12} className="text-primary" /> {property.square_footage} sqft</span>
+            ) : null}
+          </div>
+        ) : null}
 
         {/* View details hint */}
-        <div className="mt-3 rounded-lg bg-primary/5 py-1.5 text-center text-[11px] font-semibold text-primary transition group-hover:bg-primary/10">
+        <div className="rounded-lg bg-primary/5 py-1.5 text-center text-[11px] font-semibold text-primary transition group-hover:bg-primary/10">
           View Details & Inquire
         </div>
       </div>
@@ -289,7 +291,7 @@ export default function AgentPropertiesSection({ profile, onPropertyInquiry }) {
           </div>
 
           {/* Grid */}
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 items-start gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {visibleProperties.map((p) => (
               <PropertyCard key={p.id} property={p} onViewDetails={setModalProperty} />
             ))}

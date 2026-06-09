@@ -1,6 +1,6 @@
 'use client';
 
-import { CheckCircle2 } from 'lucide-react';
+import { ArrowRight, CheckCircle2 } from 'lucide-react';
 
 const ROLE_CONTENT = {
   agent: {
@@ -56,22 +56,24 @@ export default function PublicCTA({ profile, onDirectLeadClick }) {
               <span className="h-1.5 w-1.5 rounded-full bg-primary" />
               {content.eyebrow}
             </div>
-            <h2 className="max-w-3xl text-2xl font-semibold leading-tight tracking-[-0.03em] text-text-heading md:text-[32px]">
-              {content.title}
-            </h2>
+            <div className="flex flex-wrap items-center justify-between gap-3 gap-y-2">
+              <h2 className="max-w-3xl text-2xl font-semibold leading-tight tracking-[-0.03em] text-text-heading md:text-[32px]">
+                {content.title}
+              </h2>
+              <button
+                type="button"
+                onClick={onDirectLeadClick}
+                className="group inline-flex shrink-0 items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-xs font-bold text-white shadow-lg shadow-primary/25 ring-1 ring-primary/15 transition duration-300 hover:-translate-y-0.5 hover:bg-primary-dark hover:shadow-xl hover:shadow-primary/35"
+              >
+                Submit inquiry
+                <span className="grid h-5 w-5 place-items-center rounded-full bg-white/15 transition duration-300 group-hover:bg-white/25">
+                  <ArrowRight size={13} className="transition duration-300 group-hover:translate-x-0.5" />
+                </span>
+              </button>
+            </div>
             <p className="mt-4 max-w-3xl text-[15px] leading-7 text-text-muted">
               {content.description}
             </p>
-
-              <div className="mt-6 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={onDirectLeadClick}
-                  className="inline-flex h-9 items-center justify-center rounded-lg border border-primary/25 bg-primary/5 px-4 text-xs font-semibold text-primary transition hover:bg-primary/10"
-                >
-                  Submit inquiry
-                </button>
-              </div>
 
               <div className="mt-7 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_10px_35px_rgba(15,23,42,0.04)]">
               <div
