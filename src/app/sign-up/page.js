@@ -44,6 +44,11 @@ function SignUpPageContent() {
   }, [token, router]);
 
   useEffect(() => {
+    const wantsGoogleFlow = String(searchParams?.get("google") || "").trim() === "1";
+    if (wantsGoogleFlow) {
+      setIsGoogleSignupSelected(true);
+    }
+
     const fromQuery =
       String(searchParams?.get("invite") || searchParams?.get("ref") || "").trim();
     if (fromQuery) {
@@ -72,6 +77,7 @@ function SignUpPageContent() {
     }).catch(() => {});
   }, [inviteToken]);
   const [loader, setLoader] = useState(false);
+  const [isGoogleSignupSelected, setIsGoogleSignupSelected] = useState(false);
   const [focusedField, setFocusedField] = useState("");
   const [passwordStrength, setPasswordStrength] = useState(null);
   const [form, setForm] = useState({
@@ -80,13 +86,13 @@ function SignUpPageContent() {
     email: "",
     password: "",
     role: "",
-    country: "US",
   });
   const [fieldErrors, setFieldErrors] = useState({});
   const { saveSignupData } = useSignupFlow();
   const signupMutation = useSignup();
   const googleSignupMutation = useGoogleSignup();
-  const isSubmitting = loader || signupMutation.isLoading;
+  const isGoogleFlowActive = isGoogleSignupSelected || googleSignupMutation.isPending;
+  const isSubmitting = loader || signupMutation.isPending;
   const googleSignup = useGoogleLogin({
     flow: "implicit",
     onSuccess: (tokenResponse) => {
@@ -94,6 +100,7 @@ function SignUpPageContent() {
         {
           token: tokenResponse.access_token,
           token_type: "access_token",
+          role: form.role,
           invite_token: inviteToken || undefined,
         },
         {
@@ -101,7 +108,10 @@ function SignUpPageContent() {
         }
       );
     },
-    onError: () => toast.error("Google signup failed. Please try again."),
+    onError: () => {
+      setIsGoogleSignupSelected(false);
+      toast.error("Google signup failed. Please try again.");
+    },
   });
 
   const handleChange = (e) => {
@@ -182,6 +192,12 @@ function SignUpPageContent() {
   };
 
   const handleGoogleSignup = () => {
+    setIsGoogleSignupSelected(true);
+    if (!form.role) {
+      setFieldErrors((prev) => ({ ...prev, role: "Please select a role" }));
+      toast.error("Please select your role before continuing with Google.");
+      return;
+    }
     googleSignup();
   };
 
@@ -197,52 +213,56 @@ function SignUpPageContent() {
           />
 
           <form onSubmit={handleSubmit} className="space-y-3">
-            <NameFields
-              firstName={form.firstName}
-              lastName={form.lastName}
-              onFirstNameChange={handleChange}
-              onLastNameChange={handleChange}
-              onFirstNameFocus={() => setFocusedField("firstName")}
-              onLastNameFocus={() => setFocusedField("lastName")}
-              onFirstNameBlur={() => setFocusedField("")}
-              onLastNameBlur={() => setFocusedField("")}
-              firstNameError={fieldErrors.firstName}
-              lastNameError={fieldErrors.lastName}
-              focusedField={focusedField}
-            />
+            {!isGoogleFlowActive ? (
+              <>
+                <NameFields
+                  firstName={form.firstName}
+                  lastName={form.lastName}
+                  onFirstNameChange={handleChange}
+                  onLastNameChange={handleChange}
+                  onFirstNameFocus={() => setFocusedField("firstName")}
+                  onLastNameFocus={() => setFocusedField("lastName")}
+                  onFirstNameBlur={() => setFocusedField("")}
+                  onLastNameBlur={() => setFocusedField("")}
+                  firstNameError={fieldErrors.firstName}
+                  lastNameError={fieldErrors.lastName}
+                  focusedField={focusedField}
+                />
 
-            <FormField
-            label="Email Address"
-            name="email"
-            type="email"
-            value={form.email}
-            onChange={handleChange}
-            onFocus={() => setFocusedField("email")}
-            onBlur={() => setFocusedField("")}
-            placeholder="Enter your email"
-            icon={Mail}
-            focusedField={focusedField}
-            error={fieldErrors.email}
-            required
-            autoComplete="email"
-            />
+                <FormField
+                  label="Email Address"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField("email")}
+                  onBlur={() => setFocusedField("")}
+                  placeholder="Enter your email"
+                  icon={Mail}
+                  focusedField={focusedField}
+                  error={fieldErrors.email}
+                  required
+                  autoComplete="email"
+                />
 
-            <PasswordField
-            label="Password"
-            name="password"
-            value={form.password}
-            onChange={handleChange}
-            onFocus={() => setFocusedField("password")}
-            onBlur={() => setFocusedField("")}
-            placeholder="Enter your password"
-            focusedField={focusedField}
-            error={fieldErrors.password}
-            passwordStrength={passwordStrength}
-            required
-            autoComplete="new-password"
-            showStrengthIndicator={true}
-            passwordRequirements={passwordRequirements}
-            />
+                <PasswordField
+                  label="Password"
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  onFocus={() => setFocusedField("password")}
+                  onBlur={() => setFocusedField("")}
+                  placeholder="Enter your password"
+                  focusedField={focusedField}
+                  error={fieldErrors.password}
+                  passwordStrength={passwordStrength}
+                  required
+                  autoComplete="new-password"
+                  showStrengthIndicator={true}
+                  passwordRequirements={passwordRequirements}
+                />
+              </>
+            ) : null}
 
             <RoleDropdown
             value={form.role}
@@ -254,18 +274,30 @@ function SignUpPageContent() {
             required
             />
 
-            <div className="flex flex-col space-y-2 pt-1">
-              <SubmitButton loading={isSubmitting}>Create Account</SubmitButton>
-            </div>
+            {!isGoogleFlowActive ? (
+              <div className="flex flex-col space-y-2 pt-1">
+                <SubmitButton loading={isSubmitting}>Create Account</SubmitButton>
+              </div>
+            ) : null}
 
-            <Divider />
+            {!isGoogleFlowActive ? <Divider /> : null}
 
             <GoogleButton
               onClick={handleGoogleSignup}
-              loading={googleSignupMutation.isLoading}
+              loading={googleSignupMutation.isPending}
             >
               Sign up with Google
             </GoogleButton>
+
+            {isGoogleFlowActive ? (
+              <button
+                type="button"
+                onClick={() => setIsGoogleSignupSelected(false)}
+                className="w-full text-xs font-semibold text-text-muted hover:text-text-heading transition-colors"
+              >
+                Use email signup instead
+              </button>
+            ) : null}
           </form>
 
           <AuthFooter

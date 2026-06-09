@@ -6,6 +6,7 @@ import { toast } from "react-toastify";
 import FormField from "@/components/auth/FormField";
 import SubmitButton from "@/components/auth/SubmitButton";
 import { useAppDispatch, useAppSelector } from "@/store";
+import { useProfileQuery } from "@/hooks/useAuthApi";
 import { useSavePersonalInfo, useUploadProfileMedia } from "@/hooks/useProfileApi";
 import { setPersonalInfo } from "@/store/profileSlice";
 import ChangePassword from "@/components/settings/ChangePassword";
@@ -14,6 +15,18 @@ function phoneDigitCount(value) {
   const s = String(value || "").trim();
   if (!s) return 0;
   return (s.match(/\d/g) || []).length;
+}
+
+function isValidCalendlyUrl(value) {
+  const s = String(value || "").trim();
+  if (!s) return true;
+  try {
+    const url = new URL(s);
+    const host = String(url.hostname || "").toLowerCase();
+    return host === "calendly.com" || host.endsWith(".calendly.com");
+  } catch {
+    return false;
+  }
 }
 
 const validatePersonalInfo = (form) => {
@@ -33,11 +46,16 @@ const validatePersonalInfo = (form) => {
   } else if (phoneDigitCount(form.phone) < 7) {
     errors.phone = "Phone should include at least 7 digits";
   }
+  if (!isValidCalendlyUrl(form.calendlyUrl)) {
+    errors.calendlyUrl = "Please enter a valid Calendly URL (https://calendly.com/...)";
+  }
   return errors;
 };
 
 export default function PersonalInfo({ onSaveSuccess } = {}) {
   const storedPersonal = useAppSelector((state) => state.profile.personalInfo);
+  const authUser = useAppSelector((state) => state.auth.user);
+  const profileQuery = useProfileQuery();
   const dispatch = useAppDispatch();
   const [focusedField, setFocusedField] = useState("");
   const [form, setForm] = useState({
@@ -55,6 +73,14 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const savePersonalInfo = useSavePersonalInfo();
   const uploadMedia = useUploadProfileMedia();
+  const authProvider = String(
+    profileQuery.data?.user?.auth_provider ||
+      profileQuery.data?.user?.authProvider ||
+      authUser?.auth_provider ||
+      authUser?.authProvider ||
+      ""
+  ).toLowerCase();
+  const canChangePassword = authProvider !== "google";
 
   useEffect(() => {
     if (storedPersonal) {
@@ -316,13 +342,15 @@ export default function PersonalInfo({ onSaveSuccess } = {}) {
         </div>
 
         <div className="mt-5 flex flex-col gap-3 border-t border-border/50 pt-4 sm:flex-row sm:items-center sm:justify-end">
-          <button
-            type="button"
-            onClick={() => setShowPasswordModal(true)}
-            className="w-full rounded-md border border-border bg-white px-4 py-2 text-[13px] font-semibold text-text-heading transition hover:border-primary/40 hover:text-primary sm:w-auto"
-          >
-            Change password
-          </button>
+          {canChangePassword ? (
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(true)}
+              className="w-full rounded-md border border-border bg-white px-4 py-2 text-[13px] font-semibold text-text-heading transition hover:border-primary/40 hover:text-primary sm:w-auto"
+            >
+              Change password
+            </button>
+          ) : null}
           <SubmitButton
             loading={loading}
             type="button"

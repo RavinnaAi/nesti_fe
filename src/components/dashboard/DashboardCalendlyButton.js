@@ -57,10 +57,10 @@ export default function DashboardCalendlyButton({ className = "", surface = "dar
     const label = allGood
       ? "Connected"
       : planBlocked
-        ? "Connected (upgrade required)"
+        ? "Connected"
         : webhookError
-          ? "Connected (sync issue)"
-          : "Connected (syncing)";
+          ? "Connected (action needed to finish sync)"
+          : "Connected (finishing setup)";
 
     const title = allGood
       ? "Click to disconnect Calendly"

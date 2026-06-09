@@ -5,8 +5,8 @@ import { Users, Eye, CalendarCheck, Mail, Trophy } from "lucide-react";
 const TILES = [
   {
     key: "leads_created",
-    label: "New leads",
-    helper: "Captured in period",
+    label: "Leads",
+    helper: "Total in leads list",
     Icon: Users,
     accent: "text-emerald-600 bg-emerald-50",
   },
@@ -70,10 +70,13 @@ export default function DashboardKpiStrip({ summary, isLoading }) {
       {TILES.map(({ key, label, helper, Icon, accent, isPercent, dealsMeta }) => {
         const raw = values[key];
         const display = isLoading ? null : isPercent ? formatPercent(raw) : formatInt(raw);
-        const cohort = totals.leads_in_window_for_conversion ?? 0;
+        const totalLeads = totals.leads_created ?? 0;
+        const dealsCount = totals.leads_closed_won ?? 0;
+        const dealsRateFromTotal =
+          totalLeads > 0 ? Number((dealsCount / totalLeads).toFixed(3)) : 0;
         const helperText =
           dealsMeta && !isLoading
-            ? `Moved to closed-won in window · ${formatPercent(rates.closed_won_from_created ?? 0)} cohort win rate · ${formatInt(cohort)} leads in cohort`
+            ? `Moved to closed-won · ${formatPercent(dealsRateFromTotal)} win rate · ${formatInt(totalLeads)} leads total`
             : helper;
         return (
           <div

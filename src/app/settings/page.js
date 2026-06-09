@@ -59,12 +59,19 @@ function SettingsPageContent() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const calendlyReturnHandled = useRef(null);
+  const onboardingIncompleteOnEntryRef = useRef(null);
   const [isMounted, setIsMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("personal");
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!profileQuery.isSuccess) return;
+    if (onboardingIncompleteOnEntryRef.current !== null) return;
+    onboardingIncompleteOnEntryRef.current = !profileQuery.data?.profile_setup?.is_complete;
+  }, [profileQuery.isSuccess, profileQuery.data?.profile_setup?.is_complete]);
 
   useEffect(() => {
     const calendly = searchParams.get("calendly");
@@ -268,10 +275,12 @@ function SettingsPageContent() {
    */
   const onBusinessSaveSuccess = useCallback(async () => {
     const snapshot = queryClient.getQueryData(["profile"]);
-    const wasIncomplete = !snapshot?.profile_setup?.is_complete;
+    const wasIncomplete =
+      onboardingIncompleteOnEntryRef.current ?? !snapshot?.profile_setup?.is_complete;
     await queryClient.refetchQueries({ queryKey: ["profile"] });
     const data = queryClient.getQueryData(["profile"]);
     if (data?.profile_setup?.is_complete && wasIncomplete) {
+      onboardingIncompleteOnEntryRef.current = false;
       router.replace("/dashboard");
     }
   }, [queryClient, router]);
@@ -282,10 +291,12 @@ function SettingsPageContent() {
    */
   const onPersonalSaveSuccess = useCallback(async () => {
     const snapshot = queryClient.getQueryData(["profile"]);
-    const wasIncomplete = !snapshot?.profile_setup?.is_complete;
+    const wasIncomplete =
+      onboardingIncompleteOnEntryRef.current ?? !snapshot?.profile_setup?.is_complete;
     await queryClient.refetchQueries({ queryKey: ["profile"] });
     const data = queryClient.getQueryData(["profile"]);
     if (data?.profile_setup?.is_complete && wasIncomplete) {
+      onboardingIncompleteOnEntryRef.current = false;
       router.replace("/dashboard");
       return;
     }

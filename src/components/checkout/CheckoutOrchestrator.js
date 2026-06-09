@@ -29,10 +29,16 @@ export default function CheckoutOrchestrator() {
   const [isChoosingPlan, setIsChoosingPlan] = useState(false);
   const checkoutMutation = useCreateCheckoutSession();
   const billingPlansQuery = useBillingPlans();
-  useSubscriptionMe();
+  const subscriptionMeQuery = useSubscriptionMe();
 
-  const userStatus = (user?.accountStatus || user?.account_status || "").toLowerCase();
-  const isSubscribed = userStatus === ACCOUNT_STATUS.SUBSCRIBED;
+  const userStatus = String(user?.accountStatus || user?.account_status || "").toLowerCase();
+  const subscriptionStatus = String(
+    subscriptionMeQuery.data?.subscription?.accountStatus ||
+      subscriptionMeQuery.data?.subscription?.account_status ||
+      ""
+  ).toLowerCase();
+  const effectiveStatus = subscriptionStatus || userStatus;
+  const isSubscribed = effectiveStatus === ACCOUNT_STATUS.SUBSCRIBED;
 
   const effectivePlans = billingPlansQuery.data?.length
     ? billingPlansQuery.data

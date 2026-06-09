@@ -10,7 +10,11 @@ import {
   disconnectCalendly,
   registerCalendlyWebhook,
 } from "@/lib/calendarClient";
-import { isCalendlyPlanWebhookBlock } from "@/lib/calendlyErrors";
+import {
+  CALENDLY_BILLING_URL,
+  CALENDLY_PLAN_WEBHOOK_USER_MESSAGE,
+  isCalendlyPlanWebhookBlock,
+} from "@/lib/calendlyErrors";
 import {
   CALENDLY_INTEGRATION_TOAST_ID,
   CALENDLY_OAUTH_RETURN_KEY,
@@ -25,6 +29,7 @@ export function useCalendlyConnection() {
   const queryClient = useQueryClient();
   const [connecting, setConnecting] = useState(false);
   const autoWebhookAttemptedRef = useRef("");
+  const planRenewalToastKeyRef = useRef("");
 
   const statusQuery = useQuery({
     queryKey: ["calendar-status", token],
@@ -75,6 +80,17 @@ export function useCalendlyConnection() {
     cal?.account_email,
     registerWebhookMut,
   ]);
+
+  useEffect(() => {
+    if (!token || !connected || !planBlocked) return;
+    const key = `${String(token).slice(0, 12)}::${String(cal?.updatedAt || cal?.account_email || "")}`;
+    if (planRenewalToastKeyRef.current === key) return;
+    planRenewalToastKeyRef.current = key;
+    toast.warn(
+      `${CALENDLY_PLAN_WEBHOOK_USER_MESSAGE} Renew or upgrade your Calendly subscription to resume booking sync. ${CALENDLY_BILLING_URL}`,
+      { toastId: `${CALENDLY_INTEGRATION_TOAST_ID}-renewal` }
+    );
+  }, [token, connected, planBlocked, cal?.updatedAt, cal?.account_email]);
 
   const startCalendlyOAuth = useCallback(async () => {
     setConnecting(true);

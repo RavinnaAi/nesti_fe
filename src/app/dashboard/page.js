@@ -202,14 +202,26 @@ export default function DashboardPage() {
     const calendarBooked = Array.isArray(calendarBookingsQuery.data?.bookings)
       ? calendarBookingsQuery.data.bookings.length
       : 0;
+    const leadsTotal =
+      Number(
+        leadsQuery.data?.pagination?.total ??
+          leadsQuery.data?.data?.pagination?.total ??
+          NaN
+      ) || null;
     return {
       ...summary,
       totals: {
         ...(summary.totals || {}),
+        leads_created: leadsTotal ?? summary?.totals?.leads_created ?? 0,
         appointments_booked: calendarBooked,
       },
     };
-  }, [analyticsSummaryQuery.data?.summary, calendarBookingsQuery.data?.bookings]);
+  }, [
+    analyticsSummaryQuery.data?.summary,
+    calendarBookingsQuery.data?.bookings,
+    leadsQuery.data?.pagination?.total,
+    leadsQuery.data?.data?.pagination?.total,
+  ]);
 
   const refreshAll = () => {
     leadsQuery.refetch();

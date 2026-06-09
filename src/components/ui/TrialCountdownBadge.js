@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAppSelector } from "@/store";
 import { ACCOUNT_STATUS } from "@/constants/features";
+import { useSubscriptionMe } from "@/hooks/useBillingApi";
 
 export function getTrialRemainingMs(trialEndsAt, currentTime = Date.now()) {
   if (!trialEndsAt) return 0;
@@ -33,14 +34,23 @@ export function formatTrialRemaining(ms) {
 
 export default function TrialCountdownBadge({ compact = false }) {
   const user = useAppSelector((state) => state.auth.user);
+  const subscriptionMeQuery = useSubscriptionMe();
   const [isMounted, setIsMounted] = useState(false);
   const [now, setNow] = useState(Date.now());
 
-  const accountStatus =
-    (user?.accountStatus || user?.account_status || ACCOUNT_STATUS.SUBSCRIBED)?.toLowerCase() ||
-    ACCOUNT_STATUS.SUBSCRIBED;
+  const accountStatus = String(
+    subscriptionMeQuery.data?.subscription?.accountStatus ||
+      subscriptionMeQuery.data?.subscription?.account_status ||
+      user?.accountStatus ||
+      user?.account_status ||
+      ACCOUNT_STATUS.SUBSCRIBED
+  ).toLowerCase();
 
-  const trialEndsAt = user?.trialEndsAt || user?.trial_ends_at;
+  const trialEndsAt =
+    subscriptionMeQuery.data?.subscription?.trialEndsAt ||
+    subscriptionMeQuery.data?.subscription?.trial_ends_at ||
+    user?.trialEndsAt ||
+    user?.trial_ends_at;
 
   const remainingMs = useMemo(() => getTrialRemainingMs(trialEndsAt, now), [trialEndsAt, now]);
 

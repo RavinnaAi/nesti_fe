@@ -4,6 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Mail } from "lucide-react";
+import { toast } from "react-toastify";
+import { useGoogleLogin as useGoogleOAuthLogin } from "@react-oauth/google";
 import AuthLayout from "@/components/auth/AuthLayout";
 import AuthBrandLink from "@/components/auth/AuthBrandLink";
 import AuthHeader from "@/components/auth/AuthHeader";
@@ -11,9 +13,11 @@ import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import FormField from "@/components/auth/FormField";
 import PasswordField from "@/components/auth/PasswordField";
 import SubmitButton from "@/components/auth/SubmitButton";
+import Divider from "@/components/auth/Divider";
+import GoogleButton from "@/components/auth/GoogleButton";
 import AuthFooter from "@/components/auth/AuthFooter";
 import { emailRegexSimple } from "@/utils/validation";
-import { useLogin } from "@/hooks/useAuthApi";
+import { useGoogleLogin, useLogin } from "@/hooks/useAuthApi";
 import { useAppSelector } from "@/store";
 import { captureInviteToken } from "@/lib/inviteClient";
 import {
@@ -70,7 +74,39 @@ export default function LoginPageClient() {
   const [fieldErrors, setFieldErrors] = useState({});
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const loginMutation = useLogin();
+  const googleLoginMutation = useGoogleLogin();
   const isSubmitting = isLoggingIn || loginMutation.isPending;
+
+  const redirectToGoogleSignup = () => {
+    const params = new URLSearchParams();
+    params.set("google", "1");
+    if (inviteToken) params.set("invite", inviteToken);
+    router.push(`/sign-up?${params.toString()}`);
+  };
+
+  const googleLogin = useGoogleOAuthLogin({
+    flow: "implicit",
+    onSuccess: (tokenResponse) => {
+      googleLoginMutation.mutate(
+        {
+          token: tokenResponse.access_token,
+          token_type: "access_token",
+          invite_token: inviteToken || undefined,
+        },
+        {
+          onSuccess: () => router.push("/dashboard"),
+          onError: (error) => {
+            const msg = String(error?.message || "").toLowerCase();
+            if (error?.status === 404 || msg.includes("no google account found")) {
+              toast.info("No Google account found. Redirecting to Google signup...");
+              redirectToGoogleSignup();
+            }
+          },
+        }
+      );
+    },
+    onError: () => toast.error("Google login failed. Please try again."),
+  });
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -109,6 +145,10 @@ export default function LoginPageClient() {
       setIsLoggingIn(false);
       console.error("Login error:", err);
     }
+  };
+
+  const handleGoogleLogin = () => {
+    googleLogin();
   };
 
   return (
@@ -163,6 +203,15 @@ export default function LoginPageClient() {
             <div className="flex flex-col space-y-2 pt-1">
               <SubmitButton loading={isSubmitting}>Sign In</SubmitButton>
             </div>
+
+            <Divider />
+
+            <GoogleButton
+              onClick={handleGoogleLogin}
+              loading={googleLoginMutation.isPending}
+            >
+              Sign in with Google
+            </GoogleButton>
           </form>
 
           <AuthFooter

@@ -13,6 +13,23 @@ const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "";
 const toastError = (error) =>
   toast.error(error?.message || "Something went wrong. Please try again.");
 
+const warmProfileInBackground = ({ token, dispatch }) => {
+  if (!token) return;
+  apiClient({
+    url: API_ENDPOINTS.auth.profile,
+    method: "GET",
+    token,
+  })
+    .then((profileData) => {
+      if (profileData?.user) {
+        dispatch(updateProfile(profileData.user));
+      }
+    })
+    .catch(() => {
+      // non-fatal; guard/query retry paths handle this
+    });
+};
+
 // ─── Signup ──────────────────────────────────────────────────────────────────
 // POST /auth/signup
 // Body: { email, password, first_name, last_name, role }
@@ -282,13 +299,13 @@ export function useGoogleLogin() {
         method: "POST",
         data: credential,
       }),
-    onSuccess: (data) => {
-      dispatch(
-        loginSuccess({
-          user: data.user || null,
-          token: data.token || null,
-        })
-      );
+    onSuccess: (data, variables) => {
+      const token = data.token || null;
+      dispatch(loginSuccess({ user: null, token }));
+      if (variables?.invite_token) {
+        clearInviteAttribution();
+      }
+      warmProfileInBackground({ token, dispatch });
       toast.success(data?.message || "Logged in with Google!");
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },
@@ -307,13 +324,13 @@ export function useGoogleSignup() {
         method: "POST",
         data: credential,
       }),
-    onSuccess: (data) => {
-      dispatch(
-        loginSuccess({
-          user: data.user || null,
-          token: data.token || null,
-        })
-      );
+    onSuccess: (data, variables) => {
+      const token = data.token || null;
+      dispatch(loginSuccess({ user: null, token }));
+      if (variables?.invite_token) {
+        clearInviteAttribution();
+      }
+      warmProfileInBackground({ token, dispatch });
       toast.success(data?.message || "Signed up with Google!");
       queryClient.invalidateQueries({ queryKey: ["profile"] });
     },

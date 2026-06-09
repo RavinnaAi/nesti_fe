@@ -193,10 +193,13 @@ export default function SubscriptionBillingPanel({
   const resumeMutation = useResumeSubscription();
   const [showCancelModal, setShowCancelModal] = useState(false);
 
-  const userStatus = (user?.accountStatus || user?.account_status || "").toLowerCase();
-  const isSubscribed = userStatus === ACCOUNT_STATUS.SUBSCRIBED;
-
   const subscription = subscriptionQuery.data?.subscription;
+  const userStatus = String(user?.accountStatus || user?.account_status || "").toLowerCase();
+  const subscriptionStatus = String(
+    subscription?.accountStatus || subscription?.account_status || ""
+  ).toLowerCase();
+  const isSubscribed =
+    (subscriptionStatus || userStatus) === ACCOUNT_STATUS.SUBSCRIBED;
   const invoices = invoicesQuery.data?.invoices || [];
 
   const cancelAtPeriodEnd = Boolean(
