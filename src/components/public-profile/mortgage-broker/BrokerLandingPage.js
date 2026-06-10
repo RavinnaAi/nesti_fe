@@ -9,7 +9,6 @@ import PublicHappyClientsSlider from '../PublicHappyClientsSlider';
 import BrokerProgramsSection from './BrokerProgramsSection';
 import BrokerAboutSection from './BrokerAboutSection';
 import PublicCTA from '../PublicCTA';
-import PublicProfessionalsSlider from '../PublicProfessionalsSlider';
 import PublicChatBubble from '../PublicChatBubble';
 import PublicGuidanceSection from '../PublicGuidanceSection';
 import PublicInquiryChatWidget from '../PublicInquiryChatWidget';
@@ -81,8 +80,6 @@ export default function BrokerLandingPage({ profile }) {
           onProgramClick={handleCTAClick}
         />
       )}
-
-      <PublicProfessionalsSlider currentSlug={profile.slug} />
 
       <PublicGuidanceSection profile={profile} />
 

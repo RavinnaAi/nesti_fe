@@ -1,3 +1,5 @@
+import { normalizeLeadIntent } from "@/lib/leadsPageUtils";
+
 /**
  * Normalized fields for CRM lead rows shaped by leadApiRowToConversationShape.
  */
@@ -5,11 +7,10 @@
 export function getLeadMeta(conversation) {
   const leadScore = conversation?.lead_score ?? conversation?.leadScore ?? conversation?.score;
   const leadGrade = conversation?.lead_grade ?? conversation?.leadGrade ?? "";
-  const intent =
-    conversation?.intent ||
-    conversation?.lead_intent ||
-    conversation?.intent_label ||
-    "";
+  const intent = normalizeLeadIntent(
+    conversation?.intent || conversation?.lead_intent || conversation?.intent_label,
+    conversation?.lead_type,
+  );
   const channel = conversation?.channel || conversation?.source || "web";
 
   const qualified = conversation?.is_qualified ?? conversation?.isQualified ?? null;

@@ -29,10 +29,7 @@ import { fetchAllLeadConversationMessages } from "@/lib/leadConversationClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
-import {
-  roleHidesLeadPropertyMatches,
-  roleShowsLeadsListAgentColumns,
-} from "@/lib/leadWorkspaceTabsMeta";
+import { roleShowsLeadsListAgentColumns } from "@/lib/leadWorkspaceTabsMeta";
 import LeadsListHeader from "@/components/leads/LeadsListHeader";
 import LeadsListFiltersBar from "@/components/leads/LeadsListFiltersBar";
 import LeadsListTable from "@/components/leads/LeadsListTable";
@@ -49,8 +46,10 @@ import {
   getActionConversationId,
   getConversationMeta,
   getLeadMatchId,
+  getPropertyMatchesTabLabel,
   isDirectInquiryLead,
   matchesSearch,
+  normalizeLeadIntent,
   normalizeList,
   normalizeLeadId,
 } from "@/lib/leadsPageUtils";
@@ -96,7 +95,7 @@ function LeadsPageContent() {
   const { token, user: authUser } = useAppSelector((state) => state.auth);
   const userRole = authUser?.role || "agent";
   const roleFilteredTabs = useMemo(() => getLeadWorkspaceTabsForRole(userRole), [userRole]);
-  const showPropertyMatchesColumn = !roleHidesLeadPropertyMatches(userRole);
+  const showPropertyMatchesColumn = false;
   const showAgentLeadColumns = roleShowsLeadsListAgentColumns(userRole);
   const showMortgageLeadColumns = String(userRole || "")
     .trim()
@@ -196,12 +195,17 @@ function LeadsPageContent() {
     setCurrentPage(1);
   }, [appointmentFilter]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [intentFilter]);
+
   const leadsQuery = useQuery({
     queryKey: [
       "leads",
       token,
       currentPage,
       leadsRowsPerPage,
+      intentFilter,
       appointmentFilter,
       statusFromUrl,
       pipelineFromUrl,
@@ -212,6 +216,7 @@ function LeadsPageContent() {
         token,
         page: currentPage,
         limit: leadsRowsPerPage,
+        ...(intentFilter ? { intent: intentFilter } : {}),
         ...(appointmentFilter && appointmentFilter !== "all" ? { appointment: appointmentFilter } : {}),
         ...(statusFromUrl ? { status: statusFromUrl } : {}),
         ...(!statusFromUrl && pipelineFromUrl ? { pipeline: pipelineFromUrl } : {}),
@@ -275,8 +280,7 @@ function LeadsPageContent() {
 
   const filteredConversations = useMemo(() => {
     return conversations.filter((conversation) => {
-      const meta = getConversationMeta(conversation);
-      const intent = String(meta.intent || "").trim().toLowerCase();
+      const intent = normalizeLeadIntent(conversation?.intent, conversation?.lead_type);
       if (showAgentLeadColumns && intentFilter && intent !== intentFilter) return false;
       return matchesSearch(conversation, searchTerm);
     });
@@ -359,11 +363,11 @@ function LeadsPageContent() {
     if (hideConversationTab) {
       tabs = tabs.filter((tab) => tab.id !== "conversation");
     }
-    if (!hasInquiredProperty) return tabs;
+    const propertyMatchesLabel = getPropertyMatchesTabLabel(leadDetail);
     return tabs.map((tab) =>
-      tab.id === "property_matches" ? { ...tab, label: "Inquired Property" } : tab,
+      tab.id === "property_matches" ? { ...tab, label: propertyMatchesLabel } : tab,
     );
-  }, [roleFilteredTabs, hideConversationTab, hasInquiredProperty]);
+  }, [roleFilteredTabs, hideConversationTab, leadDetail]);
 
   useEffect(() => {
     if (!hideConversationTab) return;

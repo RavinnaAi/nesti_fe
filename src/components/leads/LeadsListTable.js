@@ -7,6 +7,7 @@ import { getStatusDisplay } from "@/lib/leadPipelineConfig";
 import {
   getConsultationListCell,
   getConversationMeta,
+  getLeadIntentDisplay,
   getLeadMatchId,
   getMatchesCount,
   formatLeadIntakeSlug,
@@ -169,7 +170,9 @@ export default function LeadsListTable({
                       </span>
                     </td>
                     {showAgentLeadColumns ? (
-                      <td className="px-3 py-2.5 capitalize">{String(meta.intent || "—")}</td>
+                      <td className="px-3 py-2.5">
+                        <span className="line-clamp-2 text-text-heading">{getLeadIntentDisplay(conversation)}</span>
+                      </td>
                     ) : null}
                     <td className="px-3 py-2.5">{location}</td>
                     {showPropertyMatchesColumn ? (

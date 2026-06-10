@@ -63,8 +63,9 @@ export default function SubscriptionInfo() {
       try {
         const [res] = await Promise.all([
           apiClient({ url: "/auth/profile?refresh_subscription=1", token }),
-          refetchSubscription(),
+          apiClient({ url: "/api/billing/subscription/me?refresh=1", token }),
         ]);
+        await refetchSubscription();
         if (res.success && res.user) {
           dispatch(updateProfile(res.user));
         }

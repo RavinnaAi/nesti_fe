@@ -36,6 +36,7 @@ import { LeadDetailPageSkeleton } from "@/components/ui/ContentSkeletons";
 import {
   extractMessageMeta,
   getActionConversationId,
+  getPropertyMatchesTabLabel,
   normalizeLeadId,
   isDirectInquiryLead,
   normalizeList,
@@ -273,11 +274,11 @@ function LeadWorkspacePageContent() {
     if (hideConversationTab) {
       tabs = tabs.filter((tab) => tab.id !== "conversation");
     }
-    if (!hasInquiredProperty) return tabs;
+    const propertyMatchesLabel = getPropertyMatchesTabLabel(leadDetail);
     return tabs.map((tab) =>
-      tab.id === "property_matches" ? { ...tab, label: "Inquired Property" } : tab,
+      tab.id === "property_matches" ? { ...tab, label: propertyMatchesLabel } : tab,
     );
-  }, [roleFilteredTabs, hideConversationTab, hasInquiredProperty]);
+  }, [roleFilteredTabs, hideConversationTab, leadDetail]);
 
   useEffect(() => {
     if (!hideConversationTab) return;

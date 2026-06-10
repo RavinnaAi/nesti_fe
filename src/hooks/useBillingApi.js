@@ -34,6 +34,7 @@ export function useSubscriptionMe() {
       });
     },
     enabled: !!token,
+    staleTime: 45_000,
   });
 }
 

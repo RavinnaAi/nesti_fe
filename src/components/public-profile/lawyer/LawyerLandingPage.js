@@ -10,7 +10,6 @@ import LawyerPracticeAreasSection from './LawyerPracticeAreasSection';
 import LawyerCredentialsSection from './LawyerCredentialsSection';
 import LawyerAboutSection from './LawyerAboutSection';
 import PublicCTA from '../PublicCTA';
-import PublicProfessionalsSlider from '../PublicProfessionalsSlider';
 import PublicChatBubble from '../PublicChatBubble';
 import PublicGuidanceSection from '../PublicGuidanceSection';
 import PublicInquiryChatWidget from '../PublicInquiryChatWidget';
@@ -86,8 +85,6 @@ export default function LawyerLandingPage({ profile }) {
       {profile.credentials && profile.credentials.length > 0 && (
         <LawyerCredentialsSection credentials={profile.credentials} />
       )}
-
-      <PublicProfessionalsSlider currentSlug={profile.slug} />
 
       <PublicGuidanceSection profile={profile} />
 

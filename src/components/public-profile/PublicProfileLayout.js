@@ -93,17 +93,17 @@ export default function PublicProfileLayout({ profile, children }) {
                 {profile.tagline || profile.about || 'Professional real estate services backed by guided AI support.'}
               </p>
               {(email || phone) && (
-                <div className="mt-4 flex flex-wrap gap-3 text-sm text-text-muted">
-                  {phone && (
-                    <a href={`tel:${phone}`} className="inline-flex items-center gap-2 transition hover:text-primary">
-                      <Phone size={14} className="text-primary" />
-                      {phone}
+                <div className="mt-4 space-y-2 text-sm text-text-muted">
+                  {email && (
+                    <a href={`mailto:${email}`} className="flex min-w-0 items-center gap-2 transition hover:text-primary">
+                      <Mail size={14} className="shrink-0 text-primary" />
+                      <span className="min-w-0 break-all">{email}</span>
                     </a>
                   )}
-                  {email && (
-                    <a href={`mailto:${email}`} className="inline-flex items-center gap-2 transition hover:text-primary">
-                      <Mail size={14} className="text-primary" />
-                      {email}
+                  {phone && (
+                    <a href={`tel:${phone}`} className="flex min-w-0 items-center gap-2 transition hover:text-primary">
+                      <Phone size={14} className="shrink-0 text-primary" />
+                      <span className="min-w-0">{phone}</span>
                     </a>
                   )}
                 </div>

@@ -278,15 +278,15 @@ export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
               {(email || phone) ? (
                 <div className="mt-3 space-y-2 rounded-xl border border-slate-100 bg-slate-50/70 p-2.5 text-xs font-medium text-slate-600">
                   {email ? (
-                    <div className="flex min-w-0 items-center gap-2">
-                      <Mail size={13} className="shrink-0 text-primary" />
-                      <span className="whitespace-nowrap">{email}</span>
+                    <div className="flex min-w-0 items-start gap-2">
+                      <Mail size={13} className="mt-0.5 shrink-0 text-primary" />
+                      <span className="min-w-0 break-all">{email}</span>
                     </div>
                   ) : null}
                   {phone ? (
                     <div className="flex min-w-0 items-center gap-2">
                       <Phone size={13} className="shrink-0 text-primary" />
-                      <span className="whitespace-nowrap">{phone}</span>
+                      <span className="min-w-0">{phone}</span>
                     </div>
                   ) : null}
                 </div>

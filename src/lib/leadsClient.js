@@ -27,9 +27,9 @@ export async function fetchLeadProfiles({ token, ...query }) {
   });
 }
 
-export async function fetchLeadProfileById({ token, profileId }) {
+export async function fetchLeadProfileById({ token, profileId, include, page, limit }) {
   return apiClient({
-    url: API_ENDPOINTS.leads.profileDetail(profileId),
+    url: withQuery(API_ENDPOINTS.leads.profileDetail(profileId), { include, page, limit }),
     method: "GET",
     token,
   });

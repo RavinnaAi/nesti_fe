@@ -11,7 +11,6 @@ import { useAppSelector } from "@/store";
 import { fetchLeadProfileById, fetchLeadsByProfileId } from "@/lib/leadsClient";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 import {
-  fetchNurtureLogs,
   postNurtureDraft,
   postNurturePreview,
   postNurtureRefine,
@@ -102,14 +101,21 @@ export default function ClientProfileLeadsPage() {
   useEffect(() => setClientWorkspaceTab("leads"), [profileId]);
 
   const profileQuery = useQuery({
-    queryKey: ["lead-profile", profileId, token],
+    queryKey: ["lead-profile", profileId, pageSize, token],
     enabled: Boolean(token && profileId),
-    queryFn: () => fetchLeadProfileById({ token, profileId }),
+    queryFn: () =>
+      fetchLeadProfileById({
+        token,
+        profileId,
+        include: "leads,nurture_logs",
+        page: 1,
+        limit: pageSize,
+      }),
   });
 
   const leadsQuery = useQuery({
     queryKey: ["lead-profile-leads", profileId, page, pageSize, token],
-    enabled: Boolean(token && profileId),
+    enabled: Boolean(token && profileId && page > 1),
     queryFn: () =>
       fetchLeadsByProfileId({
         token,
@@ -121,6 +127,7 @@ export default function ClientProfileLeadsPage() {
   });
 
   const profile = profileQuery.data?.lead_profile;
+  const leadsSource = page === 1 ? profileQuery.data : leadsQuery.data;
   const profileProfessionalType = String(
     profile?.professional_type || profile?.ownership?.professional_type || "",
   )
@@ -129,21 +136,22 @@ export default function ClientProfileLeadsPage() {
   const isLawyerProfile = profileProfessionalType === "lawyer";
   const isMortgageBrokerProfile = profileProfessionalType === "mortgage_broker";
   const leads = useMemo(() => {
-    const raw = leadsQuery.data?.leads;
+    const raw = leadsSource?.leads;
     return Array.isArray(raw) ? raw : [];
-  }, [leadsQuery.data]);
+  }, [leadsSource]);
   const tableRows = useMemo(() => {
     if (leads.length >= pageSize) return leads;
     return [...leads, ...Array.from({ length: pageSize - leads.length }, () => null)];
   }, [leads, pageSize]);
 
-  const pagination = leadsQuery.data?.pagination || {};
+  const pagination = leadsSource?.pagination || {};
   const currentPage = Number(pagination.page || page || 1);
   const totalPages = Number(pagination.total_pages || 1);
   const total = Number(pagination.total || leads.length || 0);
   const linkedCountLabel = total;
   const hasPrev = Boolean(pagination.has_prev_page || currentPage > 1);
   const hasNext = Boolean(pagination.has_next_page || currentPage < totalPages);
+  const leadsFetching = page === 1 ? profileQuery.isFetching : leadsQuery.isFetching;
 
   const displayName = useMemo(() => {
     const c = profile?.contact || {};
@@ -623,7 +631,7 @@ export default function ClientProfileLeadsPage() {
                   logsEnabled
                   actionConversationId=""
                   nurtureLogs={nurtureLogs}
-                  nurtureLogsLoading={nurtureLogsQuery.isLoading}
+                  nurtureLogsLoading={profileQuery.isLoading}
                   composeEmptyMessage="No lead workspace linked to this client yet. Add or open a lead from the Leads tab before composing a nurture email."
                   logsEmptyListMessage="No nurture emails logged for this client yet."
                   headerDescription="Send from this client profile: draft uses your most recently active lead workspace for context and listing cards, then refine and send with your workspace email configuration."
@@ -642,7 +650,7 @@ export default function ClientProfileLeadsPage() {
                 </p>
               </div>
 
-              {leadsQuery.isLoading && !leadsQuery.data ? (
+              {(page === 1 ? profileQuery.isLoading : leadsQuery.isLoading && !leadsQuery.data) ? (
                 <div className="px-2 py-4 sm:px-3">
                   <ProfileLeadsTableSkeleton
                     rows={pageSize}
@@ -660,7 +668,7 @@ export default function ClientProfileLeadsPage() {
                 </div>
               ) : leads.length === 0 ? (
                 <p className="px-3 py-8 text-center text-xs text-text-muted">
-                  {leadsQuery.data?.empty_state?.reason || "No leads linked to this profile yet."}
+                  {leadsSource?.empty_state?.reason || "No leads linked to this profile yet."}
                 </p>
               ) : (
                 <div className="overflow-x-auto">
@@ -826,7 +834,7 @@ export default function ClientProfileLeadsPage() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
-                      disabled={!hasPrev || leadsQuery.isFetching}
+                      disabled={!hasPrev || leadsFetching}
                       onClick={() => setPage((p) => Math.max(1, p - 1))}
                       className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -835,7 +843,7 @@ export default function ClientProfileLeadsPage() {
                     </button>
                     <button
                       type="button"
-                      disabled={!hasNext || leadsQuery.isFetching}
+                      disabled={!hasNext || leadsFetching}
                       onClick={() => setPage((p) => p + 1)}
                       className="inline-flex h-8 items-center gap-1 rounded-md border border-border px-3 text-xs font-semibold text-text-heading transition hover:bg-background-light disabled:cursor-not-allowed disabled:opacity-60"
                     >

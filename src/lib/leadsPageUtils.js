@@ -1,3 +1,5 @@
+import { hasInquiredPropertyContext } from "@/lib/inquiredPropertyUtils";
+
 /** Must match backend `fetchLeads` `limit` so pagination totals stay correct. */
 export const LEADS_PAGE_SIZE = 10;
 
@@ -142,6 +144,65 @@ export function isDirectInquiryLead(lead) {
   return source === "public_web_form" || source === "public_inquiry";
 }
 
+export function normalizeLeadIntent(intent, leadType) {
+  const lt = String(leadType || "").toLowerCase();
+  if (/seller/i.test(lt)) return "sell";
+  if (/(buyer|client)/i.test(lt)) return "buy";
+
+  const raw = String(intent || "").trim().toLowerCase();
+  if (raw === "buy" || raw === "sell") return raw;
+  if (raw === "buyer") return "buy";
+  if (raw === "seller") return "sell";
+  return raw;
+}
+
+/** Workspace tab label for the property-matches tab (buyer vs seller vs listing inquiry). */
+export function getPropertyMatchesTabLabel(lead) {
+  const intent = normalizeLeadIntent(lead?.intent, lead?.lead_type);
+  if (intent === "sell") return "Buyer Matches";
+  if (hasInquiredPropertyContext(lead)) return "Inquired Property";
+  return "Property Matches";
+}
+
+/** Whether the property-matches tab is showing buyers matched to a seller listing. */
+export function isSellerPropertyMatchesContext(lead, payload = null) {
+  const ctx = String(payload?.property_matches_context || "").toLowerCase();
+  if (ctx === "sell") return true;
+  return normalizeLeadIntent(lead?.intent, lead?.lead_type) === "sell";
+}
+
+/** Loading, empty, and error copy for the property-matches workspace tab. */
+export function getPropertyMatchesCopy(lead, payload = null) {
+  if (isSellerPropertyMatchesContext(lead, payload)) {
+    return {
+      loading: "Loading buyer matches...",
+      error: "Failed to load buyer matches.",
+      empty: "No buyer matches found for this lead.",
+      chooseLead: "Choose a lead to view buyer matches.",
+      matchFallback: "Buyer match",
+    };
+  }
+  return {
+    loading: "Loading property matches...",
+    error: "Failed to load property matches.",
+    empty: "No property matches found for this lead.",
+    chooseLead: "Choose a lead to view property matches.",
+    matchFallback: "Property match",
+  };
+}
+
+/** Human label for the leads table Intent column. */
+export function getLeadIntentDisplay(conversation) {
+  const intent = normalizeLeadIntent(
+    conversation?.intent || conversation?.lead_intent || conversation?.intent_label,
+    conversation?.lead_type,
+  );
+  if (intent === "sell") return "Seller";
+  if (intent === "buy") return "Buyer";
+  if (!intent || intent === "unknown") return "—";
+  return intent.charAt(0).toUpperCase() + intent.slice(1);
+}
+
 export function getConversationMeta(conversation) {
   let isMatched = conversation?.is_matched ?? conversation?.matched ?? null;
   if (isMatched === null) {
@@ -158,12 +219,13 @@ export function getConversationMeta(conversation) {
     }
   }
 
+  const intent = normalizeLeadIntent(
+    conversation?.intent || conversation?.lead_intent || conversation?.intent_label,
+    conversation?.lead_type,
+  );
+
   return {
-    intent:
-      conversation?.intent ||
-      conversation?.lead_intent ||
-      conversation?.intent_label ||
-      "Unknown",
+    intent: intent || "Unknown",
     leadScore:
       conversation?.lead_score ?? conversation?.leadScore ?? conversation?.score ?? "—",
     leadGrade:

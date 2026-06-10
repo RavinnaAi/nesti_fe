@@ -10,7 +10,6 @@ import AgentListingsSection from './AgentListingsSection';
 import AgentPropertiesSection from './AgentPropertiesSection';
 import AgentAboutSection from './AgentAboutSection';
 import PublicCTA from '../PublicCTA';
-import PublicProfessionalsSlider from '../PublicProfessionalsSlider';
 import PublicChatBubble from '../PublicChatBubble';
 import PublicGuidanceSection from '../PublicGuidanceSection';
 import PublicInquiryChatWidget from '../PublicInquiryChatWidget';
@@ -113,8 +112,6 @@ export default function AgentLandingPage({ profile }) {
           profileSlug={profile.slug}
         />
       )}
-
-      <PublicProfessionalsSlider currentSlug={profile.slug} />
 
       <PublicGuidanceSection profile={profile} />
 

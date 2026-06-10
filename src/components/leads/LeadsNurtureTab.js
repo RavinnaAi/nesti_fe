@@ -97,6 +97,17 @@ export default function LeadsNurtureTab({
     setLastPreviewKey("");
   }, [selectedLeadId]);
 
+  const clearPreviewCache = () => {
+    setLastPreviewKey("");
+    setPreviewHtml("");
+    setPreviewOpen(false);
+    nurturePreviewMutation?.reset?.();
+  };
+
+  useEffect(() => {
+    clearPreviewCache();
+  }, [nurtureForm.include_property_cards]);
+
   useEffect(() => {
     if (nurtureDraftMutation?.data?.draft || nurtureRefineMutation?.data?.draft) {
       setDraftReady(true);
@@ -105,12 +116,12 @@ export default function LeadsNurtureTab({
 
   useEffect(() => {
     const p = nurturePreviewMutation?.data?.preview;
-    if (!p?.html) return;
+    if (!p?.html || nurturePreviewMutation?.isPending) return;
     setPreviewHtml(String(p.html));
     setPreviewSubject(String(p.subject || nurtureForm.subject || "").trim());
     setLastPreviewKey(previewRequestKey);
     setPreviewOpen(true);
-  }, [nurturePreviewMutation?.data, nurtureForm.subject, previewRequestKey]);
+  }, [nurturePreviewMutation?.data, nurturePreviewMutation?.isPending]);
 
   const handlePreviewClick = () => {
     if (!canPreview) return;
@@ -195,12 +206,11 @@ export default function LeadsNurtureTab({
                   id="nurture-to"
                   type="email"
                   value={nurtureForm.to_email}
-                  onChange={(e) =>
-                    setNurtureForm((p) => ({ ...p, to_email: e.target.value }))
-                  }
+                  readOnly
                   placeholder="recipient@email.com"
                   disabled={!canAi}
-                  className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm shadow-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-50"
+                  aria-readonly="true"
+                  className="h-9 w-full rounded-lg border border-border bg-slate-50/80 px-3 text-sm text-text-body shadow-sm placeholder:text-text-muted/60 cursor-default focus:outline-none focus:ring-0 focus:border-border disabled:opacity-50"
                 />
               </div>
               <div>
@@ -209,12 +219,11 @@ export default function LeadsNurtureTab({
                   id="nurture-subject"
                   type="text"
                   value={nurtureForm.subject}
-                  onChange={(e) =>
-                    setNurtureForm((p) => ({ ...p, subject: e.target.value }))
-                  }
+                  readOnly
                   placeholder="Subject line"
                   disabled={!canAi}
-                  className="h-9 w-full rounded-lg border border-border bg-white px-3 text-sm shadow-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 disabled:opacity-50"
+                  aria-readonly="true"
+                  className="h-9 w-full rounded-lg border border-border bg-slate-50/80 px-3 text-sm text-text-body shadow-sm placeholder:text-text-muted/60 cursor-default focus:outline-none focus:ring-0 focus:border-border disabled:opacity-50"
                 />
               </div>
             </div>
@@ -360,22 +369,23 @@ export default function LeadsNurtureTab({
                 <input
                   type="checkbox"
                   checked={nurtureForm.include_property_cards}
-                  onChange={(e) =>
+                  onChange={(e) => {
                     setNurtureForm((p) => ({
                       ...p,
                       include_property_cards: e.target.checked,
-                    }))
-                  }
+                    }));
+                    clearPreviewCache();
+                  }}
                   disabled={!canAi}
                   className="mt-0.5 rounded border-border text-primary focus:ring-primary"
                 />
                 <span className="min-w-0">
                   <span className="font-medium text-text-heading text-sm">
-                    Include property match cards
+                    Include recommended listings table
                   </span>
                   <span className="block text-[11px] text-text-muted mt-0.5 leading-snug">
-                    Attach listing cards from matched properties in HTML when
-                    sending.
+                    When checked, the email adds the formatted Recommended
+                    listings section. When unchecked, only your message is sent.
                   </span>
                 </span>
               </label>
@@ -553,6 +563,7 @@ export default function LeadsNurtureTab({
             </div>
             <div className="flex-1 bg-slate-100 flex items-start justify-center p-3">
               <iframe
+                key={previewRequestKey}
                 title="Nurture email preview"
                 srcDoc={previewHtml}
                 className="h-[66vh] w-full max-w-[720px] border border-border/70 rounded-lg bg-white"

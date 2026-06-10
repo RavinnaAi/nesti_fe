@@ -19,7 +19,12 @@ import {
   inquiredPropertyFromLead,
 } from "@/lib/inquiredPropertyUtils";
 import LeadsProfileTab from "@/components/leads/LeadsProfileTab";
-import { extractMeta, formatMetaEntries, getConversationMeta } from "@/lib/leadsPageUtils";
+import {
+  extractMeta,
+  formatMetaEntries,
+  getConversationMeta,
+  getPropertyMatchesCopy,
+} from "@/lib/leadsPageUtils";
 
 export default function LeadsPropertyMatchesTab({
   selectedConversation,
@@ -38,6 +43,7 @@ export default function LeadsPropertyMatchesTab({
 
   const inquiredMode = hasInquiredPropertyContext(lead);
   const inquiredPropertySnapshot = inquiredProperty || inquiredPropertyFromLead(lead);
+  const matchesCopy = getPropertyMatchesCopy(lead, propertyMatchesPayload);
   const selectedLeadKey = String(selectedConversation?.id || selectedConversation?.lead_match_id || "");
   useEffect(() => {
     setSelectedMatch(null);
@@ -189,7 +195,7 @@ export default function LeadsPropertyMatchesTab({
   };
 
   const getListingHeading = (item, idx) => {
-    if (!item) return `Property match ${idx + 1}`;
+    if (!item) return `${matchesCopy.matchFallback} ${idx + 1}`;
     const loc = getMatchLocation(item) || "";
     const price = getMatchNumericBudget(item);
     const typ = getMatchType(item) || "";
@@ -205,7 +211,7 @@ export default function LeadsPropertyMatchesTab({
     if (addr) return String(addr);
     const t = item.title || item.name;
     if (t && !GENERIC_PROPERTY_LABELS.test(String(t).trim())) return String(t);
-    return `Property match ${idx + 1}`;
+    return `${matchesCopy.matchFallback} ${idx + 1}`;
   };
 
   /** One-line listing summary for cards (replaces bulky 2×2 KeyValue grid). */
@@ -438,12 +444,12 @@ export default function LeadsPropertyMatchesTab({
               </div>
             </div>
           ) : propertyMatchesQuery?.isLoading ? (
-            <div className="text-xs text-text-muted">Loading property matches...</div>
+            <div className="text-xs text-text-muted">{matchesCopy.loading}</div>
           ) : propertyMatchesQuery?.isError ? (
-            <div className="text-xs text-red-600">Failed to load property matches.</div>
+            <div className="text-xs text-red-600">{matchesCopy.error}</div>
           ) : propertyMatches.length === 0 ? (
             <div className="text-xs text-text-muted">
-              {propertyMatchesQuery?.data?.empty_state?.reason || "No property matches found for this lead."}
+              {propertyMatchesQuery?.data?.empty_state?.reason || matchesCopy.empty}
             </div>
           ) : (
             <>
@@ -814,7 +820,7 @@ export default function LeadsPropertyMatchesTab({
           )}
         </>
       ) : (
-        <div className="text-sm text-text-muted">Choose a lead to view property matches.</div>
+        <div className="text-sm text-text-muted">{matchesCopy.chooseLead}</div>
       )}
 
     </div>
