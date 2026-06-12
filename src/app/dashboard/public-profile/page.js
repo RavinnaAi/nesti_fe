@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuthGuard } from '@/hooks/useAuthGuard';
+import FeaturePageGate from '@/components/billing/FeaturePageGate';
+import { FEATURES } from '@/constants/features';
+import { useFeatureAccess } from '@/hooks/useFeatureAccess';
 import { deletePublicProfile, generatePublicProfileCopy, getOwnPublicProfile, updatePublicProfile } from '@/lib/publicProfileClient';
 import { Check, Copy, Eye, Globe2, Loader2, Save, Sparkles, Trash2 } from 'lucide-react';
 import { toast } from 'react-toastify';
@@ -10,6 +13,8 @@ import DeleteLeadConfirmModal from '@/components/leads/DeleteLeadConfirmModal';
 
 export default function PublicProfilePage() {
   const { token } = useAuthGuard();
+  const { hasFeature } = useFeatureAccess();
+  const canEditPublicProfile = hasFeature(FEATURES.PUBLIC_PROFILE);
   const queryClient = useQueryClient();
   const [origin, setOrigin] = useState('');
   const [copied, setCopied] = useState(false);
@@ -22,7 +27,7 @@ export default function PublicProfilePage() {
   const { data: profileData, isLoading } = useQuery({
     queryKey: ['own-public-profile'],
     queryFn: () => getOwnPublicProfile(token),
-    enabled: !!token,
+    enabled: !!token && canEditPublicProfile,
   });
 
   const updateMutation = useMutation({
@@ -124,6 +129,7 @@ export default function PublicProfilePage() {
   const publicUrl = slug ? `${origin || ''}/professional/${slug}` : '';
 
   return (
+    <FeaturePageGate feature={FEATURES.PUBLIC_PROFILE}>
     <div className="mx-auto w-full max-w-6xl px-4 py-4 sm:px-5 lg:px-6">
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_14px_42px_rgba(15,23,42,0.055)]">
         <div className="border-b border-slate-100 bg-gradient-to-br from-white via-emerald-50/40 to-white px-5 py-3.5">
@@ -312,6 +318,7 @@ export default function PublicProfilePage() {
         description="This will delete your public webpage and remove related profile analytics history. This action cannot be undone. You can create a new webpage later."
       />
     </div>
+    </FeaturePageGate>
   );
 }
 

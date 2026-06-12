@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { CalendarCheck2, Mail, Route } from "lucide-react";
+import { CalendarCheck2, Info, Mail, Route } from "lucide-react";
 import { getStatusDisplay } from "@/lib/leadPipelineConfig";
 
 export default function LeadsConsultationTab({
@@ -66,7 +66,17 @@ export default function LeadsConsultationTab({
   return (
     <div className="rounded-md border border-border bg-white shadow-sm p-5 space-y-4">
       {!lead ? (
-        <div className="text-sm text-text-muted">Choose a lead to view consultation status.</div>
+        <div className="flex min-h-[220px] items-center justify-center px-3 py-6">
+          <div className="w-full max-w-sm rounded-xl border border-border/70 bg-background-light/40 px-5 py-6 text-center shadow-sm">
+            <span className="mx-auto mb-2.5 grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Info size={16} />
+            </span>
+            <p className="text-sm font-semibold text-text-heading">Choose a lead to view consultation</p>
+            <p className="mt-1 text-xs text-text-muted">
+              Select a lead to check booking status and Calendly activity.
+            </p>
+          </div>
+        </div>
       ) : (
         <>
           <div

@@ -6,6 +6,8 @@ import { BarChart3 } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import FeaturePageGate from "@/components/billing/FeaturePageGate";
+import { FEATURES } from "@/constants/features";
 import {
   fetchChatAnalyticsFunnel,
   fetchChatAnalyticsLeadTrends,
@@ -27,13 +29,14 @@ const WINDOW_OPTIONS = [
 
 export default function AnalyticsPage() {
   const { isAuthenticated } = useAuthGuard();
-  useFeatureAccess();
+  const { hasFeature } = useFeatureAccess();
+  const canViewAnalytics = hasFeature(FEATURES.WORKSPACE_ANALYTICS_PAGE);
   const { token } = useAppSelector((state) => state.auth);
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
 
   const summaryQuery = useQuery({
     queryKey: ["analytics-summary", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canViewAnalytics,
     queryFn: () => fetchChatAnalyticsSummary({ token, days: windowDays }),
     staleTime: 60_000,
   });
@@ -47,21 +50,21 @@ export default function AnalyticsPage() {
 
   const funnelQuery = useQuery({
     queryKey: ["analytics-funnel", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canViewAnalytics,
     queryFn: () => fetchChatAnalyticsFunnel({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const leadTrendsQuery = useQuery({
     queryKey: ["analytics-lead-trends", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canViewAnalytics,
     queryFn: () => fetchChatAnalyticsLeadTrends({ token, days: windowDays }),
     staleTime: 60_000,
   });
 
   const inviteMetricsQuery = useQuery({
     queryKey: ["analytics-invite-metrics", token, windowDays],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canViewAnalytics,
     queryFn: () => fetchInviteMetrics({ token, days: windowDays }),
     staleTime: 60_000,
   });
@@ -69,6 +72,7 @@ export default function AnalyticsPage() {
   if (!isAuthenticated) return null;
 
   return (
+    <FeaturePageGate feature={FEATURES.WORKSPACE_ANALYTICS_PAGE}>
     <div className="min-h-[calc(100vh-4rem)] overflow-y-auto bg-background-light/30">
       <div className="mx-auto w-full max-w-screen-2xl space-y-4 px-4 py-4 sm:px-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -150,5 +154,6 @@ export default function AnalyticsPage() {
         </div>
       </div>
     </div>
+    </FeaturePageGate>
   );
 }

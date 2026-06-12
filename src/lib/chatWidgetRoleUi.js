@@ -64,7 +64,7 @@ export function getChatWidgetRolePresentation(widgetRole) {
     return {
       ...AGENT_PRESENTATION,
       defaultTitle: "Nesti AI – Mortgage",
-      defaultSubtitle: "24/7 Mortgage Lead Assistant",
+      defaultSubtitle: "24/7 Mortgage Broker",
       defaultGreeting:
         "Hi! I'm here to help with financing questions, pre-approval, refinancing, and next steps. What would you like to know?",
       launcherAriaLabel: "Open mortgage assistant",
@@ -74,7 +74,7 @@ export function getChatWidgetRolePresentation(widgetRole) {
     return {
       ...AGENT_PRESENTATION,
       defaultTitle: "Nesti AI – Legal",
-      defaultSubtitle: "24/7 Real Estate Closing Assistant",
+      defaultSubtitle: "24/7 Real Estate Lawyer",
       defaultGreeting:
         "Hello! I can help with real estate closing questions, timelines, and scheduling. How can I assist you today?",
       launcherAriaLabel: "Open legal assistant",

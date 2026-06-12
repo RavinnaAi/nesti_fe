@@ -55,7 +55,6 @@ export default function NurtureLogsPage() {
         <div className="h-full w-full px-6 py-6">
           <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
             <NurtureLogsListSkeleton rows={effectivePageSize} />
-            <p className="mt-4 text-center text-xs font-medium text-primary">Loading…</p>
           </div>
         </div>
       </div>

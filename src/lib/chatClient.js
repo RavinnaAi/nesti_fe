@@ -67,6 +67,17 @@ export function resetChatIdentity({
   return { sessionId: sid, visitorCleared: true };
 }
 
+export function persistChatSessionId(sessionId, sessionKey = defaultSessionKey) {
+  if (typeof window === "undefined") return;
+  const sid = String(sessionId || "").trim();
+  if (sid) localStorage.setItem(sessionKey, sid);
+}
+
+/** Prefer server-forked session id when intake creates a new conversation thread. */
+export function resolveChatSessionId(payload, fallbackSessionId = "") {
+  return String(payload?.session_id || fallbackSessionId || "").trim();
+}
+
 export async function resolveEmbedToken(token) {
   const t = String(token || "").trim();
   if (!t) throw new Error("Missing embed token.");
@@ -89,7 +100,10 @@ export async function sendChatMessage({
   agentType,
   channel = "web",
   formContact,
+  forceNewLead = false,
 }) {
+  const hasFormContact =
+    formContact && typeof formContact === "object" && Object.keys(formContact).length > 0;
   const payload = {
     id: sessionId,
     message,
@@ -97,9 +111,8 @@ export async function sendChatMessage({
     visitorId: visitorId || undefined,
     agentType: agentType || undefined,
     channel,
-    ...(formContact && typeof formContact === "object" && Object.keys(formContact).length
-      ? { formContact }
-      : {}),
+    ...(hasFormContact ? { formContact } : {}),
+    ...(forceNewLead ? { forceNewLead: true } : {}),
   };
 
   const response = await fetch(apiUrl("/api/chat"), {
@@ -193,6 +206,7 @@ export async function fetchChatPropertyMatches({
   formContact,
   page = 1,
   limit = 5,
+  matchMode = "strict",
 }) {
   const payload = {
     id: sessionId,
@@ -200,6 +214,7 @@ export async function fetchChatPropertyMatches({
     visitorId: visitorId || undefined,
     page,
     limit,
+    matchMode: matchMode === "relaxed" ? "relaxed" : "strict",
     ...(formContact && typeof formContact === "object" && Object.keys(formContact).length
       ? { formContact }
       : {}),

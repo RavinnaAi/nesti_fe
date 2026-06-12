@@ -11,6 +11,7 @@ import { FEATURES } from "@/constants/features";
 import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfileBudget";
 import { AppointmentStatusChip, LeadsCountChip } from "@/components/clients/AppointmentStatusChip";
 import { fetchLeadProfiles } from "@/lib/leadsClient";
+import PlanLimitBanner from "@/components/billing/PlanLimitBanner";
 import { ClientsTableSkeleton } from "@/components/ui/ContentSkeletons";
 import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
 
@@ -185,7 +186,6 @@ export default function ClientsPage() {
         <div className="w-full">
           <div className="overflow-hidden rounded-md border border-border/90 bg-white p-2 shadow-sm sm:p-3">
             <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
-            <p className="mt-3 text-center text-[10px] font-medium text-primary sm:text-[11px]">Loading…</p>
           </div>
         </div>
       </div>
@@ -197,6 +197,7 @@ export default function ClientsPage() {
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] pb-3 font-body text-text-body antialiased sm:pb-4">
       <div className="flex h-full w-full flex-col space-y-1.5 px-2.5 pt-5 sm:px-4 sm:pt-6">
+        <PlanLimitBanner />
         <div className="flex flex-wrap items-end justify-between gap-1.5">
           <div>
             <h1 className="font-heading inline-flex items-center gap-1 text-base font-bold tracking-tight text-text-heading sm:text-lg">
@@ -231,13 +232,6 @@ export default function ClientsPage() {
           {clientsQuery.isLoading ? (
             <div className="p-2 sm:p-3">
               <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
-              <p className="mt-3 flex items-center gap-2 text-[10px] font-medium text-primary sm:text-[11px]">
-                <span
-                  className="inline-block size-3.5 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
-                  aria-hidden
-                />
-                Loading clients…
-              </p>
             </div>
           ) : profiles.length === 0 ? (
             <p className="px-2.5 py-6 text-center text-[11px] capitalize text-text-muted sm:text-xs">

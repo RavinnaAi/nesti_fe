@@ -50,6 +50,14 @@ export function useWorkspaceSocket(token, queryClient) {
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
     };
 
+    const refreshLeadWorkspaceData = () => {
+      queryClient.invalidateQueries({ queryKey: ["leads"] });
+      queryClient.invalidateQueries({ queryKey: ["lead-detail"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-leads"] });
+      queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
+    };
+
     const actionHref = (action) => {
       const type = String(action?.type || "").trim();
       if (!type) return null;
@@ -96,12 +104,7 @@ export function useWorkspaceSocket(token, queryClient) {
           queryClient.invalidateQueries({ queryKey: ["prochat-messages"] });
         }
       }
-      // Fix #6 — use default refetchType ("active") so only on-screen queries refetch.
-      // refetchType: "all" was triggering 6+ simultaneous background re-fetches per notification.
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
+      refreshLeadWorkspaceData();
 
       // Public professional pages should not show workspace toasts.
       // Keep background cache updates, but avoid UI notification noise here.
@@ -144,11 +147,8 @@ export function useWorkspaceSocket(token, queryClient) {
     };
 
     const onLead = () => {
-      // Fix #6 — use default refetchType ("active") so only on-screen queries refetch
-      queryClient.invalidateQueries({ queryKey: ["leads"] });
-      queryClient.invalidateQueries({ queryKey: ["lead-detail"] });
-      queryClient.invalidateQueries({ queryKey: ["dashboard-conversations"] });
-      queryClient.invalidateQueries({ queryKey: ["calendar-bookings"] });
+      refreshLeadWorkspaceData();
+      refreshNotifications();
     };
 
     const onProChatInbox = (payload) => {

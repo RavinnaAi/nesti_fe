@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import { apiClient, API_ENDPOINTS } from "@/lib/api";
@@ -261,14 +262,14 @@ export function useProfileQuery() {
   const token = useAppSelector((state) => state.auth.token);
   const dispatch = useAppDispatch();
 
-  return useQuery({
+  const query = useQuery({
     queryKey: ["profile"],
     enabled: Boolean(token),
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
-    refetchOnWindowFocus: false,
-    refetchOnReconnect: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchOnMount: true,
     queryFn: () =>
       apiClient({
         url: API_ENDPOINTS.auth.profile,
@@ -285,6 +286,15 @@ export function useProfileQuery() {
       }
     },
   });
+
+  // Keep Redux auth.user in sync so plan-based UI gates update immediately.
+  useEffect(() => {
+    if (query.data?.user) {
+      dispatch(updateProfile(query.data.user));
+    }
+  }, [query.data, dispatch]);
+
+  return query;
 }
 
 // ─── Google Auth (stubs — backend not yet implemented) ────────────────────────

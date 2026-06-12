@@ -28,6 +28,7 @@ export const FEATURES = {
   CRM_BASIC_LIST: "crm.basic.list",
   CRM_BASIC_STATUS: "crm.basic.status",
   CRM_FOLLOWUP_MANUAL: "crm.followup.manual",
+  CRM_LEAD_CONVERSATION: "crm.lead.conversation",
   PUBLIC_PROFILE: "public_profile.basic",
 
   // Standard and Enterprise
@@ -37,13 +38,17 @@ export const FEATURES = {
   CALENDAR_INTEGRATION: "calendar.integration",
   CALENDAR_VIRTUAL_CONSULT: "calendar.virtual_consultations",
   LEADS_FOLLOWUP_AUTOMATED: "leads.followup.automated",
+  DASHBOARD_ANALYTICS: "dashboard.analytics",
+  WORKSPACE_ANALYTICS_PAGE: "workspace.analytics.page",
   REPORTS_AI_MONTHLY: "reports.ai_monthly",
   ASSISTANT_PROFESSIONAL: "assistant.professional",
   ASSISTANT_PROFESSIONAL_CLOSING: "assistant.professional.closing",
   ASSISTANT_PROFESSIONAL_FOLLOWUP: "assistant.professional.followup",
   LEADS_INSIGHTS_ADVANCED: "leads.insights.advanced",
+  REFERRALS_MANUAL: "referrals.manual",
   REFERRALS_INVITES: "referrals.invites",
   PROFILE_ANALYTICS: "profile.analytics",
   PRO_CHAT: "prochat.messaging",
+  PRO_CHAT_DM: "prochat.dm",
 };
 

@@ -10,6 +10,9 @@ import { createProChatGroupThread, fetchMyProChatThreads } from "@/lib/proChatCl
 import { clearUnread } from "@/store/proChatSlice";
 import { fetchProfessionals } from "@/lib/professionalsClient";
 import useDynamicTablePageSize from "@/hooks/useDynamicTablePageSize";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
+import FeaturePageGate from "@/components/billing/FeaturePageGate";
 
 function formatShortTime(iso) {
   if (!iso) return "";
@@ -105,6 +108,9 @@ export default function ConversationsPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const queryClient = useQueryClient();
+  const { hasFeature } = useFeatureAccess();
+  const canUseProChat = hasFeature(FEATURES.PRO_CHAT_DM);
+  const canCreateGroups = hasFeature(FEATURES.PRO_CHAT);
   const token = useAppSelector((s) => s.auth.token);
   const unreadByThread = useAppSelector((s) => s.proChat?.unreadByThread || {});
   const [page, setPage] = useState(1);
@@ -117,17 +123,18 @@ export default function ConversationsPage() {
 
   const listQuery = useQuery({
     queryKey: ["prochat-threads", token, page, pageSize],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canUseProChat,
     queryFn: () => fetchMyProChatThreads({ token, page, limit: pageSize }),
     staleTime: 15_000,
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
   });
 
-  const items = useMemo(
-    () => (Array.isArray(listQuery.data?.items) ? listQuery.data.items : []),
-    [listQuery.data?.items],
-  );
+  const items = useMemo(() => {
+    const raw = Array.isArray(listQuery.data?.items) ? listQuery.data.items : [];
+    if (canCreateGroups) return raw;
+    return raw.filter((t) => String(t.thread_type || "dm") !== "group");
+  }, [listQuery.data?.items, canCreateGroups]);
 
   const unreadTotal = useMemo(
     () => Object.values(unreadByThread).reduce((sum, n) => sum + Number(n || 0), 0),
@@ -350,6 +357,7 @@ export default function ConversationsPage() {
       : null;
 
   return (
+    <FeaturePageGate feature={FEATURES.PRO_CHAT_DM}>
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-white to-primary/10 px-4 py-4 sm:px-6">
       <div className="flex w-full max-w-none flex-col gap-3">
         <div className="px-1 py-1">
@@ -361,14 +369,16 @@ export default function ConversationsPage() {
               </p>
             </div>
             <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setCreateOpen(true)}
-                className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-bold text-text-heading shadow-sm transition hover:border-primary/30 hover:bg-primary/[0.06]"
-              >
-                <Plus size={16} className="text-primary-dark" />
-                New group
-              </button>
+              {canCreateGroups ? (
+                <button
+                  type="button"
+                  onClick={() => setCreateOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-white px-4 text-sm font-bold text-text-heading shadow-sm transition hover:border-primary/30 hover:bg-primary/[0.06]"
+                >
+                  <Plus size={16} className="text-primary-dark" />
+                  New group
+                </button>
+              ) : null}
               <div
                 className="inline-flex w-fit items-center gap-2 rounded-xl border border-primary/15 bg-primary/[0.06] px-3 py-2"
                 aria-label={`Unread conversations: ${unreadTotal}`}
@@ -524,5 +534,6 @@ export default function ConversationsPage() {
       </div>
       {modal}
     </div>
+    </FeaturePageGate>
   );
 }

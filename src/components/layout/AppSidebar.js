@@ -32,6 +32,8 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import LeadsPipelineSidebarNav from "@/components/leads/LeadsPipelineSidebarNav";
 import { PUBLIC_HOME_PATH, navigateToPublicHome } from "@/lib/workspaceNavigation";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 const REFERRAL_DIRECTION_ITEMS = [
   { id: "referral-inbound", label: "Inbound", href: "/referrals?direction=inbound", icon: Inbox },
@@ -133,6 +135,10 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user } = useAppSelector((state) => state.auth);
+  const { filterNavItems, hasFeature } = useFeatureAccess();
+  const visiblePrimaryItems = useMemo(() => filterNavItems(PRIMARY_ITEMS), [filterNavItems]);
+  const visibleSettingsItems = useMemo(() => filterNavItems(SETTINGS_ITEMS), [filterNavItems]);
+  const showCalendarNav = hasFeature(FEATURES.CALENDAR_INTEGRATION);
   const shouldPrefetch = process.env.NODE_ENV === "production";
   const personalInfo = useAppSelector((state) => state.profile.personalInfo);
   const menuRef = useRef(null);
@@ -342,7 +348,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
 
       <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2 space-y-3 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-0.5">
-          {PRIMARY_ITEMS.map((item) => {
+          {visiblePrimaryItems.map((item) => {
             const Icon = item.icon;
             const active = primaryItemActive(item);
             const leadsHere = leadsNavInWorkspace(item);
@@ -447,31 +453,33 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                         ) : null}
                       </AnimatePresence>
                     </div>
-                    <Link
-                      href="/calendar"
-                      onClick={() => {
-                        setSettingsOpen(false);
-                        setPipelineNavOpen(false);
-                        setProfessionalsOpen(false);
-                        setReferralsOpen(false);
-                        onCloseMobile?.();
-                      }}
-                      className={`group relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-semibold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background-light ${
-                        isCalendarRoute
-                          ? "bg-gradient-to-r from-primary/14 to-primary/5 text-primary-dark shadow-sm ring-1 ring-primary/10"
-                          : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
-                      }`}
-                      aria-current={isCalendarRoute ? "page" : undefined}
-                    >
-                      {isCalendarRoute ? (
-                        <span
-                          className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary"
-                          aria-hidden
-                        />
-                      ) : null}
-                      <NavIconTile Icon={CalendarDays} variant={isCalendarRoute ? "active" : "idle"} />
-                      <span className="truncate">Calendar</span>
-                    </Link>
+                    {showCalendarNav ? (
+                      <Link
+                        href="/calendar"
+                        onClick={() => {
+                          setSettingsOpen(false);
+                          setPipelineNavOpen(false);
+                          setProfessionalsOpen(false);
+                          setReferralsOpen(false);
+                          onCloseMobile?.();
+                        }}
+                        className={`group relative flex items-center gap-2 rounded-lg px-2 py-1.5 text-[13px] font-semibold outline-none transition-all duration-200 focus-visible:ring-2 focus-visible:ring-primary/35 focus-visible:ring-offset-2 focus-visible:ring-offset-background-light ${
+                          isCalendarRoute
+                            ? "bg-gradient-to-r from-primary/14 to-primary/5 text-primary-dark shadow-sm ring-1 ring-primary/10"
+                            : "text-text-body hover:bg-white/90 hover:text-text-heading hover:ring-1 hover:ring-border/70"
+                        }`}
+                        aria-current={isCalendarRoute ? "page" : undefined}
+                      >
+                        {isCalendarRoute ? (
+                          <span
+                            className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary"
+                            aria-hidden
+                          />
+                        ) : null}
+                        <NavIconTile Icon={CalendarDays} variant={isCalendarRoute ? "active" : "idle"} />
+                        <span className="truncate">Calendar</span>
+                      </Link>
+                    ) : null}
                   </>
                 ) : null}
                 {item.id === "referrals" ? (
@@ -675,7 +683,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
                   className="overflow-hidden"
                 >
                   <div className="ml-2 mt-0.5 space-y-0.5 rounded-lg border border-border/60 bg-white/80 py-1.5 pl-2 pr-1">
-                    {SETTINGS_ITEMS.map((item) => {
+                    {visibleSettingsItems.map((item) => {
                       const Icon = item.icon;
                       const href = item.href || `/settings?tab=${item.tab}`;
                       const tabActive = item.href

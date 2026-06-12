@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppSelector } from "@/store";
 import Link from "next/link";
 import { ChevronDown, History, Loader2, Mail, Send, Sparkles, Wand2, X } from "lucide-react";
@@ -60,6 +60,7 @@ export default function LeadsNurtureTab({
   const [previewSubject, setPreviewSubject] = useState("");
   const [lastPreviewKey, setLastPreviewKey] = useState("");
   const [draftReady, setDraftReady] = useState(false);
+  const previewResetRef = useRef(null);
   const nurtureEnabled =
     typeof nurtureEnabledProp === "boolean"
       ? nurtureEnabledProp
@@ -97,16 +98,20 @@ export default function LeadsNurtureTab({
     setLastPreviewKey("");
   }, [selectedLeadId]);
 
-  const clearPreviewCache = () => {
+  useEffect(() => {
+    previewResetRef.current = nurturePreviewMutation?.reset;
+  }, [nurturePreviewMutation?.reset]);
+
+  const clearPreviewCache = useCallback(() => {
     setLastPreviewKey("");
     setPreviewHtml("");
     setPreviewOpen(false);
-    nurturePreviewMutation?.reset?.();
-  };
+    previewResetRef.current?.();
+  }, []);
 
   useEffect(() => {
     clearPreviewCache();
-  }, [nurtureForm.include_property_cards]);
+  }, [nurtureForm.include_property_cards, clearPreviewCache]);
 
   useEffect(() => {
     if (nurtureDraftMutation?.data?.draft || nurtureRefineMutation?.data?.draft) {
@@ -121,7 +126,12 @@ export default function LeadsNurtureTab({
     setPreviewSubject(String(p.subject || nurtureForm.subject || "").trim());
     setLastPreviewKey(previewRequestKey);
     setPreviewOpen(true);
-  }, [nurturePreviewMutation?.data, nurturePreviewMutation?.isPending]);
+  }, [
+    nurturePreviewMutation?.data,
+    nurturePreviewMutation?.isPending,
+    nurtureForm.subject,
+    previewRequestKey,
+  ]);
 
   const handlePreviewClick = () => {
     if (!canPreview) return;

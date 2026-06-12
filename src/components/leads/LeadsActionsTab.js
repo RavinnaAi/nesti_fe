@@ -2,14 +2,15 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useMutation } from "@tanstack/react-query";
-import { useQuery } from "@tanstack/react-query";
-import { Copy, DollarSign, Mail, MessageCircle, Scale, Share2, Users, X } from "lucide-react";
+import { useMutation, useQuery } from "@tanstack/react-query";
+import { Copy, DollarSign, Inbox, Mail, MessageCircle, Scale, Share2, Users, X } from "lucide-react";
 import { toast } from "react-toastify";
 import LeadActionSection from "@/components/leads/LeadActionSection";
 import SelectDropdown from "@/components/ui/SelectDropdown";
 import { fetchProfessionals } from "@/lib/professionalsClient";
 import { createInviteLink } from "@/lib/inviteClient";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 /** Same role ids + labels as `DashboardProfessionalsTabs` (Agents / Lawyers / Mortgage Brokers). */
 const PROFESSIONAL_ROLE_OPTIONS = [
@@ -60,6 +61,8 @@ export default function LeadsActionsTab({
   activeReferralId,
   setActiveReferralId,
 }) {
+  const { hasFeature } = useFeatureAccess();
+  const canUseReferralInviteLinks = hasFeature(FEATURES.REFERRALS_INVITES);
   const [referralsPage, setReferralsPage] = useState(1);
   const [openReferralDetails, setOpenReferralDetails] = useState(null);
   const role = referralForm?.professional_role ?? "";
@@ -173,22 +176,24 @@ export default function LeadsActionsTab({
         subtitle="Connect this lead to another professional."
         className="lg:flex lg:h-[26rem] lg:flex-col"
         headerAction={
-          <button
-            type="button"
-            onClick={() => {
-              if (leadInviteShareUrl) {
-                setShareModalOpen(true);
-                return;
-              }
-              createLeadInviteMutation.mutate();
-            }}
-            disabled={!token || createLeadInviteMutation.isPending}
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary/25 bg-white text-primary-dark transition hover:bg-primary/[0.08] disabled:opacity-50"
-            aria-label="Share referral link"
-            title="Share referral link"
-          >
-            <Share2 size={13} />
-          </button>
+          canUseReferralInviteLinks ? (
+            <button
+              type="button"
+              onClick={() => {
+                if (leadInviteShareUrl) {
+                  setShareModalOpen(true);
+                  return;
+                }
+                createLeadInviteMutation.mutate();
+              }}
+              disabled={!token || createLeadInviteMutation.isPending}
+              className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-primary/25 bg-white text-primary-dark transition hover:bg-primary/[0.08] disabled:opacity-50"
+              aria-label="Share referral link"
+              title="Share referral link"
+            >
+              <Share2 size={13} />
+            </button>
+          ) : null
         }
       >
         <div className="flex h-full min-h-0 flex-col gap-3.5">
@@ -223,8 +228,16 @@ export default function LeadsActionsTab({
                   {professionalsQuery.error?.message || "Could not load professionals."}
                 </div>
               ) : professionals.length === 0 ? (
-                <div className="px-2.5 py-2 text-[11px] text-text-muted">
-                  No professionals found for this type yet.
+                <div className="px-2.5 py-3">
+                  <div className="rounded-lg border border-border/70 bg-background-light/40 px-3 py-4 text-center">
+                    <span className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                      <Users size={14} />
+                    </span>
+                    <p className="text-[11px] font-semibold text-text-heading">No professionals found yet</p>
+                    <p className="mt-1 text-[10px] leading-snug text-text-muted">
+                      Add professionals for this role, then you can send a referral.
+                    </p>
+                  </div>
                 </div>
               ) : selectedProfessional ? (
                 <div className="flex items-center gap-1.5 px-1.5 py-1">
@@ -367,8 +380,16 @@ export default function LeadsActionsTab({
               <tbody>
                 {sortedReferrals.length === 0 ? (
                   <tr>
-                    <td className="px-2 py-3 text-text-muted" colSpan={4}>
-                      No referrals yet for this lead.
+                    <td className="px-2 py-3" colSpan={4}>
+                      <div className="mx-auto my-2 max-w-sm rounded-lg border border-border/70 bg-background-light/40 px-4 py-5 text-center">
+                        <span className="mx-auto mb-2 grid h-8 w-8 place-items-center rounded-lg bg-primary/10 text-primary">
+                          <Inbox size={14} />
+                        </span>
+                        <p className="text-xs font-semibold text-text-heading">No referrals yet for this lead</p>
+                        <p className="mt-1 text-[10px] text-text-muted">
+                          Create a referral from this panel to see history here.
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -530,7 +551,7 @@ export default function LeadsActionsTab({
         ) : null}
       </LeadActionSection>
 
-      {shareModalOpen ? (
+      {canUseReferralInviteLinks && shareModalOpen ? (
         <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/35 p-4">
           <div className="w-full max-w-lg rounded-xl border border-border bg-white p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">

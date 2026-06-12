@@ -10,10 +10,12 @@ import Footer from "@/components/layout/Footer";
 import BackgroundElements from "@/components/layout/BackgroundElements";
 import CustomToastContainer from "@/components/ui/ToastContainer";
 import TrialCountdownBadge from "@/components/ui/TrialCountdownBadge";
+import WorkspaceLoader from "@/components/ui/WorkspaceLoader";
 import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import ConversationsBell from "@/components/prochat/ConversationsBell";
 import {
+  Bot,
   CalendarDays,
   ChevronDown,
   Globe2,
@@ -35,6 +37,14 @@ import {
 import { useProfileSetupRedirect } from "@/hooks/useProfileSetupRedirect";
 import { useTrialExpiryRedirect } from "@/hooks/useTrialExpiryRedirect";
 import { useProfileQuery } from "@/hooks/useAuthApi";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
+import { updateProfile } from "@/store/authSlice";
+import {
+  BILLING_REFRESH_CHANNEL,
+  broadcastSubscriptionUpdated,
+  refreshAuthProfileFromStripe,
+} from "@/lib/billingProfileRefresh";
 import { finalizeInviteToken } from "@/lib/inviteClient";
 import {
   clearInviteAttribution,
@@ -60,10 +70,71 @@ export default function AppChrome({ children }) {
   const calendlyOAuthBroadcastAt = useRef(0);
   const inviteFinalizeAttemptedRef = useRef(false);
   const profileQuery = useProfileQuery();
+  const { hasFeature } = useFeatureAccess();
+  const showPublicProfile = hasFeature(FEATURES.PUBLIC_PROFILE);
+  const showCalendar = hasFeature(FEATURES.CALENDAR_INTEGRATION);
 
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!isMounted || !token || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("billing") !== "success") return;
+
+    let cancelled = false;
+    const syncAfterCheckout = async () => {
+      for (let attempt = 0; attempt < 6 && !cancelled; attempt += 1) {
+        try {
+          const user = await refreshAuthProfileFromStripe(token);
+          if (cancelled || !user) return;
+          dispatch(updateProfile(user));
+          queryClient.setQueryData(["profile"], (prev) => ({
+            ...(prev || {}),
+            success: true,
+            user,
+          }));
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+          broadcastSubscriptionUpdated();
+          const status = String(user.accountStatus || user.account_status || "").toLowerCase();
+          const plan = String(user.subscriptionPlan || user.subscription_plan || "").trim();
+          if (status === "subscribed" && plan) return;
+        } catch {
+          // retry while Stripe webhook sync catches up
+        }
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    };
+    syncAfterCheckout();
+    return () => {
+      cancelled = true;
+    };
+  }, [isMounted, token, dispatch, queryClient, pathname]);
+
+  useEffect(() => {
+    if (!token || typeof window === "undefined" || typeof BroadcastChannel === "undefined") {
+      return;
+    }
+    const ch = new BroadcastChannel(BILLING_REFRESH_CHANNEL);
+    const onMessage = async (ev) => {
+      if (ev?.data?.type !== "subscription_updated") return;
+      try {
+        const user = await refreshAuthProfileFromStripe(token);
+        if (user) {
+          dispatch(updateProfile(user));
+          queryClient.invalidateQueries({ queryKey: ["profile"] });
+        }
+      } catch {
+        queryClient.invalidateQueries({ queryKey: ["profile"] });
+      }
+    };
+    ch.addEventListener("message", onMessage);
+    return () => {
+      ch.removeEventListener("message", onMessage);
+      ch.close();
+    };
+  }, [token, dispatch, queryClient]);
 
   useEffect(() => {
     if (!isMounted || typeof window === "undefined") return;
@@ -287,10 +358,7 @@ export default function AppChrome({ children }) {
     [pathname]
   );
   const DashboardOrWebsiteIcon = dashboardOrWebsiteItem.Icon;
-  const workspaceHeaderQueriesEnabled =
-    Boolean(token) &&
-    profileQuery.isSuccess &&
-    profileQuery.data?.profile_setup?.is_complete !== false;
+  const workspaceHeaderQueriesEnabled = Boolean(token);
 
   const handleLogout = useCallback(() => {
     dispatch(logoutAndClearAll());
@@ -368,12 +436,12 @@ export default function AppChrome({ children }) {
 
   // ── Not yet mounted: never render public shell on protected routes ──
   if (!isMounted) {
-    if (!isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback) {
+    if (!isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback && !isProfessionalPublicPage) {
       return (
         <>
           <BackgroundElements variant="default" />
           <main className="relative z-10 flex min-h-screen w-full items-center justify-center">
-            <p className="text-sm text-text-muted">Loading workspace...</p>
+            <WorkspaceLoader fullHeight={false} />
           </main>
           <CustomToastContainer />
         </>
@@ -393,12 +461,18 @@ export default function AppChrome({ children }) {
   }
 
   // ── Mounted but auth-check still resolving on protected routes ──
-  if (!authCheckReady && !isPublicAuthPage && !isChatbotEmbed && !isCalendlyCallback) {
+  if (
+    !authCheckReady &&
+    !isPublicAuthPage &&
+    !isChatbotEmbed &&
+    !isCalendlyCallback &&
+    !isProfessionalPublicPage
+  ) {
     return (
       <>
         <BackgroundElements variant="default" />
         <main className="relative z-10 flex min-h-screen w-full items-center justify-center">
-          <p className="text-sm text-text-muted">Loading workspace...</p>
+          <WorkspaceLoader fullHeight={false} />
         </main>
         <CustomToastContainer />
       </>
@@ -496,24 +570,28 @@ export default function AppChrome({ children }) {
                         <Settings size={16} className="text-text-muted" />
                         Settings
                       </Link>
-                      <Link
-                        href="/dashboard/public-profile"
-                        role="menuitem"
-                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <Globe2 size={16} className="text-text-muted" />
-                        Web Page
-                      </Link>
-                      <Link
-                        href="/calendar"
-                        role="menuitem"
-                        className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
-                        onClick={() => setUserMenuOpen(false)}
-                      >
-                        <CalendarDays size={16} className="text-text-muted" />
-                        Calendar
-                      </Link>
+                      {showPublicProfile ? (
+                        <Link
+                          href="/dashboard/public-profile"
+                          role="menuitem"
+                          className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <Globe2 size={16} className="text-text-muted" />
+                          Web Page
+                        </Link>
+                      ) : null}
+                      {showCalendar ? (
+                        <Link
+                          href="/calendar"
+                          role="menuitem"
+                          className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
+                          onClick={() => setUserMenuOpen(false)}
+                        >
+                          <CalendarDays size={16} className="text-text-muted" />
+                          Calendar
+                        </Link>
+                      ) : null}
                       <div className="my-1 h-px bg-border" role="separator" />
                       <button
                         type="button"
@@ -542,6 +620,22 @@ export default function AppChrome({ children }) {
             >
               {children}
             </main>
+            <footer className="mt-auto border-t border-primary/20 bg-gradient-to-r from-primary/[0.08] via-white/95 to-primary/[0.06] px-4 py-2.5 sm:px-6">
+              <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
+                <div className="flex min-w-0 items-center gap-2">
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white shadow-[0_3px_10px_rgba(52,199,89,0.35)] ring-1 ring-white/60">
+                    <Bot size={14} strokeWidth={2} />
+                  </span>
+                  <div className="min-w-0 leading-tight">
+                    <p className="truncate text-[12px] font-semibold text-text-heading">Nesti AI</p>
+                    <p className="truncate text-[10px] text-text-muted">Workspace</p>
+                  </div>
+                </div>
+                <p className="shrink-0 text-[10px] text-text-muted/90">
+                  &copy; {new Date().getFullYear()} Nesti AI
+                </p>
+              </div>
+            </footer>
           </div>
         </div>
         <CustomToastContainer />

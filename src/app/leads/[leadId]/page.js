@@ -29,7 +29,14 @@ import { fetchAllLeadConversationMessages } from "@/lib/leadConversationClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
-import { LEAD_WORKSPACE_TAB_IDS, normalizeLeadWorkspaceTabId } from "@/lib/leadWorkspaceTabsMeta";
+import {
+  LEAD_WORKSPACE_TAB_IDS,
+  normalizeLeadWorkspaceTabId,
+  filterLeadWorkspaceTabsForPlan,
+} from "@/lib/leadWorkspaceTabsMeta";
+import { FEATURES } from "@/constants/features";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import PlanLimitBanner from "@/components/billing/PlanLimitBanner";
 import LeadsWorkspacePanels from "@/components/leads/LeadsWorkspacePanels";
 import DeleteLeadConfirmModal from "@/components/leads/DeleteLeadConfirmModal";
 import { LeadDetailPageSkeleton } from "@/components/ui/ContentSkeletons";
@@ -83,12 +90,19 @@ function LeadWorkspacePageContent() {
   const { isAuthenticated } = useAuthGuard();
   const { token, user: authUser } = useAppSelector((state) => state.auth);
   const userRole = authUser?.role || "agent";
+  const { hasFeature } = useFeatureAccess();
   const roleFilteredTabs = useMemo(() => getLeadWorkspaceTabsForRole(userRole), [userRole]);
-  const allowedWorkspaceTabIds = useMemo(
-    () => new Set(roleFilteredTabs.map((t) => t.id)),
-    [roleFilteredTabs],
+  const planFilteredTabs = useMemo(
+    () => filterLeadWorkspaceTabsForPlan(roleFilteredTabs, hasFeature),
+    [roleFilteredTabs, hasFeature],
   );
-  const defaultWorkspaceTab = roleFilteredTabs[0]?.id || "lead_profile";
+  const allowedWorkspaceTabIds = useMemo(
+    () => new Set(planFilteredTabs.map((t) => t.id)),
+    [planFilteredTabs],
+  );
+  const defaultWorkspaceTab = planFilteredTabs[0]?.id || "lead_profile";
+  const canViewConversation = hasFeature(FEATURES.CRM_LEAD_CONVERSATION);
+  const canViewPropertyMatches = hasFeature(FEATURES.LEADS_INSIGHTS_ADVANCED);
   const params = useParams();
   const pathname = usePathname() || "";
   const router = useRouter();
@@ -218,7 +232,9 @@ function LeadWorkspacePageContent() {
 
   const messagesQuery = useQuery({
     queryKey: ["lead-conversation", token, leadId],
-    enabled: Boolean(token && leadId),
+    enabled: Boolean(
+      token && leadId && canViewConversation && activeTab === "conversation",
+    ),
     queryFn: () => fetchAllLeadConversationMessages({ token, leadId }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,
@@ -239,7 +255,14 @@ function LeadWorkspacePageContent() {
 
   const propertyMatchesQuery = useQuery({
     queryKey: ["lead-property-matches", token, leadId],
-    enabled: Boolean(token && leadId && leadDetailLoaded && activeTab === "property_matches" && !hasInquiredProperty),
+    enabled: Boolean(
+      token &&
+        leadId &&
+        canViewPropertyMatches &&
+        leadDetailLoaded &&
+        activeTab === "property_matches" &&
+        !hasInquiredProperty,
+    ),
     queryFn: () => fetchLeadPropertyMatches({ token, leadId, page: 1, limit: 100 }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,
@@ -248,7 +271,13 @@ function LeadWorkspacePageContent() {
 
   const inquiredPropertyQuery = useQuery({
     queryKey: ["lead-inquired-property", token, leadId],
-    enabled: Boolean(token && leadId && needsSellerLeadFetch && activeTab === "property_matches"),
+    enabled: Boolean(
+      token &&
+        leadId &&
+        canViewPropertyMatches &&
+        needsSellerLeadFetch &&
+        activeTab === "property_matches",
+    ),
     queryFn: () => fetchLeadInquiredProperty({ token, id: leadId }),
     staleTime: LEAD_WORKSPACE_QUERY_STALE_MS,
     refetchOnMount: false,
@@ -270,7 +299,7 @@ function LeadWorkspacePageContent() {
   }, [propertyMatchesQuery.data]);
   const hideConversationTab = useMemo(() => isDirectInquiryLead(leadDetail), [leadDetail]);
   const visibleWorkspaceTabs = useMemo(() => {
-    let tabs = roleFilteredTabs;
+    let tabs = filterLeadWorkspaceTabsForPlan(roleFilteredTabs, hasFeature);
     if (hideConversationTab) {
       tabs = tabs.filter((tab) => tab.id !== "conversation");
     }
@@ -278,21 +307,23 @@ function LeadWorkspacePageContent() {
     return tabs.map((tab) =>
       tab.id === "property_matches" ? { ...tab, label: propertyMatchesLabel } : tab,
     );
-  }, [roleFilteredTabs, hideConversationTab, leadDetail]);
+  }, [roleFilteredTabs, hideConversationTab, leadDetail, hasFeature]);
+
+  const defaultVisibleTab = visibleWorkspaceTabs[0]?.id || defaultWorkspaceTab;
 
   useEffect(() => {
-    if (!hideConversationTab) return;
-    const tabIsConversation = tabFromUrl === "conversation" || activeTab === "conversation";
-    if (!tabIsConversation) return;
-    setActiveTab(defaultWorkspaceTab);
+    const active = tabFromUrl || activeTab;
+    const allowed = new Set(visibleWorkspaceTabs.map((t) => t.id));
+    if (!active || allowed.has(active)) return;
+    setActiveTab(defaultVisibleTab);
     const p = new URLSearchParams(searchParams.toString());
-    p.set("tab", defaultWorkspaceTab);
+    p.set("tab", defaultVisibleTab);
     router.replace(`${pathname}?${p.toString()}`, { scroll: false });
   }, [
-    hideConversationTab,
+    visibleWorkspaceTabs,
     tabFromUrl,
     activeTab,
-    defaultWorkspaceTab,
+    defaultVisibleTab,
     searchParams,
     pathname,
     router,
@@ -547,6 +578,8 @@ function LeadWorkspacePageContent() {
           <ArrowLeft size={14} />
           {backButtonLabel}
         </button>
+
+        <PlanLimitBanner />
 
         {leadDetailQuery.isLoading ? (
           <LeadDetailPageSkeleton />
