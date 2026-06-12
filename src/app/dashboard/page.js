@@ -20,9 +20,13 @@ import { fetchCalendarBookings } from "@/lib/calendarClient";
 import { createInviteLink, fetchInviteConversionRoleTrends } from "@/lib/inviteClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { formatLeadLocationLine, getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
+import PlanLimitBanner from "@/components/billing/PlanLimitBanner";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
 import DashboardTopTables from "@/components/dashboard/DashboardTopTables";
 import DashboardCalendlyButton from "@/components/dashboard/DashboardCalendlyButton";
+import WorkspaceLoader from "@/components/ui/WorkspaceLoader";
 
 const DashboardAnalyticsPanels = dynamic(
   () => import("@/components/dashboard/DashboardAnalyticsPanels"),
@@ -61,6 +65,8 @@ export default function DashboardPage() {
   const businessInfo = useAppSelector((state) => state.profile.businessInfo);
   const profileQuery = useProfileQuery();
   const { isAuthenticated, profile } = useAuthGuard();
+  const { hasFeature } = useFeatureAccess();
+  const canUseReferralInviteLinks = hasFeature(FEATURES.REFERRALS_INVITES);
   const activeUser = profile?.user || profile?.data || user;
 
   const apiUser = profile?.user;
@@ -176,7 +182,7 @@ export default function DashboardPage() {
   const inviteRoleTrendsQuery = useQuery({
     queryKey: ["dashboard-invite-role-trends", token, windowDays],
     // Fix #9 — fire immediately alongside other queries
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canUseReferralInviteLinks,
     queryFn: () => fetchInviteConversionRoleTrends({ token, days: windowDays }),
     staleTime: 60_000,
   });
@@ -397,11 +403,20 @@ export default function DashboardPage() {
     return base;
   }, [analyticsTimeseriesQuery.data]);
 
+  const leadsTableLoading =
+    leadsQuery.isPending || (leadsQuery.isFetching && !Array.isArray(leadsQuery.data?.leads));
+  const profilesTableLoading =
+    profilesTopQuery.isPending ||
+    (profilesTopQuery.isFetching && !Array.isArray(normalizeProfilesPayload(profilesTopQuery.data)));
+  const analyticsPanelsLoading =
+    analyticsTimeseriesQuery.isPending ||
+    (canUseReferralInviteLinks && inviteRoleTrendsQuery.isPending);
+
   // Avoid hydration mismatch: server has no sessionStorage token; client may. First paint must match server.
   if (!isMounted) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10 flex items-center justify-center px-6">
-        <p className="text-sm text-text-muted">Loading workspace…</p>
+      <div className="min-h-screen bg-gradient-to-br from-primary/5 via-white to-primary/10">
+        <WorkspaceLoader label="Loading workspace..." sublabel="Syncing your dashboard data" />
       </div>
     );
   }
@@ -420,6 +435,7 @@ export default function DashboardPage() {
   return (
     <div className="relative z-[1] min-h-screen bg-white">
       <div className="w-full space-y-8 px-4 pb-10 pt-5 sm:px-6 sm:pt-6">
+        <PlanLimitBanner />
         {/* Hero — same two-part card as Settings → Personal information (cover strip + white footer row) */}
         <motion.section
           initial={{ opacity: 0, y: 10 }}
@@ -538,15 +554,17 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowInviteModal(true)}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15"
-              title="Create invite link"
-            >
-              <Link2 size={13} />
-              Create invite
-            </button>
+            {canUseReferralInviteLinks ? (
+              <button
+                type="button"
+                onClick={() => setShowInviteModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15"
+                title="Create invite link"
+              >
+                <Link2 size={13} />
+                Create invite
+              </button>
+            ) : null}
             <div
               role="tablist"
               aria-label="Analytics window"
@@ -594,21 +612,19 @@ export default function DashboardPage() {
           windowDays={analyticsTimeseriesQuery.data?.window_days || windowDays}
           series={chartSeries}
           inviteRoleTrends={inviteRoleTrendsQuery.data}
-          isLoading={
-            analyticsTimeseriesQuery.isLoading ||
-            inviteRoleTrendsQuery.isLoading
-          }
+          showInviteSignups={canUseReferralInviteLinks}
+          isLoading={analyticsPanelsLoading}
           isError={
             analyticsTimeseriesQuery.isError ||
-            inviteRoleTrendsQuery.isError
+            (canUseReferralInviteLinks && inviteRoleTrendsQuery.isError)
           }
         />
 
         <DashboardTopTables
           topLeads={topLeadsRows}
           topProfiles={topProfilesRows}
-          leadsLoading={leadsQuery.isLoading}
-          profilesLoading={profilesTopQuery.isLoading}
+          leadsLoading={leadsTableLoading}
+          profilesLoading={profilesTableLoading}
           leadsError={leadsQuery.isError}
           profilesError={profilesTopQuery.isError}
           onSelectLead={(id) => setSelectedLeadId(String(id))}
@@ -628,7 +644,7 @@ export default function DashboardPage() {
         )}
       </AnimatePresence>
       <AnimatePresence>
-        {showInviteModal ? (
+        {canUseReferralInviteLinks && showInviteModal ? (
           <motion.div
             className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-950/45 px-4 py-6"
             initial={{ opacity: 0 }}

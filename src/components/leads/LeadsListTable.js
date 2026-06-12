@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { Inbox } from "lucide-react";
 import { LeadsPageTableSkeleton } from "@/components/ui/ContentSkeletons";
 import { getLeadMeta, getLeadPropertyTypeDisplay } from "@/lib/leadConversationMeta";
 import { getStatusDisplay } from "@/lib/leadPipelineConfig";
@@ -67,7 +68,17 @@ export default function LeadsListTable({
       ) : leadsQuery.isError ? (
         <div className="p-4 text-sm text-red-600">Failed to load leads.</div>
       ) : filteredConversations.length === 0 ? (
-        <div className="p-4 text-sm text-text-muted">No leads found.</div>
+        <div className="flex flex-1 items-center justify-center p-6">
+          <div className="w-full max-w-md rounded-xl border border-border/70 bg-background-light/40 px-6 py-8 text-center shadow-sm">
+            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <Inbox size={18} />
+            </span>
+            <p className="text-sm font-semibold text-text-heading">No leads in this pipeline yet</p>
+            <p className="mt-1 text-xs text-text-muted">
+              New captured leads will appear here as they enter this stage.
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="w-full flex-1 overflow-x-auto">
           <table className={`w-full table-auto ${tableMinClass}`}>

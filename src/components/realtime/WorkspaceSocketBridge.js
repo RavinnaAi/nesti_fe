@@ -8,11 +8,7 @@ import { useWorkspaceSocket } from "@/hooks/useWorkspaceSocket";
 export default function WorkspaceSocketBridge({ children }) {
   const token = useAppSelector((s) => s.auth.token);
   const queryClient = useQueryClient();
-  const profileQuery = useProfileQuery();
-  const profileComplete =
-    profileQuery.isSuccess &&
-    profileQuery.data?.profile_setup?.is_complete !== false;
-
-  useWorkspaceSocket(profileComplete ? token : null, queryClient);
+  useProfileQuery();
+  useWorkspaceSocket(token, queryClient);
   return children;
 }

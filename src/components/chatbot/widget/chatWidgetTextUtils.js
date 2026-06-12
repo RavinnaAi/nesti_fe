@@ -17,20 +17,36 @@ export const formatPrice = (value) => {
 };
 
 export const buildPropertyPickMessage = (property, context = "buy") => {
-  const title = String(property?.title || "").trim();
-  const place = String(property?.address || property?.location || "").trim();
-  const price = property?.price != null ? formatPrice(property.price) || `$${property.price}` : "";
+  const matchedLead = property?.matched_lead ?? property?.matchedLead;
+  const sellerName =
+    String(property?.matched_contact?.full_name || property?.matched_contact?.fullName || "").trim() ||
+    String(property?.title || "").split("·")[0]?.trim() ||
+    "";
+  const title = sellerName || String(property?.title || "").trim();
+  const place = String(
+    matchedLead?.property_location ||
+      matchedLead?.propertyLocation ||
+      property?.address ||
+      property?.location ||
+      "",
+  ).trim();
+  const budgetRaw = matchedLead?.property_budget ?? matchedLead?.propertyBudget;
+  const price =
+    budgetRaw != null && String(budgetRaw).trim() !== ""
+      ? String(budgetRaw).trim()
+      : property?.price != null
+        ? formatPrice(property.price) || `$${property.price}`
+        : "";
   const summary = [title, place, price].filter(Boolean).join(" • ");
-  const refId = property?.id ? ` (ref: ${property.id})` : "";
 
   if (context === "sell") {
     return summary
-      ? `I selected this comparable: ${summary}${refId}. Please guide me on pricing strategy and next steps.`
-      : `I selected this comparable${refId}. Please guide me on pricing strategy and next steps.`;
+      ? `I selected this comparable: ${summary}. Please guide me on pricing strategy and next steps.`
+      : "I selected this comparable. Please guide me on pricing strategy and next steps.";
   }
   return summary
-    ? `I selected this property: ${summary}${refId}. Please guide me on viewing and next steps.`
-    : `I selected this property${refId}. Please guide me on viewing and next steps.`;
+    ? `I selected this property: ${summary}. Please guide me on viewing and next steps.`
+    : "I selected this property. Please guide me on viewing and next steps.";
 };
 
 const isBulletLine = (trimmed) => Boolean(trimmed && BULLET_LINE_RE.test(trimmed));

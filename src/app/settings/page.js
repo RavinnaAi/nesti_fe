@@ -13,6 +13,8 @@ import BusinessInformation from "@/components/settings/BusinessInformation";
 import IcpIntegrationCard from "@/components/settings/IcpIntegrationCard";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useProfileQuery } from "@/hooks/useAuthApi";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 import { toast } from "react-toastify";
 import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
 import { useAppDispatch } from "@/store";
@@ -54,6 +56,7 @@ function SettingsPageContent() {
   const { isAuthenticated } = useAuthGuard();
   const dispatch = useAppDispatch();
   const profileQuery = useProfileQuery();
+  const { hasFeature } = useFeatureAccess();
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
@@ -166,7 +169,9 @@ function SettingsPageContent() {
     const expired = searchParams.get("expired");
 
     if (tab === "appointments") {
-      router.replace("/calendar");
+      router.replace(
+        hasFeature(FEATURES.CALENDAR_INTEGRATION) ? "/calendar" : "/settings?tab=subscription",
+      );
       return;
     }
 
@@ -186,7 +191,7 @@ function SettingsPageContent() {
     } else if (expired === "1") {
       toast.warning("Your trial has expired. Please subscribe to continue.");
     }
-  }, [searchParams, router]);
+  }, [searchParams, router, hasFeature]);
 
   // Keep settings forms in sync with `/auth/profile`.
   // PersonalInfo/BusinessInformation read from `state.profile.*` (profileSlice),

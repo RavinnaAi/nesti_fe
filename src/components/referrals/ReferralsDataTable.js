@@ -381,7 +381,17 @@ export default function ReferralsDataTable({
       ) : isError ? (
         <div className="px-3 py-4 text-xs text-red-700">{errorMessage || "Could not load referrals."}</div>
       ) : rows.length === 0 ? (
-        <div className="px-3 py-4 text-xs text-text-muted">{emptyMessage}</div>
+        <div className="flex flex-1 items-center justify-center px-3 py-8">
+          <div className="w-full max-w-md rounded-xl border border-border/70 bg-background-light/40 px-6 py-8 text-center shadow-sm">
+            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+              <UserRound size={18} />
+            </span>
+            <p className="text-sm font-semibold text-text-heading">{emptyMessage}</p>
+            <p className="mt-1 text-xs text-text-muted">
+              Referral activity will appear here once records are created.
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="w-full flex-1 overflow-x-auto">
           <table className="w-full max-w-full table-auto border-collapse text-left text-[11px] leading-tight">

@@ -1,11 +1,18 @@
 /** Remove property listing prose when match cards render separately in the chat widget. */
 
+function isLeadRecapBullet(value) {
+  const s = String(value || "").trim();
+  return /^\s*[-*•]\s+\*\*[^*]+:\*\*/.test(s);
+}
+
 function isListingBulletLine(value) {
   const s = String(value || "")
     .trim()
     .replace(/^_+/, "")
     .trim();
   if (!/^[-*•]\s+/.test(s)) return false;
+  // Keep structured lead recap rows (e.g. "- **Budget:** 400k_700k").
+  if (isLeadRecapBullet(s)) return false;
   const lower = s.toLowerCase();
   return (
     /\$[\d,]/.test(s) ||
@@ -20,11 +27,6 @@ function isNumberedPropertyLine(value) {
   if (!/^\d+\.\s+/.test(s)) return false;
   const lower = s.toLowerCase();
   return /\b(home|house|property|condo|townhouse|listing|lahore|family)\b/i.test(lower);
-}
-
-function isLeadRecapBullet(value) {
-  const s = String(value || "").trim();
-  return /^\s*[-*•]\s+\*\*[^*]+:\*\*/.test(s);
 }
 
 function isPropertyMatchIntroLine(value) {
@@ -85,7 +87,7 @@ export function stripPropertyListingFromReply(text) {
       continue;
     }
 
-    if (isListingBulletLine(trimmed) || isLeadRecapBullet(trimmed)) {
+    if (isListingBulletLine(trimmed)) {
       i += 1;
       continue;
     }

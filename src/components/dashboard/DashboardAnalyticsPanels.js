@@ -57,6 +57,7 @@ export default function DashboardAnalyticsPanels({
   inviteRoleTrends,
   isLoading,
   isError,
+  showInviteSignups = true,
 }) {
   const nurtureEmailsTotal = useMemo(
     () => series.reduce((sum, row) => sum + (Number(row.nurture_email_sent) || 0), 0),
@@ -171,6 +172,7 @@ export default function DashboardAnalyticsPanels({
         </div>
       </div>
 
+      {showInviteSignups ? (
       <div className="grid grid-cols-1 gap-4">
         <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
           <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
@@ -222,6 +224,7 @@ export default function DashboardAnalyticsPanels({
           </div>
         </div>
       </div>
+      ) : null}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
         <div className="min-w-0 flex-1 rounded-xl border border-border bg-white p-4 shadow-sm">

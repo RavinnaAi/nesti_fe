@@ -29,7 +29,13 @@ import { fetchAllLeadConversationMessages } from "@/lib/leadConversationClient";
 import { cancelCalendlyAppointment } from "@/lib/calendarClient";
 import { leadApiRowToConversationShape } from "@/lib/leadAdapters";
 import { getLeadWorkspaceTabsForRole } from "@/components/leads/LeadsWorkspaceTabs";
-import { roleShowsLeadsListAgentColumns } from "@/lib/leadWorkspaceTabsMeta";
+import {
+  roleShowsLeadsListAgentColumns,
+  filterLeadWorkspaceTabsForPlan,
+} from "@/lib/leadWorkspaceTabsMeta";
+import { FEATURES } from "@/constants/features";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import PlanLimitBanner from "@/components/billing/PlanLimitBanner";
 import LeadsListHeader from "@/components/leads/LeadsListHeader";
 import LeadsListFiltersBar from "@/components/leads/LeadsListFiltersBar";
 import LeadsListTable from "@/components/leads/LeadsListTable";
@@ -94,7 +100,10 @@ function LeadsPageContent() {
   const router = useRouter();
   const { token, user: authUser } = useAppSelector((state) => state.auth);
   const userRole = authUser?.role || "agent";
+  const { hasFeature } = useFeatureAccess();
   const roleFilteredTabs = useMemo(() => getLeadWorkspaceTabsForRole(userRole), [userRole]);
+  const canViewConversation = hasFeature(FEATURES.CRM_LEAD_CONVERSATION);
+  const canViewPropertyMatches = hasFeature(FEATURES.LEADS_INSIGHTS_ADVANCED);
   const showPropertyMatchesColumn = false;
   const showAgentLeadColumns = roleShowsLeadsListAgentColumns(userRole);
   const showMortgageLeadColumns = String(userRole || "")
@@ -311,7 +320,9 @@ function LeadsPageContent() {
 
   const messagesQuery = useQuery({
     queryKey: ["lead-conversation", token, selectedLeadId],
-    enabled: Boolean(token && selectedLeadId),
+    enabled: Boolean(
+      token && selectedLeadId && canViewConversation && activeTab === "conversation",
+    ),
     queryFn: () =>
       fetchAllLeadConversationMessages({ token, leadId: selectedLeadId }),
   });
@@ -327,6 +338,7 @@ function LeadsPageContent() {
     enabled: Boolean(
       token &&
         selectedLeadId &&
+        canViewPropertyMatches &&
         leadDetailLoaded &&
         activeTab === "property_matches" &&
         !hasInquiredProperty
@@ -338,7 +350,11 @@ function LeadsPageContent() {
   const inquiredPropertyQuery = useQuery({
     queryKey: ["lead-inquired-property", token, selectedLeadId],
     enabled: Boolean(
-      token && selectedLeadId && needsSellerLeadFetch && activeTab === "property_matches"
+      token &&
+        selectedLeadId &&
+        canViewPropertyMatches &&
+        needsSellerLeadFetch &&
+        activeTab === "property_matches"
     ),
     queryFn: () => fetchLeadInquiredProperty({ token, id: selectedLeadId }),
   });
@@ -359,7 +375,7 @@ function LeadsPageContent() {
 
   const hideConversationTab = useMemo(() => isDirectInquiryLead(leadDetail), [leadDetail]);
   const visibleWorkspaceTabs = useMemo(() => {
-    let tabs = roleFilteredTabs;
+    let tabs = filterLeadWorkspaceTabsForPlan(roleFilteredTabs, hasFeature);
     if (hideConversationTab) {
       tabs = tabs.filter((tab) => tab.id !== "conversation");
     }
@@ -367,13 +383,13 @@ function LeadsPageContent() {
     return tabs.map((tab) =>
       tab.id === "property_matches" ? { ...tab, label: propertyMatchesLabel } : tab,
     );
-  }, [roleFilteredTabs, hideConversationTab, leadDetail]);
+  }, [roleFilteredTabs, hideConversationTab, leadDetail, hasFeature]);
 
   useEffect(() => {
-    if (!hideConversationTab) return;
-    if (activeTab !== "conversation") return;
-    setActiveTab("lead_profile");
-  }, [hideConversationTab, activeTab]);
+    const allowed = new Set(visibleWorkspaceTabs.map((t) => t.id));
+    if (!activeTab || allowed.has(activeTab)) return;
+    setActiveTab(visibleWorkspaceTabs[0]?.id || "lead_profile");
+  }, [visibleWorkspaceTabs, activeTab]);
 
   const messageMeta = useMemo(() => {
     const latestWithMeta = [...messages].reverse().find((msg) => {
@@ -654,6 +670,7 @@ function LeadsPageContent() {
       }`}
     >
       <div className="flex h-full w-full flex-col gap-5 px-5 py-5 md:px-6 md:py-6">
+        <PlanLimitBanner />
         <LeadsListHeader filterLabel={filterLabel}>
           {!isReferralsPipeline ? (
             <LeadsListFiltersBar

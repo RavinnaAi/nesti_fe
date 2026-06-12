@@ -53,7 +53,7 @@ export default function ChatbotByTokenPage() {
   }, [token]);
 
   if (status === "loading") {
-    return <div className="min-h-screen bg-background" />;
+    return null;
   }
 
   if (status === "error") {

@@ -493,7 +493,17 @@ export default function LeadsDetailsTab({
 
         </>
       ) : (
-        <div className="text-sm text-text-muted">Choose a lead to view details.</div>
+        <div className="flex min-h-[220px] items-center justify-center px-3 py-6">
+          <div className="w-full max-w-sm rounded-xl border border-border/70 bg-background-light/40 px-5 py-6 text-center shadow-sm">
+            <span className="mx-auto mb-2.5 grid h-9 w-9 place-items-center rounded-lg bg-primary/10 text-primary">
+              <Info size={16} />
+            </span>
+            <p className="text-sm font-semibold text-text-heading">Choose a lead to view details</p>
+            <p className="mt-1 text-xs text-text-muted">
+              Pick a lead to see qualification, property context, and conversion signals.
+            </p>
+          </div>
+        </div>
       )}
 
       {previewImage && typeof document !== "undefined"

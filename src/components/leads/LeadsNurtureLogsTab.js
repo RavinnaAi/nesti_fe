@@ -89,17 +89,18 @@ export default function LeadsNurtureLogsTab({
         {loading ? (
           <div className="p-3">
             <NurtureLogsListSkeleton rows={6} />
-            <p className="mt-4 flex items-center justify-center gap-2 text-xs font-medium text-primary">
-              <span
-                className="inline-block size-4 shrink-0 animate-spin rounded-full border-2 border-primary/30 border-t-primary"
-                aria-hidden
-              />
-              Loading nurture logs…
-            </p>
           </div>
         ) : !logs.length ? (
-          <div className="p-3">
-            <p className="text-sm text-text-muted text-center py-8">No nurture emails logged yet.</p>
+          <div className="flex min-h-[250px] items-center justify-center p-4">
+            <div className="w-full max-w-sm rounded-xl border border-border/70 bg-white/80 px-6 py-7 text-center shadow-sm">
+              <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                <Mail size={18} />
+              </span>
+              <p className="text-sm font-semibold text-text-heading">No nurture emails logged yet</p>
+              <p className="mt-1 text-xs text-text-muted">
+                Sent nurture emails will appear here with delivery status and details.
+              </p>
+            </div>
           </div>
         ) : (
           <table className="w-full table-auto border-collapse text-left text-[11px] leading-tight">

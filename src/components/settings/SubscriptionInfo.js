@@ -20,6 +20,7 @@ import {
   useSubscriptionMe,
 } from "@/hooks/useBillingApi";
 import ThankYouModal from "@/components/checkout/ThankYouModal";
+import { broadcastSubscriptionUpdated } from "@/lib/billingProfileRefresh";
 import PricingPlanCard from "@/components/billing/PricingPlanCard";
 import SubscribeCheckoutModal from "@/components/billing/SubscribeCheckoutModal";
 import SubscriptionBillingPanel from "@/components/billing/SubscriptionBillingPanel";
@@ -68,6 +69,7 @@ export default function SubscriptionInfo() {
         await refetchSubscription();
         if (res.success && res.user) {
           dispatch(updateProfile(res.user));
+          broadcastSubscriptionUpdated();
         }
       } catch (error) {
         console.error("Error refreshing profile after checkout:", error);

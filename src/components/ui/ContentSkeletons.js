@@ -157,21 +157,51 @@ export function ReferralsTableSkeleton({ rows = 8, showConsultColumn = true }) {
 
 export function LeadDetailPageSkeleton() {
   return (
-    <div className="space-y-4" aria-busy="true" aria-label="Loading lead">
-      <SkeletonBlock className="h-10 w-full max-w-md rounded-xl" />
-      <div className="rounded-xl border border-border bg-white p-4 shadow-sm space-y-4">
-        <div className="flex flex-wrap gap-4">
-          <SkeletonBlock className="h-12 w-12 rounded-full shrink-0" />
-          <div className="space-y-2 flex-1 min-w-0">
-            <SkeletonBlock className="h-5 w-48 max-w-full" />
-            <SkeletonBlock className="h-4 w-64 max-w-full" />
-            <SkeletonBlock className="h-3 w-40 max-w-full" />
+    <div className="space-y-5" aria-busy="true" aria-label="Loading lead workspace">
+      <div className="rounded-xl border border-border bg-white p-2 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {Array.from({ length: 7 }).map((_, i) => (
+            <SkeletonBlock key={i} className="h-8 w-24 rounded-md" />
+          ))}
+          <div className="ml-auto">
+            <SkeletonBlock className="h-8 w-20 rounded-md" />
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <SkeletonBlock key={i} className="h-16 w-full rounded-lg" />
-          ))}
+      </div>
+
+      <div className="rounded-xl border border-border bg-white p-4 shadow-sm space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <SkeletonBlock className="h-7 w-28 rounded-md" />
+          <SkeletonBlock className="h-7 w-32 rounded-md" />
+        </div>
+
+        <div className="rounded-md border border-border bg-white p-4 space-y-3">
+          <SkeletonBlock className="h-4 w-40" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <SkeletonBlock key={`u-${i}`} className="h-14 w-full rounded-md" />
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-md border border-border bg-white p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <SkeletonBlock className="h-4 w-36" />
+            <SkeletonBlock className="h-9 w-56 rounded-lg" />
+          </div>
+          <SkeletonBlock className="h-3.5 w-4/5" />
+        </div>
+
+        <div className="rounded-md border border-border bg-white p-4 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <SkeletonBlock className="h-4 w-32" />
+            <SkeletonBlock className="h-4 w-28" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {Array.from({ length: 9 }).map((_, i) => (
+              <SkeletonBlock key={`c-${i}`} className="h-14 w-full rounded-md" />
+            ))}
+          </div>
         </div>
       </div>
     </div>

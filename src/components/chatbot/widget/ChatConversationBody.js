@@ -4,14 +4,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 import QuickReplyButtons from "@/components/chatbot/QuickReplyButtons";
 import LeadProfileUserBubble from "@/components/chatbot/widget/LeadProfileUserBubble";
+import ChatPropertyMatchCards from "@/components/chatbot/widget/ChatPropertyMatchCards";
 import {
-  buildPropertyPickMessage,
   dedupeLawyerAssistantProse,
-  formatPrice,
   formatTime,
   renderMessageSegments,
 } from "@/components/chatbot/widget/chatWidgetTextUtils";
 import { parseInlineMarkdownLinks } from "@/lib/chatMarkdown";
+import {
+  getChatMatchBedsBaths,
+  getChatMatchBudgetLabel,
+  getChatMatchLocation,
+  getChatMatchPartyName,
+  getChatMatchType,
+} from "@/lib/chatPropertyMatchDisplay";
 
 export default function ChatConversationBody({
   messages,
@@ -33,13 +39,23 @@ export default function ChatConversationBody({
       <AnimatePresence initial={false}>
         {messages.map((msg, idx) => {
           const isUser = msg.role === "user";
+          const hasPropertyMatchCards =
+            !isUser &&
+            Array.isArray(msg.propertyMatches) &&
+            (msg.propertyMatches.length > 0 || msg.propertyMatchesEmpty);
+          const userSelectedProperty =
+            isUser && msg.selectedProperty && typeof msg.selectedProperty === "object"
+              ? msg.selectedProperty
+              : null;
           return (
             <motion.div
               key={`${msg.role}-${idx}`}
               initial={{ opacity: 0, y: 10, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               transition={{ duration: 0.3 }}
-              className={`flex ${isUser ? "justify-end" : "justify-start"} items-end gap-2`}
+              className={`flex ${isUser ? "justify-end" : "justify-start"} items-end gap-2 ${
+                hasPropertyMatchCards ? "w-full" : ""
+              }`}
             >
               {!isUser && showHostAvatar ? (
                 <div
@@ -62,12 +78,14 @@ export default function ChatConversationBody({
               ) : null}
               <div
                 className={`${
-                  isUser && msg.leadProfilePreview
-                    ? "max-w-[min(92%,21rem)]"
-                    : resolvedRole === "lawyer" && !isUser
-                      ? "max-w-[min(96%,24rem)]"
-                      : "max-w-[85%]"
-                } rounded-2xl px-4 py-2.5 shadow-sm relative ${
+                  hasPropertyMatchCards
+                    ? "w-full max-w-full flex-1"
+                    : isUser && msg.leadProfilePreview
+                      ? "max-w-[min(92%,21rem)]"
+                      : resolvedRole === "lawyer" && !isUser
+                        ? "max-w-[min(96%,24rem)]"
+                        : "max-w-[85%]"
+                } rounded-2xl px-4 py-2.5 min-h-[3rem] shadow-sm relative ${
                   isUser ? `${roleUi.accentBg || "bg-primary"} text-white` : "bg-white border border-border text-text-heading"
                 }`}
               >
@@ -82,11 +100,34 @@ export default function ChatConversationBody({
                       headline={msg.leadProfilePreview.headline}
                       paragraphs={msg.leadProfilePreview.paragraphs}
                     />
-                  ) : !(
-                      !isUser &&
-                      Array.isArray(msg.propertyMatches) &&
-                      msg.propertyMatches.length > 0
-                    ) ? (
+                  ) : userSelectedProperty ? (
+                    <div className="space-y-1.5 rounded-xl border border-white/25 bg-white/10 p-3">
+                      <p className="text-[9px] font-semibold uppercase tracking-wide text-white/85">Selected property</p>
+                      <div className="flex items-start justify-between gap-2">
+                        <p className="min-w-0 flex-1 text-[12px] font-semibold leading-snug text-white">
+                          {getChatMatchPartyName(userSelectedProperty) || "Property"}
+                        </p>
+                        {getChatMatchBudgetLabel(userSelectedProperty) ? (
+                          <span className="shrink-0 text-[11px] font-bold text-white">
+                            {getChatMatchBudgetLabel(userSelectedProperty)}
+                          </span>
+                        ) : null}
+                      </div>
+                      {getChatMatchLocation(userSelectedProperty) ? (
+                        <p className="text-[10px] text-white/90">{getChatMatchLocation(userSelectedProperty)}</p>
+                      ) : null}
+                      {(() => {
+                        const detailLine = [
+                          getChatMatchType(userSelectedProperty),
+                          getChatMatchBedsBaths(userSelectedProperty),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ");
+                        if (!detailLine) return null;
+                        return <p className="text-[10px] text-white/90">{detailLine}</p>;
+                      })()}
+                    </div>
+                  ) : !hasPropertyMatchCards ? (
                     renderMessageSegments(
                       !isUser && resolvedRole === "lawyer"
                         ? dedupeLawyerAssistantProse(msg.content ?? "")
@@ -98,77 +139,16 @@ export default function ChatConversationBody({
                     )
                   ) : null}
                 </div>
-                {!isUser && Array.isArray(msg.propertyMatches) && msg.propertyMatches.length > 0 ? (
-                  <div className="mt-3 border-t border-border/50 pt-3">
-                    <p className="mb-2.5 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-                      {msg.propertyMatchesContext === "sell" ? "Comparable properties" : "Matching properties"}
-                    </p>
-                    <ul className="space-y-2">
-                      {msg.propertyMatches.map((p, pIdx) => {
-                        const reasons = Array.isArray(p?.match_reasons)
-                          ? p.match_reasons
-                          : Array.isArray(p?.reasons_for_matching)
-                            ? p.reasons_for_matching
-                            : [];
-                        const title = p?.title || "Property";
-                        const location = p?.address || p?.location || "";
-                        const showTypeInMeta =
-                          p?.property_type && !String(title).toLowerCase().includes(String(p.property_type).toLowerCase());
-                        const meta = [location, showTypeInMeta ? p.property_type : ""].filter(Boolean).join(" · ");
-                        const priceLabel =
-                          p?.price != null ? formatPrice(p.price) || `$${p.price}` : null;
-
-                        return (
-                          <li
-                            key={`${p?.id || "pm"}-${pIdx}`}
-                            className="rounded-xl border border-primary/10 bg-primary/[0.03] p-3"
-                          >
-                            <div className="flex items-start justify-between gap-3">
-                              <h4 className="min-w-0 text-[12px] font-semibold leading-snug text-text-heading line-clamp-2">
-                                {title}
-                              </h4>
-                              {priceLabel ? (
-                                <span className="shrink-0 text-[12px] font-bold text-primary">{priceLabel}</span>
-                              ) : null}
-                            </div>
-                            {meta ? (
-                              <p className="mt-1 text-[10px] text-text-muted line-clamp-1">{meta}</p>
-                            ) : null}
-                            {reasons.length ? (
-                              <p className="mt-1.5 text-[10px] font-medium text-primary/75">
-                                {reasons.slice(0, 2).join(" · ")}
-                              </p>
-                            ) : null}
-                            {p?.listing_url ? (
-                              <a
-                                href={p.listing_url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="mt-2 inline-block text-[10px] font-semibold text-primary underline-offset-2 hover:underline"
-                              >
-                                View listing
-                              </a>
-                            ) : null}
-                            <button
-                              type="button"
-                              onClick={() => {
-                                if (typeof onPropertyMatchSelect === "function") {
-                                  onPropertyMatchSelect(p);
-                                }
-                                handleSend(buildPropertyPickMessage(p, msg.propertyMatchesContext || "buy"));
-                              }}
-                              className="mt-2 w-full rounded-lg bg-primary px-3 py-2 text-[10px] font-semibold text-white shadow-sm transition hover:bg-primary/90 active:scale-[0.98]"
-                            >
-                              Select property
-                            </button>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                    {msg.propertyMatchesNote ? (
-                      <p className="mt-2 text-[10px] text-text-muted">{msg.propertyMatchesNote}</p>
-                    ) : null}
-                  </div>
+                {hasPropertyMatchCards ? (
+                  <ChatPropertyMatchCards
+                    matches={msg.propertyMatches}
+                    context={msg.propertyMatchesContext || "buy"}
+                    displayMode={msg.propertyMatchesDisplayMode || "matches"}
+                    note={msg.propertyMatchesNote}
+                    empty={Boolean(msg.propertyMatchesEmpty)}
+                    onPropertyMatchSelect={onPropertyMatchSelect}
+                    onSelectProperty={handleSend}
+                  />
                 ) : null}
 
                 {!isUser && idx === messages.length - 1 && quickReplies.length > 0 && (

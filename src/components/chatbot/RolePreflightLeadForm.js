@@ -18,6 +18,7 @@ const labelCls = "text-[11px] font-semibold text-text-heading";
 const fieldStackCls = "flex flex-col gap-1 min-w-0";
 const pairGridCls = "col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2.5";
 const infoSectionStackCls = "col-span-2 grid grid-cols-1 gap-y-2.5";
+const lawyerContactStackCls = "col-span-2 flex flex-col gap-y-2.5";
 
 const SELECT_EMPTY = SELECT_EMPTY_OPTION;
 const BEST_TIME_OPTIONS = [
@@ -272,7 +273,7 @@ export default function RolePreflightLeadForm({
   );
 
   const lawyerStep0 = (
-    <div className={infoSectionStackCls}>
+    <div className={lawyerContactStackCls}>
       <div className={sectionCls}>Contact information</div>
       <Field label={<RequiredLabel text="Full name" />}>
         <input

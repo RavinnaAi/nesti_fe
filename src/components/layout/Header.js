@@ -21,12 +21,17 @@ import { useAppDispatch, useAppSelector } from "@/store";
 import { logoutAndClearAll } from "@/store/actions";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import { PUBLIC_HOME_PATH, navigateToPublicHome } from "@/lib/workspaceNavigation";
+import { useFeatureAccess } from "@/hooks/useFeatureAccess";
+import { FEATURES } from "@/constants/features";
 
 export default function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const dispatch = useAppDispatch();
   const { user, token } = useAppSelector((state) => state.auth);
+  const { hasFeature } = useFeatureAccess();
+  const showPublicProfile = hasFeature(FEATURES.PUBLIC_PROFILE);
+  const showCalendar = hasFeature(FEATURES.CALENDAR_INTEGRATION);
   const personalInfo = useAppSelector((state) => state.profile?.personalInfo);
   const businessInfo = useAppSelector((state) => state.profile?.businessInfo);
   const [isMounted, setIsMounted] = useState(false);
@@ -155,7 +160,7 @@ export default function Header() {
           </button>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:block">
+          <div className="hidden lg:block">
             <div className="flex items-center gap-1 rounded-2xl border border-border/70 bg-background-light/45 p-1">
               {NAVIGATION_ITEMS.map((item) => {
                 const isActive = pathname === item.href;
@@ -177,7 +182,7 @@ export default function Header() {
           </div>
 
           {/* Desktop Right Section */}
-          <div className="hidden items-center gap-2 md:flex">
+          <div className="hidden items-center gap-2 lg:flex">
             {!isAuthenticated ? (
               <>
                 <Link
@@ -276,26 +281,30 @@ export default function Header() {
                           </span>
                           <span className="font-medium">Settings</span>
                         </Link>
-                        <Link
-                          href="/dashboard/public-profile"
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <Globe2 size={15} />
-                          </span>
-                          <span className="font-medium">Web Page</span>
-                        </Link>
-                        <Link
-                          href="/calendar"
-                          className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
-                          onClick={() => setIsProfileOpen(false)}
-                        >
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                            <CalendarDays size={15} />
-                          </span>
-                          <span className="font-medium">Calendar</span>
-                        </Link>
+                        {showPublicProfile ? (
+                          <Link
+                            href="/dashboard/public-profile"
+                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <Globe2 size={15} />
+                            </span>
+                            <span className="font-medium">Web Page</span>
+                          </Link>
+                        ) : null}
+                        {showCalendar ? (
+                          <Link
+                            href="/calendar"
+                            className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm text-text-heading transition-colors hover:bg-primary/5"
+                            onClick={() => setIsProfileOpen(false)}
+                          >
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <CalendarDays size={15} />
+                            </span>
+                            <span className="font-medium">Calendar</span>
+                          </Link>
+                        ) : null}
                         <div className="my-1 h-px bg-border" role="separator" />
                         <button
                           onClick={handleLogout}
@@ -315,8 +324,8 @@ export default function Header() {
             )}
           </div>
 
-          {/* Mobile menu button */}
-          <div className="md:hidden flex items-center gap-2">
+          {/* Mobile / tablet menu button */}
+          <div className="flex items-center gap-2 lg:hidden">
             {isAuthenticated ? <NotificationsBell /> : null}
             <motion.button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -383,7 +392,7 @@ export default function Header() {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.3 }}
-              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] md:hidden"
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] lg:hidden"
               onClick={() => setIsMenuOpen(false)}
             />
 
@@ -397,7 +406,7 @@ export default function Header() {
                 damping: 25,
                 stiffness: 200,
               }}
-              className="fixed inset-y-0 left-0 z-[70] h-dvh w-[min(22rem,calc(100vw-3rem))] overflow-y-auto overflow-x-hidden bg-white shadow-2xl shadow-slate-900/20 [scrollbar-width:none] [-ms-overflow-style:none] md:hidden [&::-webkit-scrollbar]:hidden"
+              className="fixed inset-y-0 left-0 z-[70] h-dvh w-[min(22rem,calc(100vw-3rem))] overflow-y-auto overflow-x-hidden bg-white shadow-2xl shadow-slate-900/20 [scrollbar-width:none] [-ms-overflow-style:none] lg:hidden [&::-webkit-scrollbar]:hidden"
             >
               {/* Menu header */}
               <div className="flex items-center justify-between gap-3 border-b border-border bg-gradient-to-r from-primary/5 to-transparent px-4 py-3.5">
@@ -561,22 +570,26 @@ export default function Header() {
                         <Settings size={18} />
                         Settings
                       </Link>
-                      <Link
-                        href="/dashboard/public-profile"
-                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <Globe2 size={18} />
-                        Web Page
-                      </Link>
-                      <Link
-                        href="/calendar"
-                        className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        <CalendarDays size={18} />
-                        Calendar
-                      </Link>
+                      {showPublicProfile ? (
+                        <Link
+                          href="/dashboard/public-profile"
+                          className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <Globe2 size={18} />
+                          Web Page
+                        </Link>
+                      ) : null}
+                      {showCalendar ? (
+                        <Link
+                          href="/calendar"
+                          className="flex items-center gap-2 px-4 py-3 rounded-md text-base font-medium text-text-heading hover:bg-primary/10 transition-colors"
+                          onClick={() => setIsMenuOpen(false)}
+                        >
+                          <CalendarDays size={18} />
+                          Calendar
+                        </Link>
+                      ) : null}
                       <button
                         onClick={() => {
                           setIsMenuOpen(false);

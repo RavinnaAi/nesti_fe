@@ -2,7 +2,7 @@
 
 import { Children, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ArrowRight, ExternalLink } from "lucide-react";
+import { ArrowRight, ExternalLink, Inbox } from "lucide-react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   fetchNurtureLogs,
@@ -459,8 +459,16 @@ export default function ReferralLeadWorkspace({
 
   if (!lead) {
     return (
-      <div className="rounded-xl border border-border bg-white p-6 text-sm text-text-muted shadow-sm">
-        No lead data for this referral.
+      <div className="rounded-xl border border-border bg-white p-6 shadow-sm">
+        <div className="mx-auto flex max-w-md flex-col items-center rounded-xl border border-border/70 bg-background-light/35 px-6 py-8 text-center">
+          <span className="mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <Inbox size={18} />
+          </span>
+          <p className="text-sm font-semibold text-text-heading">No lead data for this referral</p>
+          <p className="mt-1 text-xs text-text-muted">
+            This referral does not have a linked lead record yet, or it was removed.
+          </p>
+        </div>
       </div>
     );
   }

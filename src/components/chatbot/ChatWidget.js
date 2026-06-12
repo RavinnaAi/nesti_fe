@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { createPortal } from "react-dom";
+import Image from "next/image";
 import { MessageCircle } from "lucide-react";
 import {
   clearChatSession,
@@ -11,7 +12,9 @@ import {
   getOrCreateSessionId,
   getVisitorId,
   postChatScorePreview,
+  persistChatSessionId,
   resetChatIdentity,
+  resolveChatSessionId,
   selectChatPropertyMatch,
   sendChatMessage,
   setVisitorId,
@@ -48,7 +51,13 @@ import {
   missingDraftFields,
 } from "@/components/chatbot/widget/roleChatStrategy";
 import { attachSellerImagesToAgentFormContact } from "@/components/chatbot/widget/agentSellerImageUpload";
-import { isPropertyMatchesRequestMessage } from "@/lib/chatPropertyMatchesIntent";
+import {
+  assistantAnnouncingOptionCards,
+  assistantOfferedAvailableOptions,
+  isAvailableOptionsConsentMessage,
+  isAvailableOptionsRequestMessage,
+  isPropertyMatchesRequestMessage,
+} from "@/lib/chatPropertyMatchesIntent";
 import {
   assistantMessageHasPropertyMatches,
   stripPropertyListingFromReply,
@@ -90,7 +99,6 @@ const isDetailsConfirmationMessage = (text) => {
     /\b(spot\s+on|exactly|precisely)\b/.test(t)
   );
 };
-
 
 export default function ChatWidget({
   embedToken,
@@ -134,6 +142,7 @@ export default function ChatWidget({
       ? String(initialGreeting).trim()
       : roleUi.defaultGreeting;
   const effectiveLauncherLabel = launcherLabel ?? roleUi.launcherAriaLabel;
+  const launcherPillText = `Chat with ${roleBadgeLabel}`;
   const useAgentLeadForm = resolvedRole === "agent";
   const useRolePreflight = resolvedRole === "lawyer" || resolvedRole === "mortgage_broker";
 
@@ -155,6 +164,7 @@ export default function ChatWidget({
   const messagesEndRef = useRef(null);
   const lastPropertyMatchesSignatureRef = useRef("");
   const shouldFetchMatchesOnNextAssistantReplyRef = useRef(false);
+  const pendingOptionsOfferRef = useRef(false);
   const lastOutboundUserTextRef = useRef("");
   const latestCalendlyLinkRef = useRef("");
   const sessionHistoryLoadedRef = useRef(false);
@@ -192,6 +202,13 @@ export default function ChatWidget({
   const [hostAvatarBroken, setHostAvatarBroken] = useState(false);
   const trimmedAvatarUrl = hostAvatarUrl != null && String(hostAvatarUrl).trim() ? String(hostAvatarUrl).trim() : "";
   const showHostAvatar = Boolean(trimmedAvatarUrl && !hostAvatarBroken);
+  const launcherInitials = String(displayTitle || roleUi.defaultTitle || "N")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("") || "N";
 
   useEffect(() => {
     setMounted(true);
@@ -299,8 +316,16 @@ export default function ChatWidget({
     ]);
   }, []);
 
+  const beginFreshIntakeSession = useCallback(() => {
+    const { sessionId: nextSid } = resetChatIdentity();
+    setSessionId(nextSid);
+    setVisitorIdState("");
+    return nextSid;
+  }, []);
+
   const applyChatPayload = useCallback(
-    async (payload, currentVisitorId, formContactSnapshot = null) => {
+    async (payload, currentVisitorId, formContactSnapshot = null, sessionIdOverride = "") => {
+      const activeSessionId = String(sessionIdOverride || sessionId || "").trim();
       const meta = payload?.meta || {};
       const reply = payload?.reply ?? payload?.response;
       const intent = meta.intent ?? payload?.intent;
@@ -329,32 +354,72 @@ export default function ChatWidget({
         latestCalendlyLinkRef.current = meta.calendly_link;
       }
 
-      const userJustAskedForMatches = isPropertyMatchesRequestMessage(lastOutboundUserTextRef.current);
+      const lastUserText = lastOutboundUserTextRef.current;
+      const hadPendingOptionsOffer = pendingOptionsOfferRef.current;
+      const userJustAskedForOptions = isAvailableOptionsRequestMessage(lastUserText);
+      const userJustAskedForMatches = isPropertyMatchesRequestMessage(lastUserText);
+      const userAcceptedOptionsOffer = isAvailableOptionsConsentMessage(lastUserText, {
+        afterOptionsOffer: hadPendingOptionsOffer,
+      });
+      const assistantShowsOptionCards = assistantAnnouncingOptionCards(reply);
+      const userWantsPropertyCards =
+        userJustAskedForOptions || userJustAskedForMatches || userAcceptedOptionsOffer;
       const wantsMatchesAfterConfirm =
         shouldFetchMatchesOnNextAssistantReplyRef.current ||
         Boolean(meta.refetch_property_matches) ||
         (Boolean(meta.property_matches_available) &&
-          (isDetailsConfirmationMessage(lastOutboundUserTextRef.current) || userJustAskedForMatches));
+          (userWantsPropertyCards ||
+            (assistantShowsOptionCards && (hadPendingOptionsOffer || userAcceptedOptionsOffer))));
       const replacePriorMatchCards =
-        userJustAskedForMatches || Boolean(meta.refetch_property_matches);
+        userJustAskedForOptions ||
+        userJustAskedForMatches ||
+        userAcceptedOptionsOffer ||
+        Boolean(meta.refetch_property_matches) ||
+        (assistantShowsOptionCards && hadPendingOptionsOffer);
 
       let matches = [];
       let matchesMeta = {};
+      let propertyMatchesDisplayMode = "matches";
 
-      if (wantsMatchesAfterConfirm && useAgentLeadForm && embedToken && sessionId) {
+      if (wantsMatchesAfterConfirm && useAgentLeadForm && embedToken && activeSessionId) {
         shouldFetchMatchesOnNextAssistantReplyRef.current = false;
         try {
-          const matchPayload = await fetchChatPropertyMatches({
-            sessionId,
-            embedToken,
-            visitorId: visitorForMatches || visitorId,
-            formContact: formContactSnapshot || leadFormContact || undefined,
-            page: 1,
-            limit: 5,
-          });
-          matchesMeta = matchPayload?.meta || {};
-          matches = Array.isArray(matchesMeta.property_matches) ? matchesMeta.property_matches : [];
+          const fetchMatches = (matchMode) =>
+            fetchChatPropertyMatches({
+              sessionId: activeSessionId,
+              embedToken,
+              visitorId: visitorForMatches || visitorId,
+              formContact: formContactSnapshot || leadFormContact || undefined,
+              page: 1,
+              limit: 5,
+              matchMode,
+            });
+
+          if ((userJustAskedForOptions || userAcceptedOptionsOffer) && !userJustAskedForMatches) {
+            const strictPayload = await fetchMatches("strict");
+            const strictMeta = strictPayload?.meta || {};
+            const strictMatches = Array.isArray(strictMeta.property_matches)
+              ? strictMeta.property_matches
+              : [];
+            if (strictMatches.length > 0) {
+              matchesMeta = strictMeta;
+              matches = strictMatches;
+              propertyMatchesDisplayMode = "matches";
+            } else {
+              const relaxedPayload = await fetchMatches("relaxed");
+              matchesMeta = relaxedPayload?.meta || {};
+              matches = Array.isArray(matchesMeta.property_matches) ? matchesMeta.property_matches : [];
+              propertyMatchesDisplayMode = "options";
+            }
+          } else {
+            const matchPayload = await fetchMatches("strict");
+            matchesMeta = matchPayload?.meta || {};
+            matches = Array.isArray(matchesMeta.property_matches) ? matchesMeta.property_matches : [];
+            propertyMatchesDisplayMode = "matches";
+          }
+
           const signature = [
+            propertyMatchesDisplayMode,
             String(matchesMeta.property_matches_context || ""),
             String(matchesMeta.pagination?.total || matches.length),
             matches
@@ -371,7 +436,10 @@ export default function ChatWidget({
         }
       }
 
-      const showMatchCards = Boolean(showPropertyMatchesInChat && matches.length);
+      const fetchedPropertyMatches = Boolean(
+        wantsMatchesAfterConfirm && useAgentLeadForm && embedToken && activeSessionId,
+      );
+      const showMatchCards = Boolean(showPropertyMatchesInChat && fetchedPropertyMatches);
       let displayReply = String(reply || "Thanks! How else can I help?");
       if (wantsMatchesAfterConfirm || showMatchCards) {
         displayReply = stripPropertyListingFromReply(displayReply);
@@ -380,13 +448,31 @@ export default function ChatWidget({
         displayReply = "";
       }
 
-      const assistantExtras = showMatchCards
-        ? {
-            propertyMatches: matches,
-            propertyMatchesContext: matchesMeta.property_matches_context || null,
-            propertyMatchesNote: matchesMeta.property_matches_note || null,
-          }
-        : {};
+      const assistantExtras = {
+        ...(showMatchCards
+          ? {
+              propertyMatches: matches,
+              propertyMatchesContext: matchesMeta.property_matches_context || "buy",
+              propertyMatchesDisplayMode,
+              propertyMatchesNote:
+                matchesMeta.property_matches_note ||
+                (matches.length === 0
+                  ? "No matching options are available yet. Your agent can share more with you directly."
+                  : null),
+              propertyMatchesEmpty: matches.length === 0,
+            }
+          : {}),
+      };
+
+      if (assistantOfferedAvailableOptions(reply)) {
+        pendingOptionsOfferRef.current = true;
+      } else if (!userWantsPropertyCards) {
+        pendingOptionsOfferRef.current = false;
+      }
+
+      if (showMatchCards) {
+        pendingOptionsOfferRef.current = false;
+      }
 
       if (showMatchCards || replacePriorMatchCards) {
         setMessages((prev) => {
@@ -431,7 +517,17 @@ export default function ChatWidget({
   );
 
   const runPreparedChatStart = useCallback(
-    async ({ opening, summary, leadProfilePreview, formContact, fetchPropertyMatchesAfterReply = false }) => {
+    async ({
+      opening,
+      summary,
+      leadProfilePreview,
+      formContact,
+      fetchPropertyMatchesAfterReply = false,
+      sessionIdOverride = "",
+    }) => {
+      const activeSessionId = String(sessionIdOverride || sessionId || "").trim();
+      if (!activeSessionId) return;
+      sessionHistoryLoadedRef.current = true;
       setLeadFormContact(formContact);
       setLeadFlowStep("chat");
       setMessages([
@@ -447,21 +543,30 @@ export default function ChatWidget({
       setQuickReplies([]);
       lastOutboundUserTextRef.current = opening;
       shouldFetchMatchesOnNextAssistantReplyRef.current = Boolean(fetchPropertyMatchesAfterReply);
+      pendingOptionsOfferRef.current = false;
       lastPropertyMatchesSignatureRef.current = "";
 
       try {
         const response = await sendChatMessage({
           message: opening,
-          sessionId,
+          sessionId: activeSessionId,
           embedToken,
           visitorId,
           agentType: widgetRoleToChatAgentType(resolvedRole),
           formContact,
+          forceNewLead: true,
         });
         const payload = response?.data || response;
-        await applyChatPayload(payload, visitorId, formContact);
+        const nextSessionId = resolveChatSessionId(payload, activeSessionId);
+        if (nextSessionId && nextSessionId !== activeSessionId) {
+          setSessionId(nextSessionId);
+          persistChatSessionId(nextSessionId);
+        }
+        await applyChatPayload(payload, visitorId, formContact, nextSessionId || activeSessionId);
       } catch (err) {
-        setError(err?.message || "Request failed.");
+        if (err?.code !== "PLAN_LIMIT_REACHED") {
+          setError(err?.message || "Request failed.");
+        }
       } finally {
         setTimeout(() => setLoading(false), 400);
       }
@@ -470,16 +575,30 @@ export default function ChatWidget({
   );
 
   const handleSend = async (overrideText = null) => {
-    const text = overrideText || input.trim();
+    const overridePayload =
+      overrideText && typeof overrideText === "object" && !Array.isArray(overrideText)
+        ? overrideText
+        : null;
+    const text = overridePayload ? String(overridePayload.text || "").trim() : overrideText || input.trim();
     if (!text || loading || !embedToken || !sessionId) return;
 
     if (!overrideText) setInput("");
     lastOutboundUserTextRef.current = text;
-    addMessage("user", text);
+    addMessage("user", text, {
+      ...(overridePayload?.selectedProperty ? { selectedProperty: overridePayload.selectedProperty } : {}),
+      ...(overridePayload?.selectedPropertyContext
+        ? { selectedPropertyContext: overridePayload.selectedPropertyContext }
+        : {}),
+    });
+    const consentAfterOptionsOffer = isAvailableOptionsConsentMessage(text, {
+      afterOptionsOffer: pendingOptionsOfferRef.current,
+    });
     const wantsMatchesOnReply =
-      isDetailsConfirmationMessage(text) || isPropertyMatchesRequestMessage(text);
+      isAvailableOptionsRequestMessage(text) ||
+      isPropertyMatchesRequestMessage(text) ||
+      consentAfterOptionsOffer;
     shouldFetchMatchesOnNextAssistantReplyRef.current = wantsMatchesOnReply;
-    if (isPropertyMatchesRequestMessage(text)) {
+    if (wantsMatchesOnReply) {
       lastPropertyMatchesSignatureRef.current = "";
     }
     setLoading(true);
@@ -499,7 +618,9 @@ export default function ChatWidget({
       const payload = response?.data || response;
       await applyChatPayload(payload, visitorId, leadFormContact);
     } catch (err) {
-      setError(err?.message || "Request failed.");
+      if (err?.code !== "PLAN_LIMIT_REACHED") {
+        setError(err?.message || "Request failed.");
+      }
     } finally {
       setTimeout(() => setLoading(false), 400);
     }
@@ -528,6 +649,7 @@ export default function ChatWidget({
       leadDraft
     );
     let nextFormContact = formContact;
+    const activeSessionId = beginFreshIntakeSession();
     if (chosenIntent === "sell" && sellerPropertyImageFiles.length) {
       try {
         setLoading(true);
@@ -535,7 +657,7 @@ export default function ChatWidget({
           intent: chosenIntent,
           formContact,
           embedToken,
-          sessionId,
+          sessionId: activeSessionId,
           propertyImageFiles: sellerPropertyImageFiles,
           messages: {
             missingImages: "Please upload at least one property image to create a seller lead.",
@@ -556,7 +678,8 @@ export default function ChatWidget({
       summary,
       leadProfilePreview,
       formContact: nextFormContact,
-      fetchPropertyMatchesAfterReply: chosenIntent === "buy",
+      fetchPropertyMatchesAfterReply: false,
+      sessionIdOverride: activeSessionId,
     });
   };
 
@@ -578,11 +701,18 @@ export default function ChatWidget({
       return;
     }
     setFormValidationError("");
+    const activeSessionId = beginFreshIntakeSession();
 
     const { formContact, opening, summary, leadProfilePreview, professionalType } =
       getRolePreflightStartPayload(resolvedRole, rolePreflightDraft);
     void postChatScorePreview({ formContact, professionalType });
-    await runPreparedChatStart({ opening, summary, leadProfilePreview, formContact });
+    await runPreparedChatStart({
+      opening,
+      summary,
+      leadProfilePreview,
+      formContact,
+      sessionIdOverride: activeSessionId,
+    });
   };
 
   const handleRolePreflightFormCancel = () => {
@@ -713,11 +843,7 @@ export default function ChatWidget({
   const headerSubtitle =
     useAgentLeadForm && leadFlowStep !== "chat"
       ? ""
-      : useRolePreflight && leadFlowStep === "details"
-        ? ""
-        : useRolePreflight && leadFlowStep === "chat"
-          ? ""
-          : displaySubtitleBase;
+      : displaySubtitleBase;
 
   const header = (
     <ChatWidgetHeader
@@ -831,14 +957,51 @@ export default function ChatWidget({
   const floatingWidget = (
     <>
       {allowLauncher && !inlineMode && !isOpen && (
-        <button
-          onClick={() => setIsOpen(true)}
-          type="button"
-          className={`fixed bottom-6 right-6 z-[10050] flex h-14 w-14 items-center justify-center overflow-hidden rounded-full text-white shadow-lg transition-all hover:scale-110 hover:shadow-xl ${roleUi.launcherClass}`}
-          aria-label={effectiveLauncherLabel}
-        >
-          <MessageCircle size={24} className="shrink-0" aria-hidden />
-        </button>
+        <div className="fixed bottom-6 right-6 z-[10050] flex flex-col items-end gap-2">
+          <button
+            onClick={() => setIsOpen(true)}
+            type="button"
+            className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-text-heading shadow-lg ring-1 ring-slate-200 transition hover:shadow-xl"
+            aria-label={effectiveLauncherLabel}
+          >
+            <span className="relative flex h-2.5 w-2.5">
+              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
+              <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-primary" />
+            </span>
+            {launcherPillText}
+          </button>
+          <button
+            onClick={() => setIsOpen(true)}
+            type="button"
+            className="h-14 w-14 rounded-full transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              padding: "2px",
+              background: "linear-gradient(135deg, #22c55e 0%, #16a34a 100%)",
+              boxShadow: "0 8px 28px rgba(0,0,0,0.25)",
+            }}
+            aria-label={effectiveLauncherLabel}
+          >
+            <span className="relative block h-full w-full overflow-hidden rounded-full bg-white">
+              {showHostAvatar ? (
+                <Image
+                  src={trimmedAvatarUrl}
+                  alt={displayTitle || "Professional"}
+                  fill
+                  sizes="64px"
+                  className="object-cover object-center"
+                  onError={() => setHostAvatarBroken(true)}
+                />
+              ) : (
+                <span
+                  className={`flex h-full w-full items-center justify-center text-base font-bold text-white ${roleUi.launcherClass}`}
+                  aria-hidden
+                >
+                  {launcherInitials || <MessageCircle size={20} className="shrink-0" />}
+                </span>
+              )}
+            </span>
+          </button>
+        </div>
       )}
 
       {isOpen && (
