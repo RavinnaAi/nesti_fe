@@ -68,7 +68,17 @@ export async function analyzeLeadInsights({ token, leadId, refresh = false }) {
 }
 
 /** PATCH lead: `match_status` and/or `note` (append-only agent note), plus optional close metadata. */
-export async function patchLead({ token, id, match_status, note, close_reason, close_note, closed_value }) {
+export async function patchLead({
+  token,
+  id,
+  match_status,
+  note,
+  close_reason,
+  closed_value,
+  agent_closing_checklist,
+  lawyer_closing_checklist,
+  mortgage_closing_checklist,
+}) {
   const data = {};
   if (match_status != null && String(match_status).trim() !== "") {
     data.match_status = String(match_status).trim();
@@ -79,11 +89,17 @@ export async function patchLead({ token, id, match_status, note, close_reason, c
   if (close_reason != null && String(close_reason).trim() !== "") {
     data.close_reason = String(close_reason).trim();
   }
-  if (close_note != null && String(close_note).trim() !== "") {
-    data.close_note = String(close_note).trim();
-  }
   if (closed_value != null && closed_value !== "") {
     data.closed_value = Number(closed_value);
+  }
+  if (agent_closing_checklist && typeof agent_closing_checklist === "object") {
+    data.agent_closing_checklist = agent_closing_checklist;
+  }
+  if (lawyer_closing_checklist && typeof lawyer_closing_checklist === "object") {
+    data.lawyer_closing_checklist = lawyer_closing_checklist;
+  }
+  if (mortgage_closing_checklist && typeof mortgage_closing_checklist === "object") {
+    data.mortgage_closing_checklist = mortgage_closing_checklist;
   }
   return apiClient({
     url: API_ENDPOINTS.leads.patch(id),

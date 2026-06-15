@@ -28,6 +28,7 @@ import { validatePhoneRequired } from "@/lib/phoneUtils";
 const AGENT_FINAL_REQUIRED = {
   buy: [
     "location",
+    "buy_property_location",
     "budget",
     "property_type",
     "beds",
@@ -70,6 +71,7 @@ const AGENT_FINAL_REQUIRED = {
 export const AGENT_PROPERTY_STEP_REQUIRED = {
   buy: [
     "location",
+    "buy_property_location",
     "budget",
     "property_type",
     "beds",

@@ -14,7 +14,15 @@ export const logoutAndClearAll = () => (dispatch) => {
   dispatch(clearSelectedPlan());
 
   if (typeof window !== "undefined") {
-    SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
-    LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
+    try {
+      sessionStorage.clear();
+    } catch {
+      SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
+    }
+    try {
+      localStorage.clear();
+    } catch {
+      LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
+    }
   }
 };

@@ -48,6 +48,10 @@ export default function LeadsDetailsTab({
   const isInquiredPropertyInlineView = Boolean(inquiredPropertyAddress);
   const outerClassName = embedded ? "space-y-4" : "rounded-md border border-border bg-white shadow-sm p-5 space-y-4";
   const sectionClassName = embedded ? "space-y-3 border-t border-border/60 pt-4" : "rounded-md border border-border bg-white p-4 space-y-3";
+  const roleClosedLabels = {
+    converted: isLawyerLead ? "Matter retained" : isMortgageBrokerLead ? "Funded" : "Closed — won",
+    closed_lost: isLawyerLead ? "Matter lost" : "Closed — lost",
+  };
 
   const closePreview = useCallback(() => setPreviewImageIndex(null), []);
   const goPreviewPrev = useCallback(() =>
@@ -212,10 +216,55 @@ export default function LeadsDetailsTab({
 
 
   const closeSummary = leadData.close_summary;
+  const lawyerCloseChecklistLabels = {
+    transaction_type: "Transaction type",
+    property_or_legal_matter: "Property or legal matter",
+    closing_date: "Closing date",
+    agreement_and_docs_received: "Agreement and required docs",
+    outstanding_legal_requirements: "Outstanding legal requirements",
+    next_step: "Next step",
+  };
+  const mortgageCloseChecklistLabels = {
+    client_ready_to_move_forward: "Client ready to move forward",
+    property_value_and_mortgage_need: "Property value and mortgage amount",
+    financing_status: "Pre-approval / financing status",
+    income_docs_ready: "Income and document readiness",
+    funding_timeline: "Expected funding timeline",
+    next_step: "Next step",
+  };
+  const agentCloseChecklistLabels = {
+    client_ready_to_proceed: "Client ready to proceed",
+    property_identified: "Property identified",
+    price_captured: "Purchase/sale price",
+    target_closing_date: "Target closing date",
+    remaining_conditions: "Remaining conditions",
+    next_step: "Next step",
+  };
+  const roleCloseChecklistLabels = isLawyerLead
+    ? lawyerCloseChecklistLabels
+    : isMortgageBrokerLead
+      ? mortgageCloseChecklistLabels
+      : agentCloseChecklistLabels;
+  const roleCloseChecklistRaw = isLawyerLead
+    ? closeSummary?.lawyer_closing_checklist
+    : isMortgageBrokerLead
+      ? closeSummary?.mortgage_closing_checklist
+      : closeSummary?.agent_closing_checklist;
+  const roleCloseChecklistEntries =
+    roleCloseChecklistRaw && typeof roleCloseChecklistRaw === "object"
+      ? Object.entries(roleCloseChecklistRaw)
+          .filter(([key, value]) => roleCloseChecklistLabels[key] && String(value || "").trim())
+          .map(([key, value]) => ({
+            key,
+            label: roleCloseChecklistLabels[key],
+            value: String(value || "").trim(),
+          }))
+      : [];
 
   const closeSummaryBanner = (() => {
     if (!closeSummary) return null;
     const isWon = closeSummary.status === "converted";
+    const closedLabel = roleClosedLabels[closeSummary.status] || (isWon ? "Closed — won" : "Closed — lost");
     const reopened = Boolean(closeSummary.reopened_at);
     const reasonLabel = closeSummary.reason
       ? String(closeSummary.reason).replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase())
@@ -242,7 +291,7 @@ export default function LeadsDetailsTab({
             <XCircle className={`w-4 h-4 shrink-0 ${reopened ? "text-slate-400" : "text-slate-600"}`} />
           )}
           <span className={`text-sm font-semibold ${reopened ? "text-text-muted line-through" : "text-text-heading"}`}>
-            {isWon ? "Closed — won" : "Closed — lost"}
+            {closedLabel}
           </span>
           {reopened && (
             <span className="ml-1 text-[11px] font-medium text-amber-600 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
@@ -257,11 +306,16 @@ export default function LeadsDetailsTab({
             <span>By {closeSummary.closed_by_label} on {closedDate}</span>
           )}
         </div>
-        {closeSummary.note && (
-          <p className={`mt-2 text-xs italic leading-relaxed ${reopened ? "text-text-muted" : "text-text-body"}`}>
-            &ldquo;{closeSummary.note}&rdquo;
-          </p>
-        )}
+        {roleCloseChecklistEntries.length > 0 ? (
+          <div className="mt-3 grid grid-cols-1 gap-2">
+            {roleCloseChecklistEntries.map((entry) => (
+              <div key={entry.key} className="rounded-md border border-border/60 bg-white/70 px-2.5 py-2">
+                <div className="text-[10px] uppercase tracking-wide text-text-muted">{entry.label}</div>
+                <div className="mt-0.5 text-xs text-text-heading leading-relaxed break-words">{entry.value}</div>
+              </div>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   })();
@@ -276,6 +330,7 @@ export default function LeadsDetailsTab({
         <KeyValue label="Viewing readiness" value={qualification.viewing_readiness} />
         <KeyValue label="Living situation" value={qualification.living_situation} />
         <KeyValue label="Urgency readiness" value={qualification.urgency_readiness} />
+        <KeyValue label="Buy property area" value={qualification.buy_property_location} />
         <KeyValue label="Lead type" value={leadData.lead_type} />
       </div>
     </div>

@@ -344,6 +344,15 @@ export default function AgentLeadOnboarding({
               placeholder="City, neighbourhood, zip…"
             />
           </div>
+          <div className="col-span-2 flex flex-col gap-1">
+            <RequiredLabel>Where you are looking to find your dream house?</RequiredLabel>
+            <input
+              className={inputCls}
+              value={draft.buy_property_location}
+              onChange={(e) => onFieldChange("buy_property_location", e.target.value)}
+              placeholder="City, neighbourhood, zip…"
+            />
+          </div>
           <div className={pairGridCls}>
             <div className={fieldStackCls}>
               <RequiredLabel>Budget</RequiredLabel>

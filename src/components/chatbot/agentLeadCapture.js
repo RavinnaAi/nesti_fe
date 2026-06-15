@@ -18,6 +18,7 @@ export const emptyAgentLeadDraft = () => ({
   phone: "",
   email: "",
   location: "",
+  buy_property_location: "",
   budget: "",
   property_type: "",
   beds: "",
@@ -61,6 +62,7 @@ export function buildAgentFormData(intent, draft) {
     return {
       ...base,
       location: draft.location.trim(),
+      buy_property_location: draft.buy_property_location.trim(),
       budget: draft.budget.trim(),
       property_type: draft.property_type,
       beds: draft.beds,
@@ -94,6 +96,7 @@ export function buildAgentFormContactOverride(formData) {
     phone: formData.phone,
     timeline: formData.timeline,
     location: formData.location,
+    buy_property_location: formData.buy_property_location,
     budget: formData.budget,
     beds: formData.beds,
     baths: formData.baths,
@@ -125,6 +128,9 @@ export function buildAgentOpeningMessage(chosenIntent, formData) {
 
   if (chosenIntent === "buy") {
     if (formData.location) parts.push(`I'm interested in ${formData.location}.`);
+    if (formData.buy_property_location) {
+      parts.push(`Specifically looking to buy in ${formData.buy_property_location}.`);
+    }
     if (formData.budget) parts.push(`My budget is around ${formData.budget}.`);
     if (formData.property_type) parts.push(`I'm looking for a ${formData.property_type}.`);
     if (formData.beds) parts.push(`I need ${formData.beds} bedroom(s).`);
@@ -194,8 +200,10 @@ export function buildLeadProfileNarrative(chosenIntent, formData) {
   if (chosenIntent === "buy") {
     const bits = [];
     const loc = displayField(formData.location);
+    const buyLoc = displayField(formData.buy_property_location);
     const budget = displayField(formData.budget);
     if (loc) bits.push(`**Location:** ${loc}`);
+    if (buyLoc) bits.push(`**Buy area:** ${buyLoc}`);
     if (budget) bits.push(`**Budget:** ${budget}`);
     const ptype = displayField(formData.property_type);
     const beds = displayField(formData.beds);
@@ -251,6 +259,8 @@ export function agentUserSummaryLine(chosenIntent, formData) {
     const bits = [];
     const loc = String(formData.location || "").trim();
     if (loc) bits.push(loc);
+    const buyLoc = String(formData.buy_property_location || "").trim();
+    if (buyLoc) bits.push(`Buy area ${buyLoc}`);
     const budget = String(formData.budget || "").trim();
     if (budget) bits.push(`Budget ${budget}`);
     const beds = formData.beds != null && String(formData.beds).trim() ? String(formData.beds).trim() : "";

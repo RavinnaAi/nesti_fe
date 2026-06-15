@@ -120,7 +120,10 @@ export default function LeadsListTable({
                   "—";
                 const isActive = selectedLeadId && String(selectedLeadId) === id;
                 const pipeStatus = conversation?.status;
-                const statusInfo = getStatusDisplay(pipeStatus);
+                const statusInfo = getStatusDisplay(
+                  pipeStatus,
+                  conversation?.professional_type || conversation?.professionalType
+                );
                 const consultCell = getConsultationListCell(conversation);
                 const workspaceHref = toLeadWorkspace(id);
 

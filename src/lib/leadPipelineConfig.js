@@ -22,10 +22,10 @@ export const PIPELINE_AGENT_SELECT_TERMINAL = [
   { value: "closed_lost", label: "Closed — lost" },
 ];
 
-/** Sidebar shortcuts: use the main Leads link for an unfiltered list; “Closed” covers won + lost. */
+/** Sidebar shortcuts: use the main Leads link for an unfiltered list; Recursive leads covers won + lost. */
 export const PIPELINE_SIDEBAR_ITEMS = [
   { key: "active", label: "Active", kind: "pipeline", value: "active" },
-  { key: "closed", label: "Closed", kind: "pipeline", value: "closed" },
+  { key: "closed", label: "Recursive leads", kind: "pipeline", value: "closed" },
   { key: "nurturing", label: "Nurturing", kind: "status", value: "nurturing" },
 ];
 
@@ -90,8 +90,33 @@ const STATUS_DISPLAY_MAP = {
   closed_lost: { label: "Lost", color: "bg-slate-100 text-slate-600 border-slate-200" },
 };
 
-export function getStatusDisplay(status) {
-  return STATUS_DISPLAY_MAP[status] || { label: status?.replace(/_/g, " ") || "—", color: "bg-gray-50 text-gray-600 border-gray-200" };
+function normalizeProfessionalType(roleRaw) {
+  const role = String(roleRaw || "").trim().toLowerCase();
+  if (role === "lawyer") return "lawyer";
+  if (role === "mortgage_broker") return "mortgage_broker";
+  return "agent";
+}
+
+export function getStatusDisplay(status, roleRaw = "") {
+  const statusNorm = String(status || "").trim().toLowerCase();
+  const role = normalizeProfessionalType(roleRaw);
+  const base =
+    STATUS_DISPLAY_MAP[statusNorm] || {
+      label: statusNorm.replace(/_/g, " ") || "—",
+      color: "bg-gray-50 text-gray-600 border-gray-200",
+    };
+  if (statusNorm === "converted") {
+    if (role === "agent") return { ...base, label: "Deal successfully closed" };
+    if (role === "lawyer") return { ...base, label: "Matter retained" };
+    if (role === "mortgage_broker") return { ...base, label: "Funded" };
+  }
+  if (statusNorm === "closed_lost" && role === "agent") {
+    return { ...base, label: "Lead not proceeding" };
+  }
+  if (statusNorm === "closed_lost" && role === "lawyer") {
+    return { ...base, label: "Matter lost" };
+  }
+  return base;
 }
 
 /** Maps `match_status` → chip tone for accepted-referrals table (border/bg classes applied in UI). */
