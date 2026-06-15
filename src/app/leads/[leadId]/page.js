@@ -533,7 +533,9 @@ function LeadWorkspacePageContent() {
         variables?.note &&
         !variables?.match_status &&
         !variables?.close_reason &&
-        !variables?.close_note &&
+        !variables?.agent_closing_checklist &&
+        !variables?.lawyer_closing_checklist &&
+        !variables?.mortgage_closing_checklist &&
         variables?.closed_value == null;
       toast.success(isNoteOnly ? "Note added" : "Lead updated");
       if (data?.lead) {

@@ -81,6 +81,228 @@ const CLOSE_REASONS = {
   },
 };
 
+const LAWYER_CLOSING_FIELDS = [
+  {
+    key: "transaction_type",
+    label: "Confirm the transaction type (purchase, sale, refinance, etc.)",
+    placeholder: "e.g. Purchase transaction",
+    maxLength: 200,
+    multiline: false,
+  },
+  {
+    key: "property_or_legal_matter",
+    label: "Identify the property or legal matter",
+    placeholder: "Provide property address or legal matter details",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "closing_date",
+    label: "Confirm the closing date",
+    placeholder: "e.g. July 30, 2026",
+    maxLength: 120,
+    multiline: false,
+  },
+  {
+    key: "agreement_and_docs_received",
+    label: "Confirm whether the Agreement of Purchase and Sale and required documents have been received",
+    placeholder: "e.g. APS received, title search pending",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "outstanding_legal_requirements",
+    label: "Identify any outstanding legal requirements",
+    placeholder: "List outstanding legal requirements",
+    maxLength: 1000,
+    multiline: true,
+  },
+  {
+    key: "next_step",
+    label: "Confirm the next step (consultation, document review, closing preparation, etc.)",
+    placeholder: "Describe the immediate next step",
+    maxLength: 1000,
+    multiline: true,
+  },
+];
+
+const MORTGAGE_CLOSING_FIELDS = [
+  {
+    key: "client_ready_to_move_forward",
+    label: "Confirm the client is ready to move forward",
+    placeholder: "e.g. Client confirmed readiness",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "property_value_and_mortgage_need",
+    label: "Capture the property value and required mortgage amount",
+    placeholder: "e.g. Property value 700k, mortgage 520k",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "financing_status",
+    label: "Confirm pre-approval or financing status",
+    placeholder: "e.g. Pre-approved by lender",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "income_docs_ready",
+    label: "Verify income and document readiness",
+    placeholder: "e.g. Income docs and IDs received",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "funding_timeline",
+    label: "Confirm the expected funding timeline",
+    placeholder: "e.g. Funding expected within 30 days",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "next_step",
+    label: "Confirm the next step (application, document collection, approval, etc.)",
+    placeholder: "Describe the immediate next step",
+    maxLength: 1000,
+    multiline: true,
+  },
+];
+
+const AGENT_CLOSING_FIELDS = [
+  {
+    key: "client_ready_to_proceed",
+    label: "Confirm the client is ready to proceed",
+    placeholder: "e.g. Client confirmed readiness",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "property_identified",
+    label: "Identify the property being purchased or sold",
+    placeholder: "e.g. 123 Main St, Lahore",
+    maxLength: 300,
+    multiline: true,
+  },
+  {
+    key: "price_captured",
+    label: "Capture the purchase/sale price",
+    placeholder: "e.g. 850000",
+    maxLength: 200,
+    multiline: false,
+  },
+  {
+    key: "target_closing_date",
+    label: "Confirm the target closing date",
+    placeholder: "e.g. Aug 15, 2026",
+    maxLength: 120,
+    multiline: false,
+  },
+  {
+    key: "remaining_conditions",
+    label: "Identify any conditions remaining (financing, inspection, etc.)",
+    placeholder: "e.g. Financing approval pending",
+    maxLength: 500,
+    multiline: true,
+  },
+  {
+    key: "next_step",
+    label: "Confirm the next step (offer, viewing, negotiation, etc.)",
+    placeholder: "Describe the immediate next step",
+    maxLength: 1000,
+    multiline: true,
+  },
+];
+
+function createEmptyLawyerClosingChecklist() {
+  return {
+    transaction_type: "",
+    property_or_legal_matter: "",
+    closing_date: "",
+    agreement_and_docs_received: "",
+    outstanding_legal_requirements: "",
+    next_step: "",
+  };
+}
+
+function createEmptyMortgageClosingChecklist() {
+  return {
+    client_ready_to_move_forward: "",
+    property_value_and_mortgage_need: "",
+    financing_status: "",
+    income_docs_ready: "",
+    funding_timeline: "",
+    next_step: "",
+  };
+}
+
+function createEmptyAgentClosingChecklist() {
+  return {
+    client_ready_to_proceed: "",
+    property_identified: "",
+    price_captured: "",
+    target_closing_date: "",
+    remaining_conditions: "",
+    next_step: "",
+  };
+}
+
+function normalizeLawyerClosingChecklist(raw) {
+  const base = createEmptyLawyerClosingChecklist();
+  if (!raw || typeof raw !== "object") return base;
+  return {
+    transaction_type: String(raw.transaction_type || "").trim(),
+    property_or_legal_matter: String(raw.property_or_legal_matter || "").trim(),
+    closing_date: String(raw.closing_date || "").trim(),
+    agreement_and_docs_received: String(raw.agreement_and_docs_received || "").trim(),
+    outstanding_legal_requirements: String(raw.outstanding_legal_requirements || "").trim(),
+    next_step: String(raw.next_step || "").trim(),
+  };
+}
+
+function normalizeMortgageClosingChecklist(raw) {
+  const base = createEmptyMortgageClosingChecklist();
+  if (!raw || typeof raw !== "object") return base;
+  return {
+    client_ready_to_move_forward: String(raw.client_ready_to_move_forward || "").trim(),
+    property_value_and_mortgage_need: String(raw.property_value_and_mortgage_need || "").trim(),
+    financing_status: String(raw.financing_status || "").trim(),
+    income_docs_ready: String(raw.income_docs_ready || "").trim(),
+    funding_timeline: String(raw.funding_timeline || "").trim(),
+    next_step: String(raw.next_step || "").trim(),
+  };
+}
+
+function normalizeAgentClosingChecklist(raw) {
+  const base = createEmptyAgentClosingChecklist();
+  if (!raw || typeof raw !== "object") return base;
+  return {
+    client_ready_to_proceed: String(raw.client_ready_to_proceed || "").trim(),
+    property_identified: String(raw.property_identified || "").trim(),
+    price_captured: String(raw.price_captured || "").trim(),
+    target_closing_date: String(raw.target_closing_date || "").trim(),
+    remaining_conditions: String(raw.remaining_conditions || "").trim(),
+    next_step: String(raw.next_step || "").trim(),
+  };
+}
+
+function getSavedLawyerClosingChecklist(leadData) {
+  const raw = leadData?.close_summary?.lawyer_closing_checklist;
+  return normalizeLawyerClosingChecklist(raw);
+}
+
+function getSavedMortgageClosingChecklist(leadData) {
+  const raw = leadData?.close_summary?.mortgage_closing_checklist;
+  return normalizeMortgageClosingChecklist(raw);
+}
+
+function getSavedAgentClosingChecklist(leadData) {
+  const raw = leadData?.close_summary?.agent_closing_checklist;
+  return normalizeAgentClosingChecklist(raw);
+}
+
 function getRoleCloseConfig(professionalType, closeTarget) {
   const role = professionalType || "agent";
   const isWon = closeTarget === "converted";
@@ -124,6 +346,131 @@ function getRoleCloseConfig(professionalType, closeTarget) {
   };
 }
 
+function getConversionChecklist(leadData) {
+  const raw =
+    (leadData && typeof leadData === "object" && (leadData.conversionChecklist || leadData.conversion_checklist)) ||
+    null;
+  if (!raw || typeof raw !== "object") return null;
+  const items = Array.isArray(raw.items) ? raw.items : [];
+  const normalizedItems = items
+    .filter((item) => item && typeof item === "object")
+    .map((item) => ({
+      key: item.key || "",
+      label: item.label || "",
+      isComplete: Boolean(item.isComplete),
+    }));
+  const missingItems = normalizedItems.filter((item) => !item.isComplete);
+  const hasExplicitCanConvert = typeof raw.canConvert === "boolean";
+  return {
+    role: raw.role || "agent",
+    items: normalizedItems,
+    canConvert: hasExplicitCanConvert ? Boolean(raw.canConvert) : missingItems.length === 0,
+    missingItems,
+  };
+}
+
+function canLawyerChecklistAnswerSatisfyItem(itemKey) {
+  return (
+    itemKey === "transaction_type" ||
+    itemKey === "property_or_legal_matter" ||
+    itemKey === "closing_date" ||
+    itemKey === "agreement_and_docs_received" ||
+    itemKey === "outstanding_legal_requirements" ||
+    itemKey === "next_step"
+  );
+}
+
+function canMortgageChecklistAnswerSatisfyItem(itemKey) {
+  return (
+    itemKey === "client_ready_to_move_forward" ||
+    itemKey === "property_value_and_mortgage_need" ||
+    itemKey === "financing_status" ||
+    itemKey === "income_docs_ready" ||
+    itemKey === "funding_timeline" ||
+    itemKey === "next_step"
+  );
+}
+
+function canAgentChecklistAnswerSatisfyItem(itemKey) {
+  return (
+    itemKey === "client_ready_to_proceed" ||
+    itemKey === "property_identified" ||
+    itemKey === "price_captured" ||
+    itemKey === "target_closing_date" ||
+    itemKey === "remaining_conditions" ||
+    itemKey === "next_step"
+  );
+}
+
+function parseAmountToken(token) {
+  const raw = String(token || "").trim().toLowerCase();
+  if (!raw) return null;
+  const m = raw.match(/^(\d+(?:\.\d+)?)([km])?$/i);
+  if (!m) return null;
+  const n = Number(m[1]);
+  if (!Number.isFinite(n)) return null;
+  const unit = String(m[2] || "").toLowerCase();
+  if (unit === "k") return Math.round(n * 1000);
+  if (unit === "m") return Math.round(n * 1000000);
+  return Math.round(n);
+}
+
+function parseAmountFromValue(value) {
+  if (value == null || value === "") return null;
+  if (typeof value === "number" && Number.isFinite(value)) return Math.round(value);
+  const txt = String(value).trim().toLowerCase();
+  if (!txt) return null;
+
+  if (/^\d+(?:\.\d+)?([km])?_plus$/i.test(txt)) {
+    const base = parseAmountToken(txt.replace(/_plus$/i, ""));
+    return Number.isFinite(base) ? base : null;
+  }
+  if (/^under_\d+(?:\.\d+)?([km])?$/i.test(txt)) {
+    const base = parseAmountToken(txt.replace(/^under_/i, ""));
+    return Number.isFinite(base) ? base : null;
+  }
+  if (/^\d+(?:\.\d+)?([km])?_\d+(?:\.\d+)?([km])?$/i.test(txt)) {
+    const [a, b] = txt.split("_");
+    const av = parseAmountToken(a);
+    const bv = parseAmountToken(b);
+    if (Number.isFinite(av) && Number.isFinite(bv)) return Math.max(av, bv);
+  }
+
+  const cleaned = txt.replace(/[$,\s]/g, "");
+  const range = cleaned.match(
+    /(\d+(?:\.\d+)?(?:[km])?)\s*(?:-|to|–)\s*(\d+(?:\.\d+)?(?:[km])?)/i
+  );
+  if (range) {
+    const a = parseAmountToken(range[1]);
+    const b = parseAmountToken(range[2]);
+    if (Number.isFinite(a) && Number.isFinite(b)) return Math.max(a, b);
+  }
+  return parseAmountToken(cleaned);
+}
+
+function deriveInitialCloseValue(leadData, professionalType) {
+  const role = String(professionalType || leadData?.professional_type || "agent")
+    .trim()
+    .toLowerCase();
+  const shared = [
+    leadData?.close_summary?.value,
+    leadData?.property?.expected_price,
+    leadData?.property?.budget,
+  ];
+  const roleSpecific =
+    role === "mortgage_broker"
+      ? [leadData?.qualification?.property_budget]
+      : role === "lawyer"
+        ? [leadData?.qualification?.property_value]
+        : [];
+  const candidates = [...shared, ...roleSpecific];
+  for (const candidate of candidates) {
+    const parsed = parseAmountFromValue(candidate);
+    if (Number.isFinite(parsed) && parsed > 0) return String(parsed);
+  }
+  return "";
+}
+
 /**
  * Shared pipeline / match_status editor (Lead Profile + Notes tab).
  * - Default: saves on each selection (`submitOnSelect`).
@@ -143,7 +490,10 @@ export default function LeadPipelineStageControl({
   onCloseMetadataChange,
   professionalType,
 }) {
-  const leadData = lead && typeof lead === "object" ? lead : {};
+  const leadData = useMemo(
+    () => (lead && typeof lead === "object" ? lead : {}),
+    [lead]
+  );
   const savedStatus = leadData.status ?? leadData.match_status ?? "new";
   const effectiveValue = submitOnSelect ? savedStatus : (draftMatchStatus ?? savedStatus);
   const profType = professionalType || leadData.professional_type || "agent";
@@ -153,15 +503,26 @@ export default function LeadPipelineStageControl({
   const [reopenSubmitting, setReopenSubmitting] = useState(false);
 
   const [closeReason, setCloseReason] = useState("");
-  const [closeNote, setCloseNote] = useState("");
   const [closeValue, setCloseValue] = useState("");
+  const [closeAgentChecklist, setCloseAgentChecklist] = useState(createEmptyAgentClosingChecklist);
+  const [closeLawyerChecklist, setCloseLawyerChecklist] = useState(createEmptyLawyerClosingChecklist);
+  const [closeMortgageChecklist, setCloseMortgageChecklist] = useState(createEmptyMortgageClosingChecklist);
   const [reasonTouched, setReasonTouched] = useState(false);
+  const [agentChecklistTouched, setAgentChecklistTouched] = useState(false);
+  const [lawyerChecklistTouched, setLawyerChecklistTouched] = useState(false);
+  const [mortgageChecklistTouched, setMortgageChecklistTouched] = useState(false);
+  const conversionChecklist = useMemo(() => getConversionChecklist(leadData), [leadData]);
 
   const resetCloseFields = useCallback(() => {
     setCloseReason("");
-    setCloseNote("");
     setCloseValue("");
+    setCloseAgentChecklist(createEmptyAgentClosingChecklist());
+    setCloseLawyerChecklist(createEmptyLawyerClosingChecklist());
+    setCloseMortgageChecklist(createEmptyMortgageClosingChecklist());
     setReasonTouched(false);
+    setAgentChecklistTouched(false);
+    setLawyerChecklistTouched(false);
+    setMortgageChecklistTouched(false);
   }, []);
 
   useEffect(() => {
@@ -207,7 +568,24 @@ export default function LeadPipelineStageControl({
     if (submitOnSelect) {
       if (typeof onPatchLead !== "function") return;
       if (isReopen) { setReopenTarget(next); return; }
-      if (needsCloseConfirm) { setCloseTarget(next); return; }
+      if (needsCloseConfirm) {
+        resetCloseFields();
+        const role = String(profType || "").trim().toLowerCase();
+        if (role === "agent") {
+          setCloseAgentChecklist(getSavedAgentClosingChecklist(leadData));
+        }
+        if (role === "lawyer") {
+          setCloseLawyerChecklist(getSavedLawyerClosingChecklist(leadData));
+        }
+        if (role === "mortgage_broker") {
+          setCloseMortgageChecklist(getSavedMortgageClosingChecklist(leadData));
+        }
+        if (next === "converted") {
+          setCloseValue(deriveInitialCloseValue(leadData, profType));
+        }
+        setCloseTarget(next);
+        return;
+      }
       try {
         await onPatchLead({ match_status: next });
       } catch { /* toast from parent */ }
@@ -216,7 +594,24 @@ export default function LeadPipelineStageControl({
 
     if (typeof onDraftMatchStatusChange !== "function") return;
     if (isReopen) { setReopenTarget(next); return; }
-    if (needsCloseConfirm) { setCloseTarget(next); return; }
+    if (needsCloseConfirm) {
+      resetCloseFields();
+      const role = String(profType || "").trim().toLowerCase();
+      if (role === "agent") {
+        setCloseAgentChecklist(getSavedAgentClosingChecklist(leadData));
+      }
+      if (role === "lawyer") {
+        setCloseLawyerChecklist(getSavedLawyerClosingChecklist(leadData));
+      }
+      if (role === "mortgage_broker") {
+        setCloseMortgageChecklist(getSavedMortgageClosingChecklist(leadData));
+      }
+      if (next === "converted") {
+        setCloseValue(deriveInitialCloseValue(leadData, profType));
+      }
+      setCloseTarget(next);
+      return;
+    }
     onDraftMatchStatusChange(next);
   };
 
@@ -232,16 +627,46 @@ export default function LeadPipelineStageControl({
   };
 
   const confirmClose = async () => {
+    const isAgentCloseFlow = String(profType || "").trim().toLowerCase() === "agent";
+    const isLawyerCloseFlow = String(profType || "").trim().toLowerCase() === "lawyer";
+    const isMortgageCloseFlow = String(profType || "").trim().toLowerCase() === "mortgage_broker";
+    const normalizedAgentChecklist = normalizeAgentClosingChecklist(closeAgentChecklist);
+    const normalizedLawyerChecklist = normalizeLawyerClosingChecklist(closeLawyerChecklist);
+    const normalizedMortgageChecklist = normalizeMortgageClosingChecklist(closeMortgageChecklist);
+    const missingAgentChecklistKeys = isAgentCloseFlow
+      ? AGENT_CLOSING_FIELDS
+          .filter((field) => !String(normalizedAgentChecklist[field.key] || "").trim())
+          .map((field) => field.key)
+      : [];
+    const missingLawyerChecklistKeys = isLawyerCloseFlow
+      ? LAWYER_CLOSING_FIELDS
+          .filter((field) => !String(normalizedLawyerChecklist[field.key] || "").trim())
+          .map((field) => field.key)
+      : [];
+    const missingMortgageChecklistKeys = isMortgageCloseFlow
+      ? MORTGAGE_CLOSING_FIELDS
+          .filter((field) => !String(normalizedMortgageChecklist[field.key] || "").trim())
+          .map((field) => field.key)
+      : [];
+
     setReasonTouched(true);
+    if (isAgentCloseFlow) setAgentChecklistTouched(true);
+    if (isLawyerCloseFlow) setLawyerChecklistTouched(true);
+    if (isMortgageCloseFlow) setMortgageChecklistTouched(true);
     if (!closeReason) return;
+    if (missingAgentChecklistKeys.length > 0) return;
+    if (missingLawyerChecklistKeys.length > 0) return;
+    if (missingMortgageChecklistKeys.length > 0) return;
 
     const next = closeTarget;
     if (!next) { dismissCloseModal(); return; }
 
     const metadata = {
       close_reason: closeReason,
-      ...(closeNote.trim() ? { close_note: closeNote.trim() } : {}),
       ...(closeValue && Number(closeValue) > 0 ? { closed_value: Number(closeValue) } : {}),
+      ...(isAgentCloseFlow ? { agent_closing_checklist: normalizedAgentChecklist } : {}),
+      ...(isLawyerCloseFlow ? { lawyer_closing_checklist: normalizedLawyerChecklist } : {}),
+      ...(isMortgageCloseFlow ? { mortgage_closing_checklist: normalizedMortgageChecklist } : {}),
     };
 
     if (submitOnSelect) {
@@ -277,9 +702,6 @@ export default function LeadPipelineStageControl({
     setReopenTarget(null);
   };
 
-  if (submitOnSelect && typeof onPatchLead !== "function") return null;
-  if (!submitOnSelect && typeof onDraftMatchStatusChange !== "function") return null;
-
   const shell = unboxed
     ? `space-y-3 ${className}`.trim()
     : `rounded-lg border border-border/60 bg-gradient-to-b from-primary/[0.03] to-transparent p-4 sm:p-5 space-y-3 ${className}`.trim();
@@ -289,7 +711,97 @@ export default function LeadPipelineStageControl({
   const closeConfig = closeTarget ? getRoleCloseConfig(profType, closeTarget) : null;
   const swapping = closeTarget && isTerminalPipelineStatus(savedStatus) && isTerminalPipelineStatus(closeTarget);
   const isWon = closeTarget === "converted";
+  const isAgentCloseFlow = closeTarget && String(profType || "").trim().toLowerCase() === "agent";
+  const isLawyerCloseFlow = closeTarget && String(profType || "").trim().toLowerCase() === "lawyer";
+  const isMortgageCloseFlow = closeTarget && String(profType || "").trim().toLowerCase() === "mortgage_broker";
+  const hasRoleChecklistCloseFlow = Boolean(isAgentCloseFlow || isLawyerCloseFlow || isMortgageCloseFlow);
   const reasonInvalid = reasonTouched && !closeReason;
+  const normalizedCloseAgentChecklist = useMemo(
+    () => normalizeAgentClosingChecklist(closeAgentChecklist),
+    [closeAgentChecklist]
+  );
+  const normalizedCloseLawyerChecklist = useMemo(
+    () => normalizeLawyerClosingChecklist(closeLawyerChecklist),
+    [closeLawyerChecklist]
+  );
+  const normalizedCloseMortgageChecklist = useMemo(
+    () => normalizeMortgageClosingChecklist(closeMortgageChecklist),
+    [closeMortgageChecklist]
+  );
+  const roleCloseFields = isAgentCloseFlow
+    ? AGENT_CLOSING_FIELDS
+    : isLawyerCloseFlow
+      ? LAWYER_CLOSING_FIELDS
+      : isMortgageCloseFlow
+        ? MORTGAGE_CLOSING_FIELDS
+        : [];
+  const effectiveChecklistItems = useMemo(() => {
+    const baseItems = Array.isArray(conversionChecklist?.items) ? conversionChecklist.items : [];
+    return baseItems
+      .filter((item) => item && typeof item === "object")
+      .map((item) => {
+        const agentAnswerCanSatisfy =
+          isAgentCloseFlow &&
+          !item.isComplete &&
+          canAgentChecklistAnswerSatisfyItem(item.key) &&
+          String(normalizedCloseAgentChecklist[item.key] || "").trim().length > 0;
+        const lawyerAnswerCanSatisfy =
+          isLawyerCloseFlow &&
+          !item.isComplete &&
+          canLawyerChecklistAnswerSatisfyItem(item.key) &&
+          String(normalizedCloseLawyerChecklist[item.key] || "").trim().length > 0;
+        const mortgageAnswerCanSatisfy =
+          isMortgageCloseFlow &&
+          !item.isComplete &&
+          canMortgageChecklistAnswerSatisfyItem(item.key) &&
+          String(normalizedCloseMortgageChecklist[item.key] || "").trim().length > 0;
+        return {
+          ...item,
+          isCompleteEffective: Boolean(
+            item.isComplete || agentAnswerCanSatisfy || lawyerAnswerCanSatisfy || mortgageAnswerCanSatisfy
+          ),
+          satisfiedByAgentInput: Boolean(agentAnswerCanSatisfy),
+          satisfiedByLawyerInput: Boolean(lawyerAnswerCanSatisfy),
+          satisfiedByMortgageInput: Boolean(mortgageAnswerCanSatisfy),
+        };
+      });
+  }, [
+    conversionChecklist,
+    isAgentCloseFlow,
+    isLawyerCloseFlow,
+    isMortgageCloseFlow,
+    normalizedCloseAgentChecklist,
+    normalizedCloseLawyerChecklist,
+    normalizedCloseMortgageChecklist,
+  ]);
+  const effectiveMissingChecklistItems = useMemo(
+    () => effectiveChecklistItems.filter((item) => !item.isCompleteEffective),
+    [effectiveChecklistItems]
+  );
+  const shouldBlockWonClose = isWon && effectiveMissingChecklistItems.length > 0;
+  const missingRequiredAgentFields = isAgentCloseFlow
+    ? AGENT_CLOSING_FIELDS.filter(
+        (field) => !String(normalizedCloseAgentChecklist[field.key] || "").trim()
+      )
+    : [];
+  const missingRequiredLawyerFields = isLawyerCloseFlow
+    ? LAWYER_CLOSING_FIELDS.filter(
+        (field) => !String(normalizedCloseLawyerChecklist[field.key] || "").trim()
+      )
+    : [];
+  const missingRequiredMortgageFields = isMortgageCloseFlow
+    ? MORTGAGE_CLOSING_FIELDS.filter(
+        (field) => !String(normalizedCloseMortgageChecklist[field.key] || "").trim()
+      )
+    : [];
+  const shouldBlockAgentClose = isAgentCloseFlow && missingRequiredAgentFields.length > 0;
+  const shouldBlockLawyerClose = isLawyerCloseFlow && missingRequiredLawyerFields.length > 0;
+  const shouldBlockMortgageClose = isMortgageCloseFlow && missingRequiredMortgageFields.length > 0;
+  const missingRequiredPatchHandler =
+    (submitOnSelect && typeof onPatchLead !== "function") ||
+    (!submitOnSelect && typeof onDraftMatchStatusChange !== "function");
+
+  if (missingRequiredPatchHandler) return null;
 
   return (
     <div className={shell}>
@@ -367,7 +879,9 @@ export default function LeadPipelineStageControl({
               onClick={(e) => { if (e.target === e.currentTarget && !reopenSubmitting) dismissCloseModal(); }}
             >
               <div
-                className="w-full max-w-lg rounded-xl border border-border bg-white shadow-2xl p-6"
+                className={`w-full rounded-xl border border-border bg-white shadow-2xl p-6 max-h-[88vh] overflow-y-auto ${
+                  hasRoleChecklistCloseFlow ? "max-w-4xl" : "max-w-lg"
+                }`}
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="close-lead-title"
@@ -396,41 +910,113 @@ export default function LeadPipelineStageControl({
                 </p>
 
                 <div className="mt-4 space-y-3">
+                  {hasRoleChecklistCloseFlow ? (
+                    <div className="rounded-lg border border-border/80 bg-slate-50/60 p-3 md:p-3.5 space-y-2.5">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-heading/90">
+                        Required before closing
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 md:gap-3">
+                        {roleCloseFields.map((field) => {
+                          const value = isAgentCloseFlow
+                            ? (closeAgentChecklist[field.key] || "")
+                            : isLawyerCloseFlow
+                            ? (closeLawyerChecklist[field.key] || "")
+                            : (closeMortgageChecklist[field.key] || "");
+                          const invalid =
+                            (isAgentCloseFlow
+                              ? agentChecklistTouched
+                              : isLawyerCloseFlow
+                                ? lawyerChecklistTouched
+                                : mortgageChecklistTouched) &&
+                            !String(value).trim();
+                          return (
+                            <div key={field.key} className="space-y-1">
+                              <label className="block min-h-[2.25rem] text-[11px] leading-4 font-semibold text-text-heading/90">
+                                {field.label} <span className="text-red-500">*</span>
+                              </label>
+                              {field.multiline ? (
+                                <textarea
+                                  value={value}
+                                  onChange={(e) =>
+                                    (isAgentCloseFlow
+                                      ? setCloseAgentChecklist((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value.slice(0, field.maxLength),
+                                        }))
+                                      : isLawyerCloseFlow
+                                      ? setCloseLawyerChecklist((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value.slice(0, field.maxLength),
+                                        }))
+                                      : setCloseMortgageChecklist((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value.slice(0, field.maxLength),
+                                        })))
+                                  }
+                                  rows={1}
+                                  placeholder={field.placeholder}
+                                  className={`w-full min-h-9 rounded-md border px-3 py-2 text-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 resize-y ${
+                                    invalid ? "border-red-300 bg-red-50/30" : "border-border"
+                                  }`}
+                                />
+                              ) : (
+                                <input
+                                  type="text"
+                                  value={value}
+                                  onChange={(e) =>
+                                    (isAgentCloseFlow
+                                      ? setCloseAgentChecklist((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value.slice(0, field.maxLength),
+                                        }))
+                                      : isLawyerCloseFlow
+                                      ? setCloseLawyerChecklist((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value.slice(0, field.maxLength),
+                                        }))
+                                      : setCloseMortgageChecklist((prev) => ({
+                                          ...prev,
+                                          [field.key]: e.target.value.slice(0, field.maxLength),
+                                        })))
+                                  }
+                                  placeholder={field.placeholder}
+                                  className={`w-full h-9 rounded-md border px-3 text-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 ${
+                                    invalid ? "border-red-300 bg-red-50/30" : "border-border"
+                                  }`}
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {(isAgentCloseFlow
+                        ? (agentChecklistTouched && shouldBlockAgentClose)
+                        : isLawyerCloseFlow
+                          ? (lawyerChecklistTouched && shouldBlockLawyerClose)
+                          : (mortgageChecklistTouched && shouldBlockMortgageClose)) ? (
+                        <p className="text-[11px] text-red-600">
+                          Please complete all required closing fields.
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   {/* Reason (required) */}
                   <div>
                     <label className="block text-xs font-medium text-text-heading mb-1">
                       Reason <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <SelectDropdown
+                      size="small"
+                      placeholder="Select a reason..."
+                      options={closeConfig.reasons}
                       value={closeReason}
-                      onChange={(e) => { setCloseReason(e.target.value); setReasonTouched(true); }}
-                      className={`w-full h-9 rounded-md border px-3 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 ${
-                        reasonInvalid ? "border-red-400 ring-1 ring-red-200" : "border-border"
-                      }`}
-                    >
-                      <option value="">Select a reason…</option>
-                      {closeConfig.reasons.map((r) => (
-                        <option key={r.value} value={r.value}>{r.label}</option>
-                      ))}
-                    </select>
-                    {reasonInvalid && (
-                      <p className="mt-1 text-[11px] text-red-500">Please select a reason</p>
-                    )}
-                  </div>
-
-                  {/* Note (optional) */}
-                  <div>
-                    <label className="block text-xs font-medium text-text-heading mb-1">
-                      Note <span className="text-text-muted font-normal">(optional)</span>
-                    </label>
-                    <textarea
-                      value={closeNote}
-                      onChange={(e) => setCloseNote(e.target.value.slice(0, 200))}
-                      rows={2}
-                      placeholder="Any additional context…"
-                      className="w-full rounded-md border border-border px-3 py-2 text-sm placeholder:text-text-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/40 resize-none"
+                      onChange={(val) => {
+                        setCloseReason(val);
+                        setReasonTouched(true);
+                      }}
+                      error={reasonInvalid ? "Please select a reason" : ""}
                     />
-                    <p className="mt-0.5 text-[10px] text-text-muted text-right">{closeNote.length}/200</p>
                   </div>
 
                   {/* Value (optional, shown only for won) */}
@@ -467,7 +1053,14 @@ export default function LeadPipelineStageControl({
                   <button
                     type="button"
                     onClick={() => void confirmClose()}
-                    disabled={reopenSubmitting || !closeReason}
+                    disabled={
+                      reopenSubmitting ||
+                      !closeReason ||
+                      shouldBlockWonClose ||
+                      shouldBlockAgentClose ||
+                      shouldBlockLawyerClose ||
+                      shouldBlockMortgageClose
+                    }
                     className={`px-3.5 py-2 text-xs font-semibold text-white rounded-md hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed transition-opacity ${
                       isWon ? "bg-emerald-600" : "bg-slate-700"
                     }`}
