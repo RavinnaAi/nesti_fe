@@ -1,8 +1,8 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
-  Bot,
   CheckCircle2,
   ChevronDown,
   HelpCircle,
@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { fadeUp, PageCta, splitTitle } from "./shared/PublicPageShared";
 
-const faqIcons = [Bot, HelpCircle, Zap, Sparkles, CheckCircle2, ShieldCheck];
+const faqIcons = ["logo", HelpCircle, Zap, Sparkles, CheckCircle2, ShieldCheck];
 
 function FaqHero({ page, meta, faqs }) {
   const title = page.title || "";
@@ -125,7 +125,17 @@ function FaqList({ faqs }) {
                 >
                   <summary className="flex cursor-pointer list-none items-start gap-3.5 [&::-webkit-details-marker]:hidden">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary transition-colors duration-300 group-open:bg-primary group-open:text-white">
-                      <Icon size={19} strokeWidth={1.9} aria-hidden />
+                      {Icon === "logo" ? (
+                        <Image
+                          src="/logo/logo.png"
+                          alt="Nesti AI logo"
+                          width={19}
+                          height={19}
+                          className="h-[19px] w-[19px] object-contain"
+                        />
+                      ) : (
+                        <Icon size={19} strokeWidth={1.9} aria-hidden />
+                      )}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-base font-black leading-tight text-text-heading md:text-lg">

@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Bot,
   LayoutDashboard,
   Users,
   UserRound,
@@ -319,12 +319,14 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
             className="relative z-20 group flex min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-lg border-0 bg-transparent py-0.5 text-left transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
             aria-label="Go to Nesti AI home"
           >
-            <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg grid place-items-center bg-gradient-to-br from-primary via-primary to-primary-dark text-white shadow-[0_4px_16px_rgba(52,199,89,0.4)] ring-1 ring-white/50 transition duration-300 group-hover:scale-[1.03] group-hover:shadow-[0_6px_20px_rgba(52,199,89,0.45)]">
-              <span
-                className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/15 to-transparent opacity-80"
-                aria-hidden
+            <span className="relative h-8 w-8 shrink-0 overflow-hidden rounded-lg grid place-items-center transition duration-300 group-hover:scale-[1.03]">
+              <Image
+                src="/logo/logo.png"
+                alt="Nesti AI logo"
+                width={32}
+                height={32}
+                className="relative h-8 w-8 object-cover"
               />
-              <Bot size={16} strokeWidth={2} className="relative drop-shadow-sm" />
             </span>
             <div className="min-w-0 leading-tight">
               <div className="font-heading text-sm font-bold tracking-tight text-text-heading">

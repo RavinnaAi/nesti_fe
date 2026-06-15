@@ -1,6 +1,6 @@
 "use client";
 
-import { Bot } from "lucide-react";
+import Image from "next/image";
 
 export default function WorkspaceLoader({
   label = "Loading workspace...",
@@ -22,8 +22,14 @@ export default function WorkspaceLoader({
             className="absolute inset-[4px] animate-spin rounded-xl border-2 border-primary/45 border-t-primary"
             aria-hidden
           />
-          <span className="relative z-[1] grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm">
-            <Bot size={16} strokeWidth={2.2} />
+          <span className="relative z-[1] grid h-9 w-9 place-items-center rounded-lg overflow-hidden">
+            <Image
+              src="/logo/logo.png"
+              alt="Nesti AI logo"
+              width={36}
+              height={36}
+              className="h-9 w-9 object-cover"
+            />
           </span>
         </div>
         <p className="text-sm font-semibold text-text-heading">{label}</p>

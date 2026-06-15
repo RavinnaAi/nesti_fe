@@ -59,13 +59,12 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              className="text-4xl font-black leading-[1.05] tracking-tight text-text-heading md:text-5xl lg:text-[52px]"
+              className="text-3xl font-black leading-[1.08] tracking-tight text-text-heading md:text-4xl lg:text-[34px] lg:whitespace-nowrap"
               suppressHydrationWarning
             >
-              Transform Real Estate
-              <br />
-              <span className="bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary-dark">
-                With AI Intelligence
+              Your Real Estate{" "}
+              <span className="text-primary">
+                Business on Autopilot.
               </span>
             </motion.h1>
 
@@ -77,10 +76,10 @@ export default function HeroSection() {
               className="max-w-2xl text-base font-light leading-6 text-text-body md:text-[17px]"
               suppressHydrationWarning
             >
-              Complete AI-powered platform featuring intelligent lead scoring,
-              smart matching, multi-agent chatbots, and automated follow-ups for
-              buyers, sellers, and real estate professionals across USA &
-              Canada.
+              Meet Nesti, an all-in-one lead operations platform that qualifies
+              prospects, scores intent from 0-100, and automates follow-ups
+              24/7. Spend less time chasing cold leads and more time closing
+              qualified deals across the USA and Canada.
             </motion.p>
 
             <motion.div
@@ -96,7 +95,7 @@ export default function HeroSection() {
                 className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-xl bg-gradient-to-r from-primary to-primary-dark px-6 py-3 text-sm font-bold text-white shadow-md shadow-primary/20 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
               >
                 <span className="relative z-10 flex items-center gap-2">
-                  Start Free Trial
+                  Claim My Free Trial
                   <ArrowRight
                     size={18}
                     className="relative z-10 group-hover:translate-x-1 transition-transform duration-300"
@@ -110,7 +109,7 @@ export default function HeroSection() {
                 className="group relative inline-flex items-center justify-center rounded-xl border border-border bg-white px-6 py-3 text-sm font-semibold text-text-heading shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/40 hover:bg-background-light hover:shadow-md"
               >
                 <span className="flex items-center gap-2">
-                  Watch Demo
+                  See It In Action (1 Min)
                   <ChevronRight
                     size={18}
                     className="group-hover:translate-x-0.5 transition-transform duration-300"

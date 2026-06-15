@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
   ArrowRight,
-  Bot,
   CheckCircle2,
   ChevronRight,
 } from "lucide-react";
@@ -27,7 +27,11 @@ export function splitTitle(title, highlight) {
   };
 }
 
-export function PageCta({ compact = false, transparentSection = false }) {
+export function PageCta({
+  compact = false,
+  transparentSection = false,
+  compactHeading = "Ready to grow with intelligent real estate tools?",
+}) {
   if (compact) {
     return (
       <section className={`${transparentSection ? "bg-transparent" : "bg-white"} py-6 md:py-8`}>
@@ -39,18 +43,13 @@ export function PageCta({ compact = false, transparentSection = false }) {
             <div className="pointer-events-none absolute -right-20 -top-24 h-56 w-56 rounded-full bg-primary/[0.045] blur-3xl" />
             <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
             <div className="relative z-10 grid gap-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-              <div className="flex items-start gap-4">
-                <span className="mt-1 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-lg shadow-primary/20">
-                  <Bot size={22} aria-hidden />
-                </span>
-                <div className="min-w-0">
-                  <h2 className="text-2xl font-black leading-tight text-text-heading md:text-3xl">
-                    Ready to grow with intelligent real estate tools?
-                  </h2>
-                  <p className="mt-2 max-w-3xl text-sm leading-6 text-text-body md:text-[15px]">
-                    Use Nesti AI to strengthen lead intelligence, automate repetitive workflows, and create smoother client experiences across your real estate business.
-                  </p>
-                </div>
+              <div className="min-w-0">
+                <h2 className="text-lg font-bold leading-snug text-text-heading md:text-xl lg:text-[22px]">
+                  {compactHeading}
+                </h2>
+                <p className="mt-2 max-w-3xl text-sm leading-6 text-text-body md:text-[15px]">
+                  Use Nesti AI to strengthen lead intelligence, automate repetitive workflows, and create smoother client experiences across your real estate business.
+                </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row lg:justify-end">
@@ -95,8 +94,14 @@ export function PageCta({ compact = false, transparentSection = false }) {
       </div>
       <div className="relative z-10 mx-auto max-w-5xl px-4 text-center sm:px-6 md:px-8">
         <motion.div {...fadeUp} className="space-y-8">
-          <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md bg-white/20 backdrop-blur-sm">
-            <Bot size={28} className="text-white" />
+          <div className="mx-auto inline-flex h-12 w-12 items-center justify-center rounded-md overflow-hidden">
+            <Image
+              src="/logo/logo.png"
+              alt="Nesti AI logo"
+              width={48}
+              height={48}
+              className="h-12 w-12 object-cover"
+            />
           </div>
           <h2 className="text-3xl font-extrabold leading-tight text-white md:text-4xl lg:text-5xl">
             Ready to grow with

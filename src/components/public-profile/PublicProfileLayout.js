@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowUpRight, Bot, Globe, Mail, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
+import { ArrowUpRight, Globe, Mail, MessageCircle, Phone, ShieldCheck } from 'lucide-react';
 import BackgroundElements from '@/components/layout/BackgroundElements';
 import CustomToastContainer from '@/components/ui/ToastContainer';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
@@ -159,8 +159,14 @@ export default function PublicProfileLayout({ profile, children }) {
           <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 text-xs text-text-muted sm:flex-row sm:items-center sm:justify-between">
             <p>© {new Date().getFullYear()} {profile.professional_name}. All rights reserved.</p>
             <Link href="/" className="inline-flex items-center gap-2 font-bold uppercase tracking-wider text-primary transition hover:text-primary/80">
-              <span className="grid h-7 w-7 place-items-center rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white shadow-sm shadow-primary/20">
-                <Bot size={14} />
+              <span className="grid h-7 w-7 place-items-center rounded-lg overflow-hidden">
+                <Image
+                  src="/logo/logo.png"
+                  alt="Nesti AI logo"
+                  width={28}
+                  height={28}
+                  className="h-7 w-7 object-cover"
+                />
               </span>
               <span>Powered by Nesti AI</span>
               <ArrowUpRight size={12} />

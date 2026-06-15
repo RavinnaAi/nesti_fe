@@ -19,7 +19,11 @@ export default function Home() {
       <TestimonialsSection />
       <CEOFeaturesSection />
       <OnboardingSection />
-      <PageCta compact transparentSection />
+      <PageCta
+        compact
+        transparentSection
+        compactHeading="Stop Burning Hours on Admin Work. Start Your Free Trial Today."
+      />
     </div>
   );
 }

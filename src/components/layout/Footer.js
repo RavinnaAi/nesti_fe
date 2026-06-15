@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Bot, Mail, PhoneCall, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { Mail, PhoneCall, ArrowRight } from "lucide-react";
 
 function FacebookIcon(props) {
   return (
@@ -107,14 +108,20 @@ export default function Footer() {
         <div className="grid gap-7 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,2fr)] lg:gap-12">
             <div>
               <div className="mb-3 flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/15">
-                  <Bot size={20} aria-hidden />
+                <div className="grid h-10 w-10 place-items-center rounded-xl overflow-hidden">
+                  <Image
+                    src="/logo/logo.png"
+                    alt="Nesti AI logo"
+                    width={40}
+                    height={40}
+                    className="h-10 w-10 object-cover"
+                  />
                 </div>
                 <div>
-                  <span className="block text-xl font-black tracking-tight text-text-heading">
+                  <span className="block text-xl font-black leading-tight tracking-tight text-text-heading">
                     Nesti AI
                   </span>
-                  <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-primary">
+                  <span className="-mt-0.5 block text-[11px] font-bold uppercase leading-tight tracking-[0.2em] text-primary">
                     Real Estate Intelligence
                   </span>
                 </div>

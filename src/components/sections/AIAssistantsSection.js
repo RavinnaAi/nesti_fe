@@ -1,24 +1,17 @@
 "use client";
 
+import Image from "next/image";
 import { motion } from "framer-motion";
 import {
-  Bot,
-  Home,
-  Building2,
-  HeartHandshake,
-  MessageSquare,
-  RefreshCw,
-  BarChart3,
   CheckCircle2,
 } from "lucide-react";
 
 const assistants = [
   {
-    name: "Buyer Assistant",
+    name: "Buyer Assistant: The Lead Qualifier",
     role: "Lead Qualification Expert",
     description:
-      "Understands buyer needs, captures contact details, qualifies financing status, and matches with perfect agents and brokers.",
-    icon: Home,
+      "Stops you from wasting time on window-shoppers. It automatically qualifies buyer budgets, timelines, and pre-approval status before they ever reach your inbox.",
     gradient: "from-green-500 via-emerald-500 to-teal-500",
     features: [
       "Property preference analysis",
@@ -28,11 +21,10 @@ const assistants = [
     ],
   },
   {
-    name: "Seller Assistant",
+    name: "Seller Assistant: The Listing Magnet",
     role: "Property Marketing Specialist",
     description:
-      "Gathers property details, understands selling goals, provides market insights, and connects with top-performing local agents.",
-    icon: Building2,
+      "Instantly engages potential sellers. It gathers property data, handles initial valuation discussions, and hooks clients with localized market trends.",
     gradient: "from-green-500 via-emerald-500 to-teal-500",
     features: [
       "Property valuation guidance",
@@ -42,59 +34,16 @@ const assistants = [
     ],
   },
   {
-    name: "Professional Matcher",
-    role: "Smart Connection Engine",
-    description:
-      "Analyzes user needs and intelligently matches with agents, brokers, and lawyers based on expertise, location, and performance.",
-    icon: HeartHandshake,
-    gradient: "from-green-500 via-emerald-500 to-teal-500",
-    features: [
-      "Multi-factor matching algorithm",
-      "Professional profile presentation",
-      "Consultation scheduling",
-      "Engagement tracking",
-    ],
-  },
-  {
-    name: "General Assistant",
-    role: "Platform Navigation Guide",
-    description:
-      "Routes users to specialized bots, answers platform questions, provides market insights, and captures initial lead information.",
-    icon: MessageSquare,
-    gradient: "from-green-500 via-emerald-500 to-teal-500",
-    features: [
-      "Intelligent routing",
-      "Service explanation",
-      "Market insights for USA/Canada",
-      "Lead capture & qualification",
-    ],
-  },
-  {
-    name: "Follow-Up Assistant",
+    name: "Follow-Up Assistant: The Ghost-Buster",
     role: "Relationship Nurturing Pro",
     description:
-      "Re-engages cold leads, provides market updates, checks situation changes, and moves leads through the conversion funnel.",
-    icon: RefreshCw,
+      "Wakes up your dead database. It continuously nurtures cold leads with personalized SMS and email updates until they are ready to transact.",
     gradient: "from-green-500 via-emerald-500 to-teal-500",
     features: [
       "Automated re-engagement",
       "Personalized market updates",
       "Status change detection",
       "Conversion optimization",
-    ],
-  },
-  {
-    name: "Analytics Engine",
-    role: "Intelligence & Insights",
-    description:
-      "Tracks all interactions, scores leads 0-100, generates performance reports, and provides actionable insights for professionals.",
-    icon: BarChart3,
-    gradient: "from-green-500 via-emerald-500 to-teal-500",
-    features: [
-      "Advanced lead scoring",
-      "Performance analytics",
-      "Conversion tracking",
-      "ROI measurement",
     ],
   },
 ];
@@ -112,7 +61,13 @@ export default function AIAssistantsSection() {
             suppressHydrationWarning
           >
             <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
-              <Bot size={14} />
+              <Image
+                src="/logo/logo.png"
+                alt="Nesti AI logo"
+                width={14}
+                height={14}
+                className="h-[14px] w-[14px] object-contain"
+              />
               AI-Powered Assistant Network
             </span>
           </motion.div>
@@ -145,7 +100,6 @@ export default function AIAssistantsSection() {
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3">
           {assistants.map((assistant) => {
-            const IconComponent = assistant.icon;
             return (
               <motion.article
                 key={`assistant-${assistant.name}`}
@@ -157,17 +111,10 @@ export default function AIAssistantsSection() {
                 className="group relative h-full rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md"
                 suppressHydrationWarning
               >
-                {/* Icon */}
-                <div
-                  className={`mb-3 h-10 w-10 rounded-xl bg-gradient-to-br ${assistant.gradient} p-2.5 shadow-md transition-transform duration-300 group-hover:scale-105`}
-                >
-                  <IconComponent className={`w-full h-full text-white `} />
-                </div>
-
                 {/* Content */}
                 <div className="space-y-2.5">
                   <div>
-                    <h3 className="mb-1 text-lg font-black text-text-heading">
+                    <h3 className="mb-1 overflow-hidden text-ellipsis whitespace-nowrap text-[15px] font-black text-text-heading md:text-base">
                       {assistant.name}
                     </h3>
                     <p className="text-xs font-semibold uppercase tracking-[0.18em] text-text-muted">

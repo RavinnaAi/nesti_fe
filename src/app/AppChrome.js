@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
@@ -15,7 +16,6 @@ import AppSidebar from "@/components/layout/AppSidebar";
 import NotificationsBell from "@/components/notifications/NotificationsBell";
 import ConversationsBell from "@/components/prochat/ConversationsBell";
 import {
-  Bot,
   CalendarDays,
   ChevronDown,
   Globe2,
@@ -623,8 +623,14 @@ export default function AppChrome({ children }) {
             <footer className="mt-auto border-t border-primary/20 bg-gradient-to-r from-primary/[0.08] via-white/95 to-primary/[0.06] px-4 py-2.5 sm:px-6">
               <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
                 <div className="flex min-w-0 items-center gap-2">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white shadow-[0_3px_10px_rgba(52,199,89,0.35)] ring-1 ring-white/60">
-                    <Bot size={14} strokeWidth={2} />
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg overflow-hidden">
+                    <Image
+                      src="/logo/logo.png"
+                      alt="Nesti AI logo"
+                      width={28}
+                      height={28}
+                      className="h-7 w-7 object-cover"
+                    />
                   </span>
                   <div className="min-w-0 leading-tight">
                     <p className="truncate text-[12px] font-semibold text-text-heading">Nesti AI</p>

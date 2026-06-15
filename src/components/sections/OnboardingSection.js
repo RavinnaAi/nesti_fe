@@ -94,16 +94,18 @@ export default function OnboardingSection() {
                   aria-label={`Get started as ${type.title}`}
                 >
                   <div className="group relative flex h-full cursor-pointer flex-col rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md">
-                    <div
-                      className={`mb-3 h-10 w-10 rounded-xl bg-gradient-to-br ${type.gradient} p-2.5 shadow-md transition-transform duration-300 group-hover:scale-105 group-hover:shadow-lg`}
-                    >
-                      <IconComponent className="w-full h-full text-white" aria-hidden="true" />
+                    <div className="mb-2.5 flex items-center gap-2.5">
+                      <div
+                        className={`h-10 w-10 shrink-0 rounded-xl bg-gradient-to-br ${type.gradient} p-2.5 shadow-md transition-transform duration-300 group-hover:scale-105 group-hover:shadow-lg`}
+                      >
+                        <IconComponent className="h-full w-full text-white" aria-hidden="true" />
+                      </div>
+                      <h3 className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[18px] font-black leading-tight text-text-heading transition-colors group-hover:text-primary">
+                        {type.title}
+                      </h3>
                     </div>
 
                     <div className="flex-grow">
-                      <h3 className="mb-1.5 text-lg font-black text-text-heading transition-colors group-hover:text-primary">
-                        {type.title}
-                      </h3>
                       <p className="text-sm leading-5 text-text-body">
                         {type.description}
                       </p>

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowRight, Bot, Mail, Menu, Phone, ShieldCheck, UserPlus, X } from 'lucide-react';
+import { ArrowRight, Mail, Menu, Phone, ShieldCheck, UserPlus, X } from 'lucide-react';
 
 const ROLE_HERO = {
   agent: {
@@ -90,8 +90,14 @@ export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
             href="/"
             className="flex items-center gap-2.5 rounded-xl px-2 py-1 transition hover:bg-primary/5"
           >
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/20">
-              <Bot size={20} />
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-lg overflow-hidden">
+              <Image
+                src="/logo/logo.png"
+                alt="Nesti AI logo"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-cover"
+              />
             </span>
             <span className="flex min-h-10 flex-col justify-center leading-tight">
               <span className="text-base font-semibold tracking-tight text-text-heading">Nesti AI</span>

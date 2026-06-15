@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Bot,
   ArrowRight,
   CalendarDays,
   ChevronDown,
@@ -144,10 +144,16 @@ export default function Header() {
             aria-label="Go to Nesti AI home"
           >
             <motion.div
-              className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/20 transition-all group-hover:scale-105"
+              className="grid h-10 w-10 place-items-center transition-all group-hover:scale-105"
               whileHover={{ rotate: 6 }}
             >
-              <Bot size={20} />
+              <Image
+                src="/logo/logo.png"
+                alt="Nesti AI logo"
+                width={40}
+                height={40}
+                className="h-10 w-10 object-cover"
+              />
             </motion.div>
             <div className="flex flex-col">
               <span className="text-xl font-black leading-tight tracking-tight text-text-heading">
@@ -416,8 +422,14 @@ export default function Header() {
                   className="flex min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-lg border-0 bg-transparent p-0 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40"
                   aria-label="Go to Nesti AI home"
                 >
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-gradient-to-br from-primary to-primary-dark text-white shadow-md shadow-primary/20">
-                    <Bot size={18} />
+                  <div className="grid h-9 w-9 shrink-0 place-items-center">
+                    <Image
+                      src="/logo/logo.png"
+                      alt="Nesti AI logo"
+                      width={36}
+                      height={36}
+                      className="h-9 w-9 object-cover"
+                    />
                   </div>
                   <div className="min-w-0">
                     <span className="block truncate text-lg font-black leading-tight text-text-heading">
