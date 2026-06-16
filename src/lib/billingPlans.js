@@ -17,8 +17,8 @@ const PLAN_MARKETING = {
     description:
       "Advanced workflows for active professionals using automation, insights, calendar, and referrals.",
     features: [
-      "Everything in Basic with up to 1,000 leads",
-      "Automated nurture and bulk follow-up (up to 500 emails)",
+      "Everything in Basic with up to 150 leads per month",
+      "Bulk follow-up workspace (up to 500 emails)",
       "Calendly calendar integration",
       "Advanced lead insights and conversation transcript",
       "Analytics, web page, and AI assistant tools",

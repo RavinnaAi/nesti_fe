@@ -214,7 +214,7 @@ export default function LeadsProfileTab({
                   <KeyValue label="Property type" value={property.property_type} />
                   <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
                   <KeyValue label="Realtor status" value={qualification.realtor_status} />
-                  <KeyValue label="Buy property area" value={qualification.buy_property_location} />
+                  <KeyValue label="Address" value={qualification.buy_property_location} />
                   <KeyValue label="Motivation" value={qualification.motivation_reason} />
                 </>
               )}

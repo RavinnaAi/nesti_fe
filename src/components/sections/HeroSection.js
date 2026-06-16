@@ -73,7 +73,7 @@ export default function HeroSection() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true, margin: "0px" }}
               transition={{ duration: 0.3 }}
-              className="max-w-2xl text-base font-light leading-6 text-text-body md:text-[17px]"
+              className="max-w-2xl text-[16px] font-normal leading-7 text-text-heading/85 md:text-[18px] md:leading-8"
               suppressHydrationWarning
             >
               Meet Nesti, an all-in-one lead operations platform that qualifies

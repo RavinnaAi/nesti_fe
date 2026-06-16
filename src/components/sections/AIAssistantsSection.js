@@ -89,7 +89,7 @@ export default function AIAssistantsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="mx-auto max-w-2xl text-sm font-light leading-6 text-text-body md:text-base"
+            className="mx-auto max-w-2xl text-[15px] font-normal leading-7 text-text-heading/85 md:text-[17px] md:leading-8"
             suppressHydrationWarning
           >
             Multiple specialized AI agents working 24/7 to qualify leads, match
@@ -122,7 +122,7 @@ export default function AIAssistantsSection() {
                     </p>
                   </div>
 
-                  <p className="text-sm leading-5 text-text-body">
+                  <p className="text-[15px] leading-6 text-text-heading/80">
                     {assistant.description}
                   </p>
 
@@ -138,7 +138,7 @@ export default function AIAssistantsSection() {
                           className="mt-0.5 flex-shrink-0 text-primary"
                           aria-hidden="true"
                         />
-                        <span className="text-sm leading-5 text-text-body">
+                        <span className="text-[14px] leading-6 text-text-heading/80">
                           {feature}
                         </span>
                       </div>

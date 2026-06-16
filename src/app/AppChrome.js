@@ -391,21 +391,6 @@ export default function AppChrome({ children }) {
     };
   }, [userMenuOpen]);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!(token && !isPublicAuthPage && isFixedTableListRoute)) return;
-
-    const prevHtmlOverflow = document.documentElement.style.overflow;
-    const prevBodyOverflow = document.body.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.documentElement.style.overflow = prevHtmlOverflow;
-      document.body.style.overflow = prevBodyOverflow;
-    };
-  }, [token, isPublicAuthPage, isFixedTableListRoute]);
-
   // ── Chatbot embed: no chrome at all ──
   if (isChatbotEmbed) {
     return <>{children}</>;
@@ -484,12 +469,21 @@ export default function AppChrome({ children }) {
     return (
       <>
         <BackgroundElements variant="default" />
-        <div className="relative z-10 flex min-h-screen w-full flex-1">
+        <div
+          className={`relative z-10 flex w-full flex-1 ${
+            isFixedTableListRoute ? "h-screen min-h-0 overflow-hidden" : "min-h-screen"
+          }`}
+        >
           <AppSidebar
             isMobileOpen={isSidebarMobileOpen}
             onCloseMobile={() => setIsSidebarMobileOpen(false)}
           />
-          <div id="workspace-content" className="flex min-h-screen w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60">
+          <div
+            id="workspace-content"
+            className={`flex w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60 ${
+              isFixedTableListRoute ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
+            }`}
+          >
             <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur sm:px-6">
               <div className="flex items-center gap-3 min-w-0">
                 <button
@@ -614,7 +608,7 @@ export default function AppChrome({ children }) {
               id="workspace-main"
               className={`relative z-0 flex min-h-0 flex-1 flex-col ${
                 isFixedTableListRoute
-                  ? "overflow-hidden"
+                  ? "overflow-y-auto overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                   : "overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               }`}
             >

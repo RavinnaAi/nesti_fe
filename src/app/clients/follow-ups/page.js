@@ -40,7 +40,8 @@ export default function ClientFollowUpsPage() {
             </div>
             <h1 className="mt-4 text-lg font-bold text-text-heading">Bulk follow-ups require Standard</h1>
             <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-text-muted">
-              Automated client follow-ups and bulk nurture emails are included on Standard and Enterprise plans.
+              Bulk nurture emails are included on Standard and Enterprise plans.
+              Automated 15-day follow-ups are available on Enterprise.
               Upgrade to generate, review, and send follow-ups from this workspace.
             </p>
             <div className="mt-6 flex flex-wrap items-center justify-center gap-2">

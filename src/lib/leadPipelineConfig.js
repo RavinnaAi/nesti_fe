@@ -22,10 +22,10 @@ export const PIPELINE_AGENT_SELECT_TERMINAL = [
   { value: "closed_lost", label: "Closed — lost" },
 ];
 
-/** Sidebar shortcuts: use the main Leads link for an unfiltered list; Recursive leads covers won + lost. */
+/** Sidebar shortcuts: use the main Leads link for an unfiltered list; Recurring Leads covers won + lost. */
 export const PIPELINE_SIDEBAR_ITEMS = [
   { key: "active", label: "Active", kind: "pipeline", value: "active" },
-  { key: "closed", label: "Recursive leads", kind: "pipeline", value: "closed" },
+  { key: "closed", label: "Recurring Leads", kind: "pipeline", value: "closed" },
   { key: "nurturing", label: "Nurturing", kind: "status", value: "nurturing" },
 ];
 

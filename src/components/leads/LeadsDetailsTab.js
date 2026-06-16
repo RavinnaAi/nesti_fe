@@ -330,7 +330,7 @@ export default function LeadsDetailsTab({
         <KeyValue label="Viewing readiness" value={qualification.viewing_readiness} />
         <KeyValue label="Living situation" value={qualification.living_situation} />
         <KeyValue label="Urgency readiness" value={qualification.urgency_readiness} />
-        <KeyValue label="Buy property area" value={qualification.buy_property_location} />
+        <KeyValue label="Address" value={qualification.buy_property_location} />
         <KeyValue label="Lead type" value={leadData.lead_type} />
       </div>
     </div>
