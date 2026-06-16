@@ -1,3 +1,13 @@
+const r2PublicBaseUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_BASE_URL || process.env.R2_PUBLIC_BASE_URL || "";
+let r2PublicHostname = "";
+try {
+  if (r2PublicBaseUrl) {
+    r2PublicHostname = new URL(r2PublicBaseUrl).hostname;
+  }
+} catch {
+  r2PublicHostname = "";
+}
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   // Optimize for production builds
@@ -44,6 +54,22 @@ const nextConfig = {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
+      {
+        protocol: "https",
+        hostname: "**.r2.cloudflarestorage.com",
+      },
+      {
+        protocol: "https",
+        hostname: "**.r2.dev",
+      },
+      ...(r2PublicHostname
+        ? [
+            {
+              protocol: "https",
+              hostname: r2PublicHostname,
+            },
+          ]
+        : []),
     ],
     // Optimize images
     formats: ["image/avif", "image/webp"],
