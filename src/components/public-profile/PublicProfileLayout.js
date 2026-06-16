@@ -121,7 +121,6 @@ export default function PublicProfileLayout({ profile, children }) {
                   </li>
                 ))}
                 <li><Link href="#reviews" className="text-text-muted transition hover:text-primary">Reviews</Link></li>
-                <li><Link href="#network" className="text-text-muted transition hover:text-primary">Network</Link></li>
                 <li><Link href="#guide" className="text-text-muted transition hover:text-primary">Guide</Link></li>
                 <li><Link href="#contact" className="text-text-muted transition hover:text-primary">How to connect</Link></li>
               </ul>

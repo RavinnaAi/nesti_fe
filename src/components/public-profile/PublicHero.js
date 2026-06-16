@@ -77,7 +77,6 @@ export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
         ? [{ href: '#programs', label: 'Programs' }]
         : []),
     { href: '#reviews', label: 'Reviews' },
-    { href: '#network', label: 'Network' },
     { href: '#guide', label: 'Guide' },
     { href: '#contact', label: 'Contact' },
   ];
