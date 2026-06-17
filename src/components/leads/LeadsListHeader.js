@@ -9,7 +9,7 @@ import Link from "next/link";
  */
 export default function LeadsListHeader({ filterLabel = "", children = null, pageTitle = "Leads" }) {
   const normalizedFilter = String(filterLabel || "").trim().toLowerCase();
-  const standaloneFilterLabel = new Set(["recursive leads", "active", "nurturing"]).has(normalizedFilter);
+  const standaloneFilterLabel = new Set(["recurring leads", "active", "nurturing"]).has(normalizedFilter);
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div className="min-w-0 space-y-1">
@@ -35,11 +35,6 @@ export default function LeadsListHeader({ filterLabel = "", children = null, pag
             <h1 className="text-[26px] leading-tight font-bold text-text-heading">{pageTitle}</h1>
           )}
         </div>
-        {filterLabel ? null : (
-          <p className="text-sm text-text-muted">
-            Manage conversations, referrals, nurtures, and calculators.
-          </p>
-        )}
       </div>
       {children}
     </div>
