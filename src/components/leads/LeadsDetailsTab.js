@@ -116,6 +116,15 @@ export default function LeadsDetailsTab({
 
   const readable = (value) => {
     if (value === null || value === undefined || value === "") return "—";
+    const token = String(value).trim().toLowerCase().replace(/\s+/g, "_");
+    const mortgageTokenMap = {
+      "20_plus": "20%+",
+      "10_19": "10-19%",
+      "5_9": "5-9%",
+      "under_5": "Under 5%",
+      "no_savings": "No savings yet",
+    };
+    if (mortgageTokenMap[token]) return mortgageTokenMap[token];
     const raw = String(value).replace(/_/g, " ").trim();
     if (!raw) return "—";
     // Keep email/phone/number-like values as-is.
@@ -204,6 +213,9 @@ export default function LeadsDetailsTab({
     : conversionFunnel.urgency
       ? `${conversionFunnel.urgency}${responseWindowText ? ` - respond within ${responseWindowText}` : ""}`
       : leadData.conversion?.alert?.title || "—";
+  const hasPrimaryOutcome = String(primaryOutcome || "").trim() && String(primaryOutcome).trim() !== "—";
+  const hasConversionAlert = String(conversionAlert || "").trim() && String(conversionAlert).trim() !== "—";
+  const showOutcomeAlertForRole = !isLawyerLead && !isMortgageBrokerLead;
 
   const displayField = (v) => formatLeadIntakeSlug(v) || readable(v);
 
@@ -343,8 +355,12 @@ export default function LeadsDetailsTab({
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
         <KeyValue label="Appointment status" value={appointmentStatus} />
-        <KeyValue label="Primary outcome" value={primaryOutcome} />
-        <KeyValue label="Alert" value={conversionAlert} />
+        {showOutcomeAlertForRole || hasPrimaryOutcome ? (
+          <KeyValue label="Primary outcome" value={primaryOutcome} />
+        ) : null}
+        {showOutcomeAlertForRole || hasConversionAlert ? (
+          <KeyValue label="Alert" value={conversionAlert} />
+        ) : null}
       </div>
       {String(appointmentStatus).toLowerCase() === "booked" &&
       typeof onCancelCalendlyAppointment === "function" ? (

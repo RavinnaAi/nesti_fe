@@ -44,6 +44,7 @@ import {
   AGENT_QUALIFY_STEP_REQUIRED,
   AGENT_REACH_STEP_REQUIRED,
   LAWYER_PREFLIGHT_REQUIRED_FIELDS,
+  MORTGAGE_PREFLIGHT_REQUIRED_FIELDS,
   agentFinalRequiredFields,
   getAgentStartPayload,
   getBasicContactValidationError,
@@ -687,7 +688,7 @@ export default function ChatWidget({
     if (!sessionId || !embedToken || loading || !useRolePreflight) return;
 
     const contactError = getBasicContactValidationError(rolePreflightDraft, {
-      requireAddress: resolvedRole === "lawyer",
+      requireAddress: resolvedRole === "lawyer" || resolvedRole === "mortgage_broker",
     });
     if (contactError) {
       setFormValidationError(contactError);
@@ -698,6 +699,13 @@ export default function ChatWidget({
       missingDraftFields(rolePreflightDraft, LAWYER_PREFLIGHT_REQUIRED_FIELDS).length
     ) {
       setFormValidationError("Please complete all lawyer intake fields to continue.");
+      return;
+    }
+    if (
+      resolvedRole === "mortgage_broker" &&
+      missingDraftFields(rolePreflightDraft, MORTGAGE_PREFLIGHT_REQUIRED_FIELDS).length
+    ) {
+      setFormValidationError("Please complete all mortgage intake fields to continue.");
       return;
     }
     setFormValidationError("");
@@ -840,10 +848,7 @@ export default function ChatWidget({
     leadFlowStep === "chat" &&
     Boolean(leadFormContact);
 
-  const headerSubtitle =
-    useAgentLeadForm && leadFlowStep !== "chat"
-      ? ""
-      : displaySubtitleBase;
+  const headerSubtitle = displaySubtitleBase;
 
   const header = (
     <ChatWidgetHeader
@@ -853,7 +858,6 @@ export default function ChatWidget({
       trimmedAvatarUrl={trimmedAvatarUrl}
       setHostAvatarBroken={setHostAvatarBroken}
       displayTitle={displayTitle}
-      roleBadgeLabel={roleBadgeLabel}
       headerSubtitle={headerSubtitle}
       inlineMode={inlineMode}
       setIsOpen={(val) => { setIsOpen(val); if (!val) onClose?.(); }}

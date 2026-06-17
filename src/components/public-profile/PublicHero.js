@@ -188,6 +188,16 @@ export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
             ].join(', '),
           }}
         />
+        {/* Tablet overlay — stronger than desktop for text contrast on medium screens */}
+        <div
+          className="absolute inset-0 hidden md:block lg:hidden"
+          style={{
+            background: [
+              'linear-gradient(to right, rgba(255,255,255,0.97) 0%, rgba(255,255,255,0.90) 42%, rgba(255,255,255,0.62) 68%, rgba(255,255,255,0.26) 84%, transparent 96%)',
+              'linear-gradient(to top, rgba(255,255,255,0.82) 0%, rgba(255,255,255,0.44) 36%, rgba(255,255,255,0.12) 68%, transparent 100%)',
+            ].join(', '),
+          }}
+        />
         {/* Mobile overlay — stronger readability over busy cover photos */}
         <div className="absolute inset-0 sm:hidden"
           style={{
@@ -199,7 +209,7 @@ export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
         />
 
         <div className="relative z-10 mx-auto grid min-h-[430px] max-w-7xl grid-cols-1 items-center gap-8 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:px-8">
-          <div className="lg:col-span-7 lg:max-w-2xl">
+          <div className="rounded-2xl bg-white/72 p-4 backdrop-blur-[1.5px] sm:p-5 md:p-6 lg:col-span-7 lg:max-w-2xl lg:rounded-none lg:bg-transparent lg:p-0 lg:backdrop-blur-0">
             <span className="inline-flex rounded-full border border-primary/15 bg-primary/5 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-[0.18em] text-primary">
               {heroContent.eyebrow}
             </span>
@@ -208,7 +218,7 @@ export default function PublicHero({ profile, onCTAClick, onDirectLeadClick }) {
               {profile.headline || heroContent.fallbackHeadline(profile.professional_name || 'this professional')}
             </h1>
 
-            <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-text-body">
+            <p className="mt-3 max-w-xl text-sm font-medium leading-6 text-text-heading/85 lg:text-text-body">
               {profile.tagline || heroContent.fallbackTagline}
             </p>
 

@@ -37,7 +37,7 @@ export const emptyAgentLeadDraft = () => ({
   living_situation: "",
   urgency_readiness: "",
   preferred_contact_method: "",
-  best_time_to_contact: "",
+  best_time_to_contact: "anytime",
   property_images: [],
 });
 
@@ -55,7 +55,7 @@ export function buildAgentFormData(intent, draft) {
     living_situation: draft.living_situation,
     urgency_readiness: draft.urgency_readiness,
     preferred_contact_method: draft.preferred_contact_method,
-    best_time_to_contact: draft.best_time_to_contact,
+    best_time_to_contact: draft.best_time_to_contact || "anytime",
   };
 
   if (intent === "buy") {

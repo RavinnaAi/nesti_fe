@@ -484,8 +484,8 @@ export default function AppChrome({ children }) {
               isFixedTableListRoute ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
             }`}
           >
-            <header className="sticky top-0 z-40 flex h-16 shrink-0 items-center justify-between border-b border-border bg-white/90 px-4 backdrop-blur sm:px-6">
-              <div className="flex items-center gap-3 min-w-0">
+            <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-white/90 px-3 backdrop-blur sm:h-16 sm:px-6">
+              <div className="flex min-w-0 max-w-[48%] items-center gap-2.5 sm:max-w-none sm:gap-3">
                 <button
                   type="button"
                   onClick={() => setIsSidebarMobileOpen(true)}
@@ -494,9 +494,9 @@ export default function AppChrome({ children }) {
                 >
                   <Menu size={16} />
                 </button>
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-text-heading">Workspace</div>
-                  <div className="text-[11px] text-text-muted">All tools in one place</div>
+                <div className="hidden min-w-0 sm:block">
+                  <div className="truncate text-xs font-semibold text-text-heading sm:text-sm">Workspace</div>
+                  <div className="hidden text-[11px] text-text-muted sm:block">All tools in one place</div>
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
@@ -511,7 +511,7 @@ export default function AppChrome({ children }) {
                     aria-expanded={userMenuOpen}
                     aria-haspopup="menu"
                     aria-controls="workspace-user-menu"
-                    className="group flex max-w-[min(100%,14rem)] items-center gap-2 rounded-lg border border-border bg-white/90 px-2 py-1.5 transition hover:border-primary/35 hover:bg-primary/[0.06] sm:max-w-[18rem] sm:px-2.5"
+                    className="group flex max-w-[min(100%,11rem)] items-center gap-1.5 rounded-lg border border-border bg-white/90 px-1.5 py-1.5 transition hover:border-primary/35 hover:bg-primary/[0.06] sm:max-w-[18rem] sm:gap-2 sm:px-2.5"
                   >
                     <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full border border-border bg-primary/10 text-[11px] font-bold text-primary">
                       {avatarUrl ? (
@@ -521,12 +521,12 @@ export default function AppChrome({ children }) {
                         avatarInitials
                       )}
                     </span>
-                    <span className="min-w-0 max-w-[7rem] truncate text-left text-sm font-medium text-text-heading group-hover:text-primary sm:max-w-[12rem]">
+                    <span className="hidden min-w-0 max-w-[7rem] truncate text-left text-sm font-medium text-text-heading group-hover:text-primary sm:block sm:max-w-[12rem]">
                       {displayName}
                     </span>
                     <ChevronDown
                       size={16}
-                      className={`shrink-0 text-text-muted transition-transform ${userMenuOpen ? "rotate-180" : ""}`}
+                      className={`hidden shrink-0 text-text-muted transition-transform sm:block ${userMenuOpen ? "rotate-180" : ""}`}
                       aria-hidden
                     />
                   </button>
@@ -614,28 +614,30 @@ export default function AppChrome({ children }) {
             >
               {children}
             </main>
-            <footer className="mt-auto border-t border-primary/20 bg-gradient-to-r from-primary/[0.08] via-white/95 to-primary/[0.06] px-4 py-2.5 sm:px-6">
-              <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
-                <div className="flex min-w-0 items-center gap-2">
-                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg overflow-hidden">
-                    <Image
-                      src="/logo/logo.png"
-                      alt="Nesti AI logo"
-                      width={28}
-                      height={28}
-                      className="h-7 w-7 object-cover"
-                    />
-                  </span>
-                  <div className="min-w-0 leading-tight">
-                    <p className="truncate text-[12px] font-semibold text-text-heading">Nesti AI</p>
-                    <p className="truncate text-[10px] text-text-muted">Workspace</p>
+            {!isFixedTableListRoute ? (
+              <footer className="shrink-0 border-t border-primary/20 bg-gradient-to-r from-primary/[0.08] via-white/95 to-primary/[0.06] px-4 py-2.5 sm:px-6">
+                <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg overflow-hidden">
+                      <Image
+                        src="/logo/logo.png"
+                        alt="Nesti AI logo"
+                        width={28}
+                        height={28}
+                        className="h-7 w-7 object-cover"
+                      />
+                    </span>
+                    <div className="min-w-0 leading-tight">
+                      <p className="truncate text-[12px] font-semibold text-text-heading">Nesti AI</p>
+                      <p className="truncate text-[10px] text-text-muted">Workspace</p>
+                    </div>
                   </div>
+                  <p className="shrink-0 text-[10px] text-text-muted/90">
+                    &copy; {new Date().getFullYear()} Nesti AI
+                  </p>
                 </div>
-                <p className="shrink-0 text-[10px] text-text-muted/90">
-                  &copy; {new Date().getFullYear()} Nesti AI
-                </p>
-              </div>
-            </footer>
+              </footer>
+            ) : null}
           </div>
         </div>
         <CustomToastContainer />

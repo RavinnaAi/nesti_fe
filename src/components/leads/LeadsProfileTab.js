@@ -17,6 +17,11 @@ export default function LeadsProfileTab({
   const hideBuyerSellerIntent = profRole === "lawyer" || profRole === "mortgage_broker";
   const isLawyerLead = profRole === "lawyer";
   const isMortgageBrokerLead = profRole === "mortgage_broker";
+  const isSellerLead =
+    String(leadData.intent || "")
+      .trim()
+      .toLowerCase() === "sell" ||
+    /seller$/i.test(String(leadData.lead_type || ""));
   const contact = leadData.contact || {};
   const property = leadData.property || {};
   const qualification = leadData.qualification || {};
@@ -214,7 +219,9 @@ export default function LeadsProfileTab({
                   <KeyValue label="Property type" value={property.property_type} />
                   <KeyValue label="Mortgage status" value={qualification.mortgage_status} />
                   <KeyValue label="Realtor status" value={qualification.realtor_status} />
-                  <KeyValue label="Address" value={qualification.buy_property_location} />
+                  {!isSellerLead ? (
+                    <KeyValue label="Address" value={qualification.buy_property_location} />
+                  ) : null}
                   <KeyValue label="Motivation" value={qualification.motivation_reason} />
                 </>
               )}

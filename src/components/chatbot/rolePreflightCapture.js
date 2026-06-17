@@ -28,6 +28,15 @@ export const ROLE_LIVE_CHAT_PROGRESS_STEPS = [
 
 function humanizeEnum(value) {
   if (value == null || value === "") return "";
+  const token = String(value).trim().toLowerCase().replace(/\s+/g, "_");
+  const mortgageTokenMap = {
+    "20_plus": "20%+",
+    "10_19": "10-19%",
+    "5_9": "5-9%",
+    "under_5": "Under 5%",
+    "no_savings": "No savings yet",
+  };
+  if (mortgageTokenMap[token]) return mortgageTokenMap[token];
   return String(value).replace(/_/g, " ").trim();
 }
 
@@ -46,7 +55,7 @@ export function emptyLawyerPreflightDraft() {
     first_time_buyer: "",
     legal_services_needed: "",
     preferred_contact_method: "",
-    best_time_to_contact: "",
+    best_time_to_contact: "anytime",
   };
 }
 
@@ -67,7 +76,7 @@ export function emptyMortgagePreflightDraft() {
     purchase_purpose: "",
     urgency_signal: "",
     preferred_contact_method: "",
-    best_time_to_contact: "",
+    best_time_to_contact: "anytime",
   };
 }
 
@@ -95,7 +104,7 @@ export function buildLawyerFormData(draft) {
     first_time_buyer: draft.first_time_buyer,
     legal_services_needed: draft.legal_services_needed,
     preferred_contact_method: draft.preferred_contact_method,
-    best_time_to_contact: draft.best_time_to_contact,
+    best_time_to_contact: draft.best_time_to_contact || "anytime",
   };
 }
 
@@ -161,7 +170,7 @@ export function buildMortgageFormData(draft) {
     purchase_purpose: draft.purchase_purpose,
     urgency_signal: draft.urgency_signal,
     preferred_contact_method: draft.preferred_contact_method,
-    best_time_to_contact: draft.best_time_to_contact,
+    best_time_to_contact: draft.best_time_to_contact || "anytime",
   };
 }
 

@@ -4,7 +4,7 @@ import { Calendar } from "lucide-react";
 import { useCalendlyConnection } from "@/hooks/useCalendlyConnection";
 
 /**
- * Single control for the dashboard hero: shows "Connected" or "Disconnected" and toggles OAuth / disconnect.
+ * Single control for the dashboard hero: shows Calendly connection status and toggles OAuth / disconnect.
  * @param {"dark" | "light"} surface — `dark` for overlay heroes; `light` for white card footers (e.g. Settings-style dashboard hero).
  */
 export default function DashboardCalendlyButton({ className = "", surface = "dark" }) {
@@ -55,12 +55,12 @@ export default function DashboardCalendlyButton({ className = "", surface = "dar
 
   if (connected) {
     const label = allGood
-      ? "Connected"
+      ? "Calendly Connected"
       : planBlocked
-        ? "Connected"
+        ? "Calendly Connected"
         : webhookError
-          ? "Connected (action needed to finish sync)"
-          : "Connected (finishing setup)";
+          ? "Calendly Connected (action needed to finish sync)"
+          : "Calendly Connected (finishing setup)";
 
     const title = allGood
       ? "Click to disconnect Calendly"
@@ -105,7 +105,7 @@ export default function DashboardCalendlyButton({ className = "", surface = "dar
       title="Connect your Calendly account"
     >
       <Calendar size={18} className="opacity-95" aria-hidden />
-      {connecting ? "Connecting…" : "Disconnected"}
+      {connecting ? "Connecting…" : "Calendly Disconnected"}
     </button>
   );
 }

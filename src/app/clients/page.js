@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight, Mail, User, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Inbox, Mail, User, Users } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useAppSelector } from "@/store";
@@ -195,8 +195,8 @@ export default function ClientsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] flex-1 flex-col overflow-hidden bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] pb-3 font-body text-text-body antialiased sm:pb-4">
-      <div className="flex h-full w-full flex-col space-y-1.5 px-2.5 pt-5 sm:px-4 sm:pt-6">
+    <div className="flex h-full flex-1 min-h-0 flex-col bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] pb-3 font-body text-text-body antialiased sm:pb-4">
+      <div className="flex min-h-0 flex-1 w-full flex-col space-y-1.5 px-2.5 pt-5 sm:px-4 sm:pt-6">
         <PlanLimitBanner />
         <div className="flex flex-wrap items-end justify-between gap-1.5">
           <div>
@@ -234,9 +234,17 @@ export default function ClientsPage() {
               <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
             </div>
           ) : profiles.length === 0 ? (
-            <p className="px-2.5 py-6 text-center text-[11px] capitalize text-text-muted sm:text-xs">
-              {clientsQuery.data?.empty_state?.reason || "No client profiles found."}
-            </p>
+            <div className="flex h-full min-h-[260px] items-center justify-center p-6">
+              <div className="w-full max-w-md rounded-xl border border-border/70 bg-background-light/40 px-6 py-8 text-center shadow-sm">
+                <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Inbox size={18} />
+                </span>
+                <p className="text-sm font-semibold text-text-heading">No clients yet</p>
+                <p className="mt-1 text-xs text-text-muted">
+                  {clientsQuery.data?.empty_state?.reason || "Captured lead profiles will appear here."}
+                </p>
+              </div>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[680px] border-collapse text-left text-sm">

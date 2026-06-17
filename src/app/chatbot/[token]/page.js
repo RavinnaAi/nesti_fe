@@ -31,7 +31,9 @@ export default function ChatbotByTokenPage() {
           json?.widget_settings && typeof json.widget_settings === "object" ? json.widget_settings : {};
         const configuredName = String(settings.display_name ?? settings.displayName ?? "").trim();
         const resolvedHostName = String(json?.host_display_name ?? "").trim();
-        setTitleOverride(configuredName || resolvedHostName);
+        // Keep widget title consistent with professional profile display name.
+        // Use embed-configured label only as a fallback when host name is unavailable.
+        setTitleOverride(resolvedHostName || configuredName);
         setHostDisplayName(resolvedHostName);
         setHostAvatarUrl(String(json?.profile_image ?? "").trim());
         setStatus("ok");

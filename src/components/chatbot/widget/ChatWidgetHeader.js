@@ -9,7 +9,6 @@ export default function ChatWidgetHeader({
   trimmedAvatarUrl,
   setHostAvatarBroken,
   displayTitle,
-  roleBadgeLabel,
   headerSubtitle,
   inlineMode,
   setIsOpen,
@@ -39,11 +38,10 @@ export default function ChatWidgetHeader({
           </div>
         )}
         <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-2 min-w-0">
-            <div className={`${roleUi.headerTitleClass} min-w-0`} role="heading" aria-level={3}>
+          <div className="flex items-center gap-1.5 min-w-0">
+            <div className={`${roleUi.headerTitleClass} min-w-0 truncate`} role="heading" aria-level={3}>
               {displayTitle}
             </div>
-            <span className={roleUi.headerRoleBadgeClass}>{roleBadgeLabel}</span>
           </div>
           {headerSubtitle ? <p className={`m-0 mt-0.5 ${roleUi.headerSubtitleClass}`}>{headerSubtitle}</p> : null}
         </div>

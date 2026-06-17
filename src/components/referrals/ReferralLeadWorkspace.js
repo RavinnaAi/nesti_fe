@@ -161,6 +161,15 @@ function humanizeLeadDetail(value) {
   if (value === null || value === undefined) return "";
   const s = String(value).trim();
   if (!s) return "";
+  const token = s.toLowerCase().replace(/\s+/g, "_");
+  const mortgageTokenMap = {
+    "20_plus": "20%+",
+    "10_19": "10-19%",
+    "5_9": "5-9%",
+    "under_5": "Under 5%",
+    "no_savings": "No savings yet",
+  };
+  if (mortgageTokenMap[token]) return mortgageTokenMap[token];
   if (s.includes("@") || /^\+?[\d\s\-().]+$/.test(s)) return s;
   return s.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }

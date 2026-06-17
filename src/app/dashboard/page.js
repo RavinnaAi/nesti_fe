@@ -443,7 +443,7 @@ export default function DashboardPage() {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm"
         >
-          <div className="relative aspect-[16/5] w-full min-h-[10rem] sm:min-h-[11rem] md:min-h-[12rem]">
+          <div className="relative aspect-[16/6] w-full min-h-[8.5rem] sm:aspect-[16/5] sm:min-h-[11rem] md:min-h-[12rem]">
             {hasCover ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -477,15 +477,15 @@ export default function DashboardPage() {
             ) : null}
           </div>
 
-          <div className="relative flex flex-col gap-4 px-5 pb-6 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-7 sm:pb-7">
-            <div className="flex min-w-0 flex-1 items-end gap-4 sm:gap-7">
+          <div className="relative flex flex-col gap-3 px-4 pb-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-7 sm:pb-7">
+            <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-end sm:gap-7">
               <motion.div
-                className="relative z-[1] -mt-18 shrink-0 sm:-mt-24"
+                className="relative z-[1] -mt-10 shrink-0 sm:-mt-24"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="relative h-[9rem] w-[9rem] overflow-hidden rounded-[1.5rem] border-[5px] border-white bg-slate-50 shadow-[0_20px_48px_rgba(15,23,42,0.25)] ring-1 ring-black/5 sm:h-[10.5rem] sm:w-[10.5rem] sm:rounded-[1.75rem]">
+                <div className="relative h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-slate-50 shadow-[0_14px_30px_rgba(15,23,42,0.2)] ring-1 ring-black/5 sm:h-[10.5rem] sm:w-[10.5rem] sm:rounded-[1.75rem] sm:border-[5px] sm:shadow-[0_20px_48px_rgba(15,23,42,0.25)]">
                   {profileImageUrl && !avatarBroken ? (
                     <Image
                       src={profileImageUrl}
@@ -493,7 +493,7 @@ export default function DashboardPage() {
                       width={240}
                       height={240}
                       className="h-full w-full object-cover object-center"
-                      sizes="(max-width: 768px) 144px, 168px"
+                      sizes="(max-width: 640px) 80px, (max-width: 768px) 144px, 168px"
                       priority
                       unoptimized={
                         profileImageUrl.startsWith("data:") || profileImageUrl.startsWith("blob:")
@@ -501,36 +501,36 @@ export default function DashboardPage() {
                       onError={() => setAvatarBroken(true)}
                     />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center text-3xl font-bold text-primary-dark select-none sm:text-4xl" aria-hidden>
+                    <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-primary-dark select-none sm:text-4xl" aria-hidden>
                       {avatarInitials}
                     </span>
                   )}
                 </div>
-                <span className="absolute -bottom-1.5 -right-1.5 rounded-lg border-2 border-white bg-emerald-500 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-white shadow-md">
+                <span className="absolute -bottom-1 -right-1 rounded-md border-2 border-white bg-emerald-500 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white shadow-md sm:-bottom-1.5 sm:-right-1.5 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[9px]">
                   Active
                 </span>
               </motion.div>
 
               <motion.div
-                className="min-w-0 flex-1 pb-2"
+                className="min-w-0 flex-1 pt-1 sm:pb-2 sm:pt-0"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-base font-semibold tracking-tight text-text-heading sm:text-lg">
+                  <h1 className="text-sm font-semibold tracking-tight text-text-heading sm:text-lg">
                     {displayFullName || "Your workspace"}
                   </h1>
                   {roleBadgeText ? (
-                    <span className="rounded-full border border-border/80 bg-slate-100 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-text-heading">
+                    <span className="rounded-full border border-border/80 bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-text-heading sm:px-2.5 sm:text-[10px]">
                       {roleBadgeText}
                     </span>
                   ) : null}
                 </div>
                 {heroBio ? (
-                  <p className="mt-1.5 max-w-xl text-sm leading-relaxed text-text-muted">{heroBio}</p>
+                  <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-text-muted sm:mt-1.5 sm:text-sm">{heroBio}</p>
                 ) : (
-                  <p className="mt-1.5 text-sm text-text-muted/80 italic">No bio added yet.</p>
+                  <p className="mt-1 text-[13px] text-text-muted/80 italic sm:mt-1.5 sm:text-sm">No bio added yet.</p>
                 )}
               </motion.div>
             </div>

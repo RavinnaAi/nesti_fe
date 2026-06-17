@@ -33,6 +33,15 @@ const normalizeList = (data) => {
 function humanize(value) {
   if (value == null || value === "") return "—";
   const raw = String(value).trim();
+  const token = raw.toLowerCase().replace(/\s+/g, "_");
+  const mortgageTokenMap = {
+    "20_plus": "20%+",
+    "10_19": "10-19%",
+    "5_9": "5-9%",
+    "under_5": "Under 5%",
+    "no_savings": "No savings yet",
+  };
+  if (mortgageTokenMap[token]) return mortgageTokenMap[token];
   if (/^\d+_\d+$/.test(raw)) {
     const [a, b] = raw.split("_");
     return `${a}–${b}`;

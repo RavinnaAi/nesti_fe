@@ -12,6 +12,8 @@ export default function StepSegmentBar({
   activeIndex,
   activeBgClass = "bg-emerald-50",
   activeTextClass = "text-emerald-800",
+  borderClass = "border-slate-200",
+  divideClass = "divide-slate-200",
 }) {
   if (!steps?.length) return null;
 
@@ -19,7 +21,7 @@ export default function StepSegmentBar({
 
   return (
     <div
-      className="grid w-full min-w-0 gap-0 rounded-lg border border-slate-200 bg-white shadow-sm overflow-hidden divide-x divide-slate-200"
+      className={`grid w-full min-w-0 gap-0 rounded-lg border bg-white shadow-sm overflow-hidden divide-x ${borderClass} ${divideClass}`}
       style={{ gridTemplateColumns: `repeat(${n}, minmax(0, 1fr))` }}
       role="navigation"
       aria-label="Progress"

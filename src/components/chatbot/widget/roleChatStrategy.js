@@ -119,8 +119,28 @@ export const LAWYER_PREFLIGHT_REQUIRED_FIELDS = [
   "best_time_to_contact",
 ];
 
+export const MORTGAGE_PREFLIGHT_REQUIRED_FIELDS = [
+  "address",
+  "mortgage_timeline",
+  "pre_approval_status",
+  "credit_score_range",
+  "employment_status",
+  "household_income",
+  "down_payment_readiness",
+  "budget",
+  "property_budget",
+  "purchase_purpose",
+  "urgency_signal",
+  "preferred_contact_method",
+  "best_time_to_contact",
+];
+
 export function missingDraftFields(draft, fields) {
   return (fields || []).filter((key) => {
+    if (key === "best_time_to_contact") {
+      const normalized = String(draft?.best_time_to_contact || "").trim().toLowerCase();
+      if (!normalized || normalized === "anytime" || normalized === "any time") return false;
+    }
     const value = draft?.[key];
     return value == null || String(value).trim() === "";
   });

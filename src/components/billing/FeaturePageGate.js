@@ -1,19 +1,30 @@
 "use client";
 
 import { useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 
 export default function FeaturePageGate({ feature, children, redirectTo = "/checkout" }) {
   const router = useRouter();
   const { hasFeature, accountStatus } = useFeatureAccess();
+  const [isHydrated, setIsHydrated] = useState(false);
   const allowed = hasFeature(feature);
 
   useEffect(() => {
-    if (!allowed) {
+    setIsHydrated(true);
+  }, []);
+
+  useEffect(() => {
+    if (isHydrated && !allowed) {
       router.replace(redirectTo);
     }
-  }, [allowed, redirectTo, router]);
+  }, [isHydrated, allowed, redirectTo, router]);
+
+  // Keep initial server/client markup identical to avoid hydration mismatch.
+  if (!isHydrated) {
+    return <div className="min-h-[12rem]" />;
+  }
 
   if (!allowed) {
     return (

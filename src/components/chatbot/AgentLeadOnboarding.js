@@ -25,17 +25,18 @@ const fieldStackCls = "flex flex-col gap-1 min-w-0";
 const PROPERTY_TYPES = ["Single Family", "Condo", "Townhouse", "Multi-Family", "Land"];
 
 const BED_BATH_CHOICES = ["1", "2", "3", "4", "5+"].map((b) => ({ value: b, label: b }));
-const PROPERTY_TYPE_OPTIONS = [{ value: "", label: "Select…" }, ...PROPERTY_TYPES.map((t) => ({ value: t, label: t }))];
-const BEDS_ANY_OPTIONS = [{ value: "", label: "Any" }, ...BED_BATH_CHOICES];
-const BEDS_SELECT_OPTIONS = [{ value: "", label: "Select…" }, ...BED_BATH_CHOICES];
-const YES_NO_UNSURE = [
-  { value: "", label: "Not sure" },
+const SELECT_OPTION = { value: "", label: "Select…" };
+const PROPERTY_TYPE_OPTIONS = [SELECT_OPTION, ...PROPERTY_TYPES.map((t) => ({ value: t, label: t }))];
+const BED_BATH_SELECT_OPTIONS = [SELECT_OPTION, ...BED_BATH_CHOICES];
+const CONTACT_METHOD_OPTIONS = PREFERRED_CONTACT_OPTIONS;
+const YES_NO_OPTIONS = [
+  SELECT_OPTION,
   { value: "yes", label: "Yes" },
   { value: "no", label: "No" },
 ];
 
 const TIMELINE_OPTIONS = [
-  { value: "", label: "Not sure yet" },
+  SELECT_OPTION,
   { value: "asap", label: "ASAP / within 1 month" },
   { value: "1-3 months", label: "1 – 3 months" },
   { value: "3-6 months", label: "3 – 6 months" },
@@ -44,23 +45,22 @@ const TIMELINE_OPTIONS = [
 ];
 
 const MORTGAGE_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "fully_pre_approved", label: "Yes – fully pre-approved" },
   { value: "paying_cash", label: "Paying cash" },
   { value: "in_progress", label: "Pre-approval in progress" },
   { value: "not_yet", label: "Not yet" },
-  { value: "unsure", label: "Unsure" },
 ];
 
 const REALTOR_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "no_agent", label: "No – I need one" },
   { value: "has_agent_but_open", label: "Yes, but open to others" },
   { value: "has_exclusive_agent", label: "Yes – exclusively" },
 ];
 
 const MOTIVATION_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "relocation", label: "Relocation / job move" },
   { value: "family_change", label: "Growing family" },
   { value: "divorce", label: "Divorce" },
@@ -71,7 +71,7 @@ const MOTIVATION_OPTIONS = [
 ];
 
 const VIEWING_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "asap", label: "Yes – ASAP" },
   { value: "few_weeks", label: "Within a few weeks" },
   { value: "maybe_later", label: "Maybe later" },
@@ -79,29 +79,28 @@ const VIEWING_OPTIONS = [
 ];
 
 const LIVING_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "renting", label: "Renting" },
   { value: "own_need_to_sell", label: "Own – need to sell first" },
   { value: "own_not_selling", label: "Own – not selling" },
 ];
 
 const URGENCY_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "yes_immediately", label: "Yes – immediately" },
   { value: "maybe", label: "Maybe" },
   { value: "no", label: "No – not yet" },
 ];
 
 const BEST_TIME_OPTIONS = [
-  { value: "", label: "Anytime" },
+  { value: "anytime", label: "Anytime" },
   { value: "morning", label: "Morning" },
   { value: "afternoon", label: "Afternoon" },
   { value: "evening", label: "Evening" },
-  { value: "anytime", label: "Anytime" },
 ];
 
 const BUDGET_OPTIONS = [
-  { value: "", label: "Select…" },
+  SELECT_OPTION,
   { value: "under_400k", label: "Under $400k" },
   { value: "400k_700k", label: "$400k–$700k" },
   { value: "700k_1m", label: "$700k–$1M" },
@@ -380,8 +379,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.beds}
                 onChange={(v) => onFieldChange("beds", v)}
-                placeholder="Any"
-                options={BEDS_ANY_OPTIONS}
+                placeholder="Select…"
+                options={BED_BATH_SELECT_OPTIONS}
               />
             </div>
             <div className={fieldStackCls}>
@@ -390,8 +389,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.baths}
                 onChange={(v) => onFieldChange("baths", v)}
-                placeholder="Any"
-                options={BEDS_ANY_OPTIONS}
+                placeholder="Select…"
+                options={BED_BATH_SELECT_OPTIONS}
               />
             </div>
           </div>
@@ -411,8 +410,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.parking_required}
                 onChange={(v) => onFieldChange("parking_required", v)}
-                placeholder="Not sure"
-                options={YES_NO_UNSURE}
+                placeholder="Select…"
+                options={YES_NO_OPTIONS}
               />
             </div>
             <div className={fieldStackCls}>
@@ -421,8 +420,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.backyard_needed}
                 onChange={(v) => onFieldChange("backyard_needed", v)}
-                placeholder="Not sure"
-                options={YES_NO_UNSURE}
+                placeholder="Select…"
+                options={YES_NO_OPTIONS}
               />
             </div>
             <div className={`${fieldStackCls} sm:col-span-2`}>
@@ -431,8 +430,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.school_district_important}
                 onChange={(v) => onFieldChange("school_district_important", v)}
-                placeholder="Not sure"
-                options={YES_NO_UNSURE}
+                placeholder="Select…"
+                options={YES_NO_OPTIONS}
               />
             </div>
           </div>
@@ -455,8 +454,12 @@ export default function AgentLeadOnboarding({
               <input
                 className={inputCls}
                 value={draft.price}
-                onChange={(e) => onFieldChange("price", e.target.value)}
-                placeholder="e.g. $550,000"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                onChange={(e) =>
+                  onFieldChange("price", String(e.target.value || "").replace(/\D/g, ""))
+                }
+                placeholder="e.g. 550000"
               />
             </div>
             <div className={fieldStackCls}>
@@ -476,7 +479,7 @@ export default function AgentLeadOnboarding({
                 value={draft.beds}
                 onChange={(v) => onFieldChange("beds", v)}
                 placeholder="Select…"
-                options={BEDS_SELECT_OPTIONS}
+                options={BED_BATH_SELECT_OPTIONS}
               />
             </div>
             <div className={fieldStackCls}>
@@ -486,7 +489,7 @@ export default function AgentLeadOnboarding({
                 value={draft.baths}
                 onChange={(v) => onFieldChange("baths", v)}
                 placeholder="Select…"
-                options={BEDS_SELECT_OPTIONS}
+                options={BED_BATH_SELECT_OPTIONS}
               />
             </div>
           </div>
@@ -559,8 +562,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.parking_required}
                 onChange={(v) => onFieldChange("parking_required", v)}
-                placeholder="Not sure"
-                options={YES_NO_UNSURE}
+                placeholder="Select…"
+                options={YES_NO_OPTIONS}
               />
             </div>
             <div className={fieldStackCls}>
@@ -569,8 +572,8 @@ export default function AgentLeadOnboarding({
                 triggerClassName={`${inputCls} cursor-pointer`}
                 value={draft.backyard_needed}
                 onChange={(v) => onFieldChange("backyard_needed", v)}
-                placeholder="Not sure"
-                options={YES_NO_UNSURE}
+                placeholder="Select…"
+                options={YES_NO_OPTIONS}
               />
             </div>
           </div>
@@ -591,7 +594,7 @@ export default function AgentLeadOnboarding({
               triggerClassName={`${inputCls} cursor-pointer`}
               value={draft.timeline}
               onChange={(v) => onFieldChange("timeline", v)}
-              placeholder="Not sure yet"
+              placeholder="Select…"
               options={TIMELINE_OPTIONS}
             />
           </div>
@@ -673,7 +676,7 @@ export default function AgentLeadOnboarding({
               value={draft.preferred_contact_method}
               onChange={(v) => onFieldChange("preferred_contact_method", v)}
               placeholder="Select…"
-              options={PREFERRED_CONTACT_OPTIONS}
+              options={CONTACT_METHOD_OPTIONS}
             />
           </div>
           <div className={fieldStackCls}>

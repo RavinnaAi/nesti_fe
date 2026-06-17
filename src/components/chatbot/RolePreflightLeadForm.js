@@ -19,14 +19,14 @@ const fieldStackCls = "flex flex-col gap-1 min-w-0";
 const pairGridCls = "col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-2.5";
 const infoSectionStackCls = "col-span-2 grid grid-cols-1 gap-y-2.5";
 const lawyerContactStackCls = "col-span-2 flex flex-col gap-y-2.5";
+const mortgageContactStackCls = "col-span-2 flex flex-col gap-y-2.5";
 
 const SELECT_EMPTY = SELECT_EMPTY_OPTION;
 const BEST_TIME_OPTIONS = [
-  { value: "", label: "Anytime" },
+  { value: "anytime", label: "Anytime" },
   { value: "morning", label: "Morning" },
   { value: "afternoon", label: "Afternoon" },
   { value: "evening", label: "Evening" },
-  { value: "anytime", label: "Anytime" },
 ];
 
 const LAWYER_TRANSACTION_STAGE = [
@@ -149,7 +149,6 @@ const MORTGAGE_PROPERTY_BUDGET = [
   SELECT_EMPTY,
   { value: "clearly_defined", label: "Clearly defined" },
   { value: "approximate", label: "Approximate range" },
-  { value: "not_sure", label: "Not sure yet" },
 ];
 
 const MORTGAGE_PURPOSE = [
@@ -215,6 +214,10 @@ export default function RolePreflightLeadForm({
   const sectionCls = `text-xs font-bold col-span-2 border-b border-border/80 pb-1.5 pt-1 ${roleUi.accentText || "text-primary"}`;
   const selectActiveClass = roleUi.accentSelectActive || undefined;
   const selectHoverClass = roleUi.accentSelectHover || undefined;
+  const stepBorderClass = roleUi.accentBorder || "border-slate-200";
+  const stepDivideClass = stepBorderClass.startsWith("border-")
+    ? stepBorderClass.replace("border-", "divide-")
+    : "divide-slate-200";
 
   useEffect(() => {
     setStepError("");
@@ -225,7 +228,7 @@ export default function RolePreflightLeadForm({
   const handleNext = () => {
     setStepError("");
     if (preflightStepIndex === 0) {
-      const contactError = getBasicContactValidationError(draft, { requireAddress: isLawyer });
+      const contactError = getBasicContactValidationError(draft, { requireAddress: isLawyer || isMortgageBroker });
       if (contactError) {
         setStepError(contactError);
         return;
@@ -252,6 +255,34 @@ export default function RolePreflightLeadForm({
       }
     }
     if (isLawyer && preflightStepIndex === 2) {
+      if (!draft.preferred_contact_method?.trim() || !draft.best_time_to_contact?.trim()) {
+        setStepError("Please complete all contact preferences to continue.");
+        return;
+      }
+    }
+    if (isMortgageBroker && preflightStepIndex === 1) {
+      const requiredMortgageFields = [
+        "mortgage_timeline",
+        "pre_approval_status",
+        "credit_score_range",
+        "employment_status",
+        "household_income",
+        "down_payment_readiness",
+        "budget",
+        "property_budget",
+        "purchase_purpose",
+        "urgency_signal",
+      ];
+      const missing = requiredMortgageFields.filter((key) => {
+        const value = draft?.[key];
+        return value == null || String(value).trim() === "";
+      });
+      if (missing.length) {
+        setStepError("Please complete all mortgage qualification details to continue.");
+        return;
+      }
+    }
+    if (isMortgageBroker && preflightStepIndex === 2) {
       if (!draft.preferred_contact_method?.trim() || !draft.best_time_to_contact?.trim()) {
         setStepError("Please complete all contact preferences to continue.");
         return;
@@ -431,9 +462,9 @@ export default function RolePreflightLeadForm({
   );
 
   const mortgageStep0 = (
-    <div className={infoSectionStackCls}>
+    <div className={mortgageContactStackCls}>
       <div className={sectionCls}>Contact information</div>
-      <Field label="Full name *">
+      <Field label={<RequiredLabel text="Full name" />}>
         <input
           type="text"
           className={inputCls}
@@ -443,7 +474,7 @@ export default function RolePreflightLeadForm({
           autoComplete="name"
         />
       </Field>
-      <Field label="Phone *">
+      <Field label={<RequiredLabel text="Phone" />}>
         <PhoneNumberField
           name="phone"
           value={draft.phone}
@@ -452,7 +483,7 @@ export default function RolePreflightLeadForm({
           autoComplete="tel"
         />
       </Field>
-      <Field label="Email *">
+      <Field label={<RequiredLabel text="Email" />}>
         <input
           type="email"
           className={inputCls}
@@ -464,7 +495,7 @@ export default function RolePreflightLeadForm({
           spellCheck={false}
         />
       </Field>
-      <Field label="Target area / address">
+      <Field label={<RequiredLabel text="Target area / address" />}>
         <input
           type="text"
           className={inputCls}
@@ -479,7 +510,7 @@ export default function RolePreflightLeadForm({
   const mortgageStep1 = (
     <div className={pairGridCls}>
       <div className={sectionCls}>Mortgage qualification</div>
-      <Field label="When do you plan to apply?">
+      <Field label={<RequiredLabel text="When do you plan to apply?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -489,7 +520,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_TIMELINE}
         />
       </Field>
-      <Field label="Pre-approval status">
+      <Field label={<RequiredLabel text="Pre-approval status" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -499,7 +530,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_PRE_APPROVAL}
         />
       </Field>
-      <Field label="Credit score range">
+      <Field label={<RequiredLabel text="Credit score range" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -509,7 +540,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_CREDIT}
         />
       </Field>
-      <Field label="Employment status">
+      <Field label={<RequiredLabel text="Employment status" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -519,7 +550,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_EMPLOYMENT}
         />
       </Field>
-      <Field label="Household income">
+      <Field label={<RequiredLabel text="Household income" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -529,7 +560,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_INCOME}
         />
       </Field>
-      <Field label="Down payment readiness">
+      <Field label={<RequiredLabel text="Down payment readiness" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -539,7 +570,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_DOWN}
         />
       </Field>
-      <Field label="Property budget / price range" className="sm:col-span-2">
+      <Field label={<RequiredLabel text="Property budget / price range" />} className="sm:col-span-2">
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -549,7 +580,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_BUDGET_RANGE}
         />
       </Field>
-      <Field label="Property budget clarity">
+      <Field label={<RequiredLabel text="Property budget clarity" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -559,7 +590,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_PROPERTY_BUDGET}
         />
       </Field>
-      <Field label="Purchase purpose">
+      <Field label={<RequiredLabel text="Purchase purpose" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -569,7 +600,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_PURPOSE}
         />
       </Field>
-      <Field label="If approved tomorrow, start house hunting?">
+      <Field label={<RequiredLabel text="If approved tomorrow, start house hunting?" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -585,7 +616,7 @@ export default function RolePreflightLeadForm({
   const mortgageStep2 = (
     <div className={pairGridCls}>
       <div className={sectionCls}>Contact preferences</div>
-      <Field label="Preferred contact method">
+      <Field label={<RequiredLabel text="Preferred contact method" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -595,7 +626,7 @@ export default function RolePreflightLeadForm({
           options={MORTGAGE_CONTACT_METHOD}
         />
       </Field>
-      <Field label="Best time to contact">
+      <Field label={<RequiredLabel text="Best time to contact" />}>
         <ChatSelect
           triggerClassName={selectTriggerCls}
           activeClass={selectActiveClass}
@@ -631,6 +662,8 @@ export default function RolePreflightLeadForm({
           activeIndex={preflightStepIndex}
           activeBgClass={roleUi.accentBgLight}
           activeTextClass={roleUi.accentTextBold}
+          borderClass={stepBorderClass}
+          divideClass={stepDivideClass}
         />
       </div>
 

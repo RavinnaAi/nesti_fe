@@ -731,7 +731,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
           background: "linear-gradient(135deg, #F4FCF6 0%, #E8FAEE 48%, #D8F5E2 100%)",
         }}
       >
-        <div className="flex items-center gap-2 rounded-xl border border-border/70 bg-white px-2 py-1.5 shadow-sm">
+        <div className="flex items-stretch gap-2 rounded-xl border border-border/70 bg-white px-2 py-1.5 shadow-sm">
           <Link
             href="/settings?tab=personal"
             onClick={() => {
@@ -758,7 +758,7 @@ export default function AppSidebar({ isMobileOpen, onCloseMobile }) {
           <button
             type="button"
             onClick={handleLogout}
-            className="group ml-auto inline-flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200/90 bg-white px-2 py-1.5 text-[11px] font-bold text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50"
+            className="group ml-auto inline-flex h-12 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-lg border border-red-200/90 bg-white px-3 text-[11px] font-bold leading-none text-red-600 shadow-sm transition hover:border-red-300 hover:bg-red-50"
           >
             <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-red-50 text-red-600 ring-1 ring-red-100 transition group-hover:bg-red-100 group-hover:ring-red-200/80">
               <LogOut size={12} strokeWidth={2} />
