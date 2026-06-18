@@ -365,15 +365,24 @@ export default function ReferralsDataTable({
   const showConsultColumn = dir !== "outbound";
   const normalizedRowsPerPage = Math.max(1, Number(rowsPerPage) || 10);
   const emptyRowCount = Math.max(0, normalizedRowsPerPage - rows.length);
+  const isEmptyState = !isLoading && !isError && rows.length === 0;
 
   return (
-    <section className="flex h-full w-full max-w-none flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none">
-      <div className="border-b border-border px-3 py-2">
-        <h2 className="text-sm font-semibold leading-tight text-text-heading">{heading}</h2>
-        {hint ? (
-          <p className="mt-0.5 text-[10px] leading-snug text-text-muted">{hint}</p>
-        ) : null}
-      </div>
+    <section
+      className={
+        isEmptyState
+          ? "flex h-full w-full max-w-none flex-col overflow-hidden bg-transparent"
+          : "flex h-full w-full max-w-none flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none"
+      }
+    >
+      {!isEmptyState ? (
+        <div className="border-b border-border px-3 py-2">
+          <h2 className="text-sm font-semibold leading-tight text-text-heading">{heading}</h2>
+          {hint ? (
+            <p className="mt-0.5 text-[10px] leading-snug text-text-muted">{hint}</p>
+          ) : null}
+        </div>
+      ) : null}
       {isLoading ? (
         <div className="px-2 py-2 sm:px-3 sm:py-3">
           <ReferralsTableSkeleton rows={normalizedRowsPerPage} showConsultColumn={showConsultColumn} />
@@ -381,14 +390,14 @@ export default function ReferralsDataTable({
       ) : isError ? (
         <div className="px-3 py-4 text-xs text-red-700">{errorMessage || "Could not load referrals."}</div>
       ) : rows.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-3 py-8">
-          <div className="w-full max-w-md rounded-xl border border-border/70 bg-background-light/40 px-6 py-8 text-center shadow-sm">
-            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+        <div className="flex flex-1 items-center justify-center px-4 pb-16 pt-8 text-center sm:pb-20 sm:pt-10">
+          <div className="w-full max-w-xl">
+            <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
               <UserRound size={18} />
             </span>
-            <p className="text-sm font-semibold text-text-heading">{emptyMessage}</p>
-            <p className="mt-1 text-xs text-text-muted">
-              Referral activity will appear here once records are created.
+            <p className="text-base font-bold text-text-heading">{emptyMessage}</p>
+            <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-text-muted">
+              Referral activity will appear here once matching records are created.
             </p>
           </div>
         </div>

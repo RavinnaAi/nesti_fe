@@ -1,24 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
 import AppChrome from "./AppChrome";
 import WorkspaceLoader from "@/components/ui/WorkspaceLoader";
 import { isPublicMarketingRoute } from "@/lib/publicRoutes";
 
 export default function AppChromeShell({ children }) {
   const [mounted, setMounted] = useState(false);
-  const pathname = usePathname() || "";
-  const isChatbotEmbedRoute = pathname.startsWith("/chatbot/");
+  const [pathname, setPathname] = useState("");
   const isProfessionalPublicPage = pathname.startsWith("/p/") || pathname.startsWith("/professional/");
   const isPublicLandingOrMarketing =
     pathname === "/" || isPublicMarketingRoute(pathname) || isProfessionalPublicPage;
 
   useEffect(() => {
+    setPathname(window.location.pathname || "");
     setMounted(true);
   }, []);
 
-  if (!mounted && !isChatbotEmbedRoute) {
+  if (!mounted) {
     return (
       <>
         <main

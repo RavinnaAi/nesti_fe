@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "react-toastify";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -51,6 +51,7 @@ import {
   getInviteAttribution,
 } from "@/lib/inviteAttributionStorage";
 import { isPublicMarketingRoute } from "@/lib/publicRoutes";
+import { getOwnPublicProfile } from "@/lib/publicProfileClient";
 
 export default function AppChrome({ children }) {
   const pathname = usePathname() || "";
@@ -73,6 +74,12 @@ export default function AppChrome({ children }) {
   const { hasFeature } = useFeatureAccess();
   const showPublicProfile = hasFeature(FEATURES.PUBLIC_PROFILE);
   const showCalendar = hasFeature(FEATURES.CALENDAR_INTEGRATION);
+  const publicProfileQuery = useQuery({
+    queryKey: ["own-public-profile"],
+    queryFn: () => getOwnPublicProfile(token),
+    enabled: Boolean(isMounted && token && showPublicProfile),
+    staleTime: 60_000,
+  });
 
   useEffect(() => {
     setIsMounted(true);
@@ -248,7 +255,10 @@ export default function AppChrome({ children }) {
   );
   const isPublicMarketingPage = isPublicMarketingRoute(pathname);
   const isFixedTableListRoute =
-    pathname === "/leads" || pathname === "/referrals" || pathname === "/clients";
+    pathname === "/leads" ||
+    pathname === "/conversations" ||
+    pathname === "/referrals" ||
+    pathname === "/clients";
   const isPublicAuthPage = useMemo(
     () =>
       pathname === "/" ||
@@ -358,6 +368,11 @@ export default function AppChrome({ children }) {
     [pathname]
   );
   const DashboardOrWebsiteIcon = dashboardOrWebsiteItem.Icon;
+  const publicProfileSlug =
+    publicProfileQuery.data?.profile?.slug || publicProfileQuery.data?.suggested_slug || "";
+  const publicProfileHref = publicProfileSlug
+    ? `/professional/${encodeURIComponent(String(publicProfileSlug))}`
+    : "/dashboard/public-profile";
   const workspaceHeaderQueriesEnabled = Boolean(token);
 
   const handleLogout = useCallback(() => {
@@ -480,7 +495,11 @@ export default function AppChrome({ children }) {
           />
           <div
             id="workspace-content"
-            className={`flex w-full flex-1 flex-col bg-gradient-to-br from-primary/5 via-white to-primary/10 lg:pl-60 ${
+            className={`flex w-full flex-1 flex-col lg:pl-60 ${
+              isFixedTableListRoute
+                ? "bg-transparent"
+                : "bg-gradient-to-br from-primary/5 via-white to-primary/10"
+            } ${
               isFixedTableListRoute ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
             }`}
           >
@@ -566,7 +585,9 @@ export default function AppChrome({ children }) {
                       </Link>
                       {showPublicProfile ? (
                         <Link
-                          href="/dashboard/public-profile"
+                          href={publicProfileHref}
+                          target="_blank"
+                          rel="noopener noreferrer"
                           role="menuitem"
                           className="flex items-center gap-2.5 px-3 py-2.5 text-sm text-text-heading transition hover:bg-primary/[0.06]"
                           onClick={() => setUserMenuOpen(false)}

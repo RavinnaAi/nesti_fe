@@ -4,7 +4,7 @@ import { Suspense, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, ChevronLeft, ChevronRight, Handshake } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useAppSelector } from "@/store";
 import { fetchReferrals } from "@/lib/chatClient";
@@ -37,7 +37,7 @@ function ReferralsPageContent() {
     rowHeight: 44,
     reserveHeight: 240,
   });
-  const effectiveRowsPerPage = Math.max(10, rowsPerPage - 2);
+  const effectiveRowsPerPage = Math.max(10, rowsPerPage);
 
   const rawPage = Number.parseInt(String(searchParams.get("page") || "1"), 10);
   const page = Number.isFinite(rawPage) && rawPage > 0 ? rawPage : 1;
@@ -125,25 +125,18 @@ function ReferralsPageContent() {
     ) : null;
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-background-light/30">
+    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-transparent">
       <div className="flex h-full w-full flex-col px-4 py-5 sm:px-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/dashboard"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-md border border-border bg-white text-text-heading hover:bg-background-light"
-            >
-              <ArrowLeft size={18} />
-            </Link>
+          <div className="flex items-center">
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-bold text-text-heading">
-                <Handshake size={24} className="text-primary" />
+              <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-heading">
                 Referrals
               </h1>
-              <p className="text-sm text-text-muted">
+              <p className="mt-0.5 text-xs leading-5 text-text-muted">
                 {direction === "inbound"
-                  ? "All inbound referrals (pending, accepted, rejected, completed)."
-                  : "Leads you referred to colleagues."}
+                  ? "Review and manage referrals sent to your workspace."
+                  : "Track leads you have shared with other professionals."}
               </p>
             </div>
           </div>
@@ -161,8 +154,8 @@ function ReferralsPageContent() {
             hint="Click any row to open the referral workspace. Columns follow each row's source lead type (agent vs lawyer vs mortgage broker)."
             emptyMessage={
               direction === "inbound"
-                ? "No inbound referrals."
-                : "You have not referred any leads yet."
+                ? "No inbound referrals yet"
+                : "No outbound referrals yet"
             }
             footer={paginationFooter}
             rowsPerPage={effectiveRowsPerPage}

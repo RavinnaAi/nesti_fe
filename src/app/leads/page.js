@@ -131,12 +131,12 @@ function LeadsPageContent() {
   } = useLeadsListFilters();
   const isReferralsPipeline = pipelineFromUrl === "referrals";
   const dynamicRowsPerPage = useDynamicTablePageSize({
-    minRows: 10,
+    minRows: 12,
     maxRows: 24,
     rowHeight: 44,
-    reserveHeight: 240,
+    reserveHeight: 160,
   });
-  const leadsRowsPerPage = Math.max(10, dynamicRowsPerPage - 1);
+  const leadsRowsPerPage = Math.max(12, dynamicRowsPerPage);
   const [activeTab, setActiveTab] = useState("lead_profile");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
@@ -658,16 +658,19 @@ function LeadsPageContent() {
   };
 
   if (!hydrated) {
-    return <div className="min-h-full flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10" />;
+    return <div className="min-h-full flex-1 bg-transparent" />;
   }
 
   if (!isAuthenticated) return null;
 
   const lockViewportForList = !selectedLeadId;
+  const showListPagination = isReferralsPipeline
+    ? referralPipelineRows.length > 0
+    : filteredConversations.length > 0;
 
   return (
     <div
-      className={`flex-1 bg-gradient-to-br from-primary/5 via-white to-primary/10 ${
+      className={`flex-1 bg-transparent ${
         lockViewportForList ? "h-full overflow-y-auto" : "min-h-full"
       }`}
     >
@@ -707,15 +710,17 @@ function LeadsPageContent() {
                 emptyMessage="No accepted referrals in your pipeline yet."
                 rowsPerPage={leadsRowsPerPage}
               />
-              <div className="mb-2">
-                <LeadsListPagination
-                  leadsQuery={referralsPipelineQuery}
-                  leadsPagination={referralsPipelinePagination}
-                  onPrev={goPrevPage}
-                  onNext={goNextPage}
-                  resourceLabel="referrals"
-                />
-              </div>
+              {showListPagination ? (
+                <div className="mb-2">
+                  <LeadsListPagination
+                    leadsQuery={referralsPipelineQuery}
+                    leadsPagination={referralsPipelinePagination}
+                    onPrev={goPrevPage}
+                    onNext={goNextPage}
+                    resourceLabel="referrals"
+                  />
+                </div>
+              ) : null}
             </>
           ) : (
             <>
@@ -732,14 +737,16 @@ function LeadsPageContent() {
                 />
               </div>
 
-              <div className="mb-2">
-                <LeadsListPagination
-                  leadsQuery={leadsQuery}
-                  leadsPagination={leadsPagination}
-                  onPrev={goPrevPage}
-                  onNext={goNextPage}
-                />
-              </div>
+              {showListPagination ? (
+                <div className="mb-2">
+                  <LeadsListPagination
+                    leadsQuery={leadsQuery}
+                    leadsPagination={leadsPagination}
+                    onPrev={goPrevPage}
+                    onNext={goNextPage}
+                  />
+                </div>
+              ) : null}
             </>
           )}
 

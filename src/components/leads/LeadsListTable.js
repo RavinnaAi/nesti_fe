@@ -30,6 +30,7 @@ export default function LeadsListTable({
   const router = useRouter();
   const visibleRowsTarget = Math.max(1, Number(leadsPageSize) || 10);
   const emptyRowCount = Math.max(0, visibleRowsTarget - filteredConversations.length);
+  const isEmpty = !leadsQuery.isLoading && !leadsQuery.isError && filteredConversations.length === 0;
   const tableMinClass = (() => {
     if (showAgentLeadColumns && showPropertyMatchesColumn) return "min-w-[1060px]";
     if (showAgentLeadColumns && !showPropertyMatchesColumn) return "min-w-[980px]";
@@ -55,7 +56,13 @@ export default function LeadsListTable({
   };
 
   return (
-    <div className="flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none">
+    <div
+      className={
+        isEmpty
+          ? "flex h-full w-full flex-col overflow-hidden"
+          : "flex h-full w-full flex-col overflow-hidden rounded-xl border border-border/50 bg-white shadow-none"
+      }
+    >
       {leadsQuery.isLoading ? (
         <div className="p-3 sm:p-4">
           <LeadsPageTableSkeleton
@@ -68,14 +75,14 @@ export default function LeadsListTable({
       ) : leadsQuery.isError ? (
         <div className="p-4 text-sm text-red-600">Failed to load leads.</div>
       ) : filteredConversations.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center p-6">
-          <div className="w-full max-w-md rounded-xl border border-border/70 bg-background-light/40 px-6 py-8 text-center shadow-sm">
-            <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-              <Inbox size={18} />
+        <div className="flex min-h-full flex-1 items-center justify-center px-4 pb-16 pt-8 sm:px-6 sm:pb-20 sm:pt-10">
+          <div className="w-full max-w-2xl bg-transparent px-4 py-10 text-center shadow-none sm:px-8 sm:py-12">
+            <span className="mx-auto mb-4 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
+              <Inbox size={20} />
             </span>
-            <p className="text-sm font-semibold text-text-heading">No leads in this pipeline yet</p>
-            <p className="mt-1 text-xs text-text-muted">
-              New captured leads will appear here as they enter this stage.
+            <p className="text-base font-bold text-text-heading">No leads in this pipeline yet</p>
+            <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-text-muted">
+              Once new leads match this view, they&apos;ll appear here for review and follow-up.
             </p>
           </div>
         </div>

@@ -6,7 +6,7 @@ export function SkeletonBlock({ className = "" }) {
 }
 
 export function LeadsPageTableSkeleton({
-  rows = 8,
+  rows = 12,
   showPropertyMatchesColumn = true,
   showAgentLeadColumns = true,
   showMortgageLeadColumns = false,
@@ -92,7 +92,7 @@ export function LeadsPageTableSkeleton({
   );
 }
 
-export function ReferralsTableSkeleton({ rows = 8, showConsultColumn = true }) {
+export function ReferralsTableSkeleton({ rows = 10, showConsultColumn = true }) {
   const headers = [
     "Lead",
     "Lead type",
@@ -213,7 +213,7 @@ const thClients =
 const tdClients = "px-1.5 py-1 align-middle";
 
 /** Clients list table — matches `/clients` columns. */
-export function ClientsTableSkeleton({ rows = 8, showMortgageColumn = true }) {
+export function ClientsTableSkeleton({ rows = 10, showMortgageColumn = true }) {
   const headers = showMortgageColumn
     ? ["Client", "Email", "Phone", "Address", "Timeline", "Mortgage", "Budget", "Appointment", "Leads"]
     : ["Client", "Email", "Phone", "Address", "Timeline", "Budget", "Appointment", "Leads"];

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronDown, ChevronLeft, ChevronRight, Inbox, Mail, User, Users } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight, Inbox, Mail, User } from "lucide-react";
 import { useAuthGuard } from "@/hooks/useAuthGuard";
 import { useFeatureAccess } from "@/hooks/useFeatureAccess";
 import { useAppSelector } from "@/store";
@@ -169,6 +169,7 @@ export default function ClientsPage() {
   });
 
   const profiles = useMemo(() => normalizeProfiles(clientsQuery.data), [clientsQuery.data]);
+  const isEmptyState = !clientsQuery.isLoading && profiles.length === 0;
   const tableRows = useMemo(() => {
     if (profiles.length >= effectivePageSize) return profiles;
     return [...profiles, ...Array.from({ length: effectivePageSize - profiles.length }, () => null)];
@@ -182,7 +183,7 @@ export default function ClientsPage() {
 
   if (!hydrated) {
     return (
-      <div className="min-h-[40vh] bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] px-2.5 pt-5 sm:px-4 sm:pt-6">
+      <div className="min-h-[40vh] bg-transparent px-2.5 pt-5 sm:px-4 sm:pt-6">
         <div className="w-full">
           <div className="overflow-hidden rounded-md border border-border/90 bg-white p-2 shadow-sm sm:p-3">
             <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
@@ -195,17 +196,16 @@ export default function ClientsPage() {
   if (!isAuthenticated) return null;
 
   return (
-    <div className="flex h-full flex-1 min-h-0 flex-col bg-gradient-to-br from-slate-50/80 via-white to-primary/[0.04] pb-3 font-body text-text-body antialiased sm:pb-4">
+    <div className="flex h-full flex-1 min-h-0 flex-col bg-transparent pb-3 font-body text-text-body antialiased sm:pb-4">
       <div className="flex min-h-0 flex-1 w-full flex-col space-y-1.5 px-2.5 pt-5 sm:px-4 sm:pt-6">
         <PlanLimitBanner />
         <div className="flex flex-wrap items-end justify-between gap-1.5">
           <div>
-            <h1 className="font-heading inline-flex items-center gap-1 text-base font-bold tracking-tight text-text-heading sm:text-lg">
-              <Users size={18} className="text-primary" strokeWidth={2} />
+            <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-heading">
               Clients
             </h1>
-            <p className="mt-px text-[10px] capitalize text-text-muted sm:text-[11px]">
-              All lead profiles for your workspace.
+            <p className="mt-0.5 text-xs leading-5 text-text-muted">
+              Review and manage captured client profiles.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -228,19 +228,25 @@ export default function ClientsPage() {
           </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]">
+        <div
+          className={
+            isEmptyState
+              ? "min-h-0 flex-1 overflow-hidden bg-transparent"
+              : "min-h-0 flex-1 overflow-hidden rounded-md border border-border/90 bg-white shadow-sm shadow-slate-900/[0.03] ring-1 ring-slate-900/[0.02]"
+          }
+        >
           {clientsQuery.isLoading ? (
             <div className="p-2 sm:p-3">
               <ClientsTableSkeleton rows={effectivePageSize} showMortgageColumn={!isMortgageBrokerViewer} />
             </div>
           ) : profiles.length === 0 ? (
-            <div className="flex h-full min-h-[260px] items-center justify-center p-6">
-              <div className="w-full max-w-md rounded-xl border border-border/70 bg-background-light/40 px-6 py-8 text-center shadow-sm">
-                <span className="mx-auto mb-3 grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex h-full min-h-[calc(100vh-14rem)] items-center justify-center px-4 pb-16 pt-8 text-center sm:pb-20 sm:pt-10">
+              <div className="w-full max-w-xl">
+                <span className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
                   <Inbox size={18} />
                 </span>
-                <p className="text-sm font-semibold text-text-heading">No clients yet</p>
-                <p className="mt-1 text-xs text-text-muted">
+                <p className="text-base font-bold text-text-heading">No clients yet</p>
+                <p className="mx-auto mt-2 max-w-lg text-sm leading-6 text-text-muted">
                   {clientsQuery.data?.empty_state?.reason || "Captured lead profiles will appear here."}
                 </p>
               </div>
@@ -374,7 +380,7 @@ export default function ClientsPage() {
 
         </div>
 
-        {!clientsQuery.isLoading ? (
+        {!clientsQuery.isLoading && profiles.length > 0 ? (
           <div className="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 rounded-md border border-border/80 bg-background-light/40 px-3 py-2.5">
             <p className="flex items-center gap-2 text-xs text-text-muted">
               {clientsQuery.isFetching && !clientsQuery.isLoading ? (

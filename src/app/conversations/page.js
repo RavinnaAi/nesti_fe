@@ -145,6 +145,7 @@ export default function ConversationsPage() {
   const totalPages = Math.max(Number(pagination?.total_pages || 1), 1);
   const hasPrevPage = Boolean(pagination?.has_prev_page);
   const hasNextPage = Boolean(pagination?.has_next_page);
+  const isEmptyState = !listQuery.isLoading && !listQuery.isError && items.length === 0;
 
   useEffect(() => {
     setPage(1);
@@ -358,7 +359,7 @@ export default function ConversationsPage() {
 
   return (
     <FeaturePageGate feature={FEATURES.PRO_CHAT_DM}>
-    <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-primary/5 via-white to-primary/10 px-4 py-4 sm:px-6">
+    <div className="min-h-[calc(100vh-4rem)] bg-transparent px-4 py-4 sm:px-6">
       <div className="flex w-full max-w-none flex-col gap-3">
         <div className="px-1 py-1">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -393,30 +394,38 @@ export default function ConversationsPage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm">
-          <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-2.5">
-            <div>
-              <div className="text-sm font-semibold text-text-heading">All conversations</div>
-              <div className="text-xs text-text-muted">{totalItems} total</div>
+        <div
+          className={
+            isEmptyState
+              ? "overflow-hidden bg-transparent"
+              : "overflow-hidden rounded-2xl border border-border/70 bg-white shadow-sm"
+          }
+        >
+          {!isEmptyState ? (
+            <div className="flex items-center justify-between gap-3 border-b border-border/70 px-4 py-2.5">
+              <div>
+                <div className="text-sm font-semibold text-text-heading">All conversations</div>
+                <div className="text-xs text-text-muted">{totalItems} total</div>
+              </div>
+              <div className="hidden items-center gap-2 rounded-lg border border-border/70 bg-background-light px-2.5 py-1.5 text-[11px] text-text-muted sm:flex">
+                <Search size={14} />
+                Click any thread to open
+              </div>
             </div>
-            <div className="hidden items-center gap-2 rounded-lg border border-border/70 bg-background-light px-2.5 py-1.5 text-[11px] text-text-muted sm:flex">
-              <Search size={14} />
-              Click any thread to open
-            </div>
-          </div>
+          ) : null}
 
           {listQuery.isLoading ? (
             <div className="flex min-h-[18rem] items-center justify-center text-text-muted">
               <Loader2 size={24} className="animate-spin" />
             </div>
           ) : items.length === 0 ? (
-            <div className="flex min-h-[18rem] flex-col items-center justify-center px-4 text-center">
+            <div className="flex min-h-[calc(100vh-14rem)] flex-col items-center justify-center px-4 pb-16 pt-8 text-center sm:pb-20 sm:pt-10">
               <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/[0.10] text-primary-dark">
                 <MessageSquare size={22} />
               </div>
-              <h2 className="mt-3 text-base font-semibold text-text-heading">No conversations yet</h2>
-              <p className="mt-1 max-w-sm text-sm text-text-muted">
-                Open a professional profile and use the Chat button to start your first conversation.
+              <h2 className="mt-3 text-base font-bold text-text-heading">No conversations yet</h2>
+              <p className="mt-2 max-w-xl text-sm leading-6 text-text-muted">
+                Start a professional chat to keep your conversations organized in one place.
               </p>
             </div>
           ) : (

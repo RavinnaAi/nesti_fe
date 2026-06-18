@@ -10,18 +10,27 @@ import Link from "next/link";
 export default function LeadsListHeader({ filterLabel = "", children = null, pageTitle = "Leads" }) {
   const normalizedFilter = String(filterLabel || "").trim().toLowerCase();
   const standaloneFilterLabel = new Set(["recurring leads", "active", "nurturing"]).has(normalizedFilter);
+  const headingDescription = (() => {
+    if (normalizedFilter === "active") return "Track leads ready for timely follow-up.";
+    if (normalizedFilter === "nurturing") return "Manage leads that need continued engagement.";
+    if (normalizedFilter === "recurring leads") return "Review closed leads and long-term opportunities.";
+    return "Review, qualify, and prioritize captured leads.";
+  })();
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           {filterLabel ? (
             <>
               {standaloneFilterLabel ? (
-                <h1 className="text-[26px] leading-tight font-bold text-primary-dark">{filterLabel}</h1>
+                <div>
+                  <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-heading">{filterLabel}</h1>
+                  <p className="mt-1 text-[12px] font-medium text-text-muted">{headingDescription}</p>
+                </div>
               ) : (
                 <>
-                  <h1 className="text-[26px] leading-tight font-bold text-text-heading">Pipeline</h1>
-                  <span className="text-[22px] leading-tight font-bold text-primary-dark">{filterLabel}</span>
+                  <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-heading">Pipeline</h1>
+                  <span className="text-[20px] font-semibold leading-tight tracking-[-0.02em] text-primary-dark">{filterLabel}</span>
                   <Link
                     href="/leads"
                     className="text-[13px] font-semibold text-primary hover:underline whitespace-nowrap"
@@ -32,7 +41,12 @@ export default function LeadsListHeader({ filterLabel = "", children = null, pag
               )}
             </>
           ) : (
-            <h1 className="text-[26px] leading-tight font-bold text-text-heading">{pageTitle}</h1>
+            <div>
+              <h1 className="text-[22px] font-semibold leading-tight tracking-[-0.02em] text-text-heading">{pageTitle}</h1>
+              <p className="mt-1 text-[12px] font-medium text-text-muted">
+                {headingDescription}
+              </p>
+            </div>
           )}
         </div>
       </div>
