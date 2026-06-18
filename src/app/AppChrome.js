@@ -484,7 +484,7 @@ export default function AppChrome({ children }) {
               isFixedTableListRoute ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
             }`}
           >
-            <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-white/90 px-3 backdrop-blur sm:h-16 sm:px-6">
+            <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-white/95 px-3 sm:h-16 sm:bg-white/90 sm:px-6 sm:backdrop-blur">
               <div className="flex min-w-0 max-w-[48%] items-center gap-2.5 sm:max-w-none sm:gap-3">
                 <button
                   type="button"

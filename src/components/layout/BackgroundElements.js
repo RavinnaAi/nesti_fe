@@ -1,12 +1,25 @@
 "use client";
 import { motion } from "framer-motion";
 
+const mobileBlobBase =
+  "absolute rounded-full pointer-events-none sm:hidden";
+const desktopBlobBase =
+  "absolute rounded-full blur-3xl pointer-events-none hidden sm:block";
+
 export default function BackgroundElements({ variant = "default" }) {
   if (variant === "minimal") {
     return (
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+          className={`${mobileBlobBase} h-[320px] w-[320px] opacity-[0.14] blur-2xl`}
+          style={{
+            background: "radial-gradient(circle, #34C759, transparent)",
+            top: "-10%",
+            left: "-28%",
+          }}
+        />
         <motion.div
-          className="absolute w-[800px] h-[800px] rounded-full blur-3xl opacity-20"
+          className={`${desktopBlobBase} w-[800px] h-[800px] opacity-20`}
           style={{
             background: "radial-gradient(circle, #34C759, transparent)",
             top: "-15%",
@@ -29,8 +42,24 @@ export default function BackgroundElements({ variant = "default" }) {
   if (variant === "enhanced") {
     return (
       <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+        <div
+          className={`${mobileBlobBase} h-[340px] w-[340px] opacity-[0.14] blur-2xl`}
+          style={{
+            background: "radial-gradient(circle, #34C759, transparent)",
+            top: "-10%",
+            left: "-28%",
+          }}
+        />
+        <div
+          className={`${mobileBlobBase} h-[260px] w-[260px] opacity-[0.1] blur-2xl`}
+          style={{
+            background: "radial-gradient(circle, #FAFAFA, transparent)",
+            top: "48%",
+            right: "-34%",
+          }}
+        />
         <motion.div
-          className="absolute w-[800px] h-[800px] rounded-full blur-3xl opacity-20"
+          className={`${desktopBlobBase} w-[800px] h-[800px] opacity-20`}
           style={{
             background: "radial-gradient(circle, #34C759, transparent)",
             top: "-15%",
@@ -48,7 +77,7 @@ export default function BackgroundElements({ variant = "default" }) {
           }}
         />
         <motion.div
-          className="absolute w-[600px] h-[600px] rounded-full blur-3xl opacity-15"
+          className={`${desktopBlobBase} w-[600px] h-[600px] opacity-15`}
           style={{
             background: "radial-gradient(circle, #FAFAFA, transparent)",
             top: "40%",
@@ -66,7 +95,7 @@ export default function BackgroundElements({ variant = "default" }) {
           }}
         />
         <motion.div
-          className="absolute w-[500px] h-[500px] rounded-full blur-3xl opacity-10"
+          className={`${desktopBlobBase} w-[500px] h-[500px] opacity-10`}
           style={{
             background: "radial-gradient(circle, #2AA84A, transparent)",
             bottom: "5%",
@@ -90,8 +119,16 @@ export default function BackgroundElements({ variant = "default" }) {
   // Default variant
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+      <div
+        className={`${mobileBlobBase} h-[320px] w-[320px] opacity-[0.14] blur-2xl`}
+        style={{
+          background: "radial-gradient(circle, #34C759, transparent)",
+          top: "-10%",
+          left: "-28%",
+        }}
+      />
       <motion.div
-        className="absolute w-[800px] h-[800px] rounded-full blur-3xl opacity-20"
+        className={`${desktopBlobBase} w-[800px] h-[800px] opacity-20`}
         style={{
           background: "radial-gradient(circle, #34C759, transparent)",
           top: "-15%",

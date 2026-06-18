@@ -44,10 +44,10 @@ export default function FeaturesSection() {
   return (
     <section
       id="features"
-      className="relative bg-transparent py-10 md:py-12"
+      className="relative bg-transparent py-8 md:py-12"
     >
       <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 lg:px-12">
-        <div className="mx-auto mb-8 max-w-2xl text-center md:mb-9">
+        <div className="mx-auto mb-6 max-w-2xl text-center md:mb-9">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -55,7 +55,7 @@ export default function FeaturesSection() {
             transition={{ duration: 0.3 }}
             suppressHydrationWarning
           >
-            <span className="mb-3 inline-flex items-center gap-2 rounded-xl border border-primary/20 bg-primary/10 px-3.5 py-1.5 text-xs font-semibold text-primary">
+            <span className="mb-2.5 inline-flex items-center gap-1.5 rounded-xl border border-primary/20 bg-primary/10 px-3 py-1.5 text-[11px] font-semibold text-primary sm:mb-3 sm:gap-2 sm:px-3.5 sm:text-xs">
               <Zap size={14} />
               Core Capabilities
             </span>
@@ -65,7 +65,7 @@ export default function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="mb-2.5 text-2xl font-black leading-tight text-text-heading md:text-3xl lg:text-4xl"
+            className="mb-2 text-[1.65rem] font-black leading-tight text-text-heading sm:text-2xl md:mb-2.5 md:text-3xl lg:text-4xl"
             suppressHydrationWarning
           >
             Core Capabilities
@@ -75,7 +75,7 @@ export default function FeaturesSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, margin: "0px" }}
             transition={{ duration: 0.3 }}
-            className="mx-auto max-w-2xl text-sm font-light leading-6 text-text-body md:text-base"
+            className="mx-auto max-w-[20rem] text-[13px] font-light leading-5 text-text-body sm:max-w-2xl sm:text-sm sm:leading-6 md:text-base"
             suppressHydrationWarning
           >
             A comprehensive suite of AI-powered tools designed to generate,
@@ -84,9 +84,9 @@ export default function FeaturesSection() {
           </motion.p>
         </div>
 
-        <div className="w-full relative">
-          <div className="overflow-x-auto scrollbar-hide pb-4">
-            <div className="flex min-w-max gap-3 md:grid md:min-w-0 md:grid-cols-2 xl:grid-cols-4">
+        <div className="relative w-full">
+          <div className="pb-2 md:pb-4">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
               {features.map((feature, i) => {
                 const IconComponent = feature.icon;
                 return (
@@ -100,7 +100,7 @@ export default function FeaturesSection() {
                       y: -3,
                       transition: { duration: 0.25 },
                     }}
-                    className="group relative h-full min-w-[250px] !overflow-hidden rounded-2xl border border-border bg-white p-4 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md md:min-w-0"
+                    className="group relative h-full !overflow-hidden rounded-2xl border border-border bg-white p-3.5 shadow-sm transition-all duration-300 hover:border-primary/25 hover:shadow-md sm:p-4"
                     suppressHydrationWarning
                   >
                     {/* Hover Gradient Background */}
@@ -111,19 +111,19 @@ export default function FeaturesSection() {
                     {/* Content Wrapper */}
                     <div className="relative z-10">
                       {/* Icon + Title */}
-                      <div className="mb-2.5 flex items-center gap-2.5">
+                      <div className="mb-2 flex min-w-0 items-center gap-2.5 sm:mb-2.5">
                         <div
                           className={`h-9 w-9 shrink-0 rounded-xl bg-gradient-to-br ${feature.gradient} p-2 transition-all duration-300 group-hover:scale-105 group-hover:bg-white group-hover:shadow-lg`}
                         >
                           <IconComponent className="h-full w-full text-white transition-colors duration-500 group-hover:text-gray-800" />
                         </div>
-                        <h3 className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-black leading-tight text-text-heading transition-colors duration-300 group-hover:text-white md:text-[14px]">
+                        <h3 className="min-w-0 text-[13px] font-black leading-tight text-text-heading transition-colors duration-300 group-hover:text-white sm:overflow-hidden sm:text-ellipsis sm:whitespace-nowrap md:text-[14px]">
                           {feature.title}
                         </h3>
                       </div>
 
                       {/* Description */}
-                      <p className="text-[13px] leading-5 text-text-body transition-colors duration-300 group-hover:text-white/90">
+                      <p className="text-[12.5px] leading-5 text-text-body transition-colors duration-300 group-hover:text-white/90 sm:text-[13px]">
                         {feature.description}
                       </p>
                     </div>
