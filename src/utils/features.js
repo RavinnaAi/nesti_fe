@@ -22,7 +22,7 @@ export function hasFeature(user, featureName) {
     return feature === FEATURES.SETTINGS_SUBSCRIPTION;
   }
 
-  // Free trial: unlock the full product during the 3-day evaluation window.
+  // Free trial: unlock the full product during the 2-day evaluation window.
   if (status === ACCOUNT_STATUS.FREE_TRIAL) {
     return ENTERPRISE_FEATURES.has(feature) || feature === FEATURES.SETTINGS_SUBSCRIPTION;
   }

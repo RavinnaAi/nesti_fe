@@ -258,7 +258,7 @@ export const PUBLIC_PAGES = {
       {
         title: "Subscription Services",
         paragraphs: [
-          "Some features may require paid subscriptions. Nesti currently offers a 3-day free trial for eligible subscription plans. Subscription pricing, billing cycles, and platform offerings may change at any time.",
+          "Some features may require paid subscriptions. Nesti currently offers a 2-day free trial for eligible subscription plans. Subscription pricing, billing cycles, and platform offerings may change at any time.",
         ],
       },
       {
@@ -464,7 +464,7 @@ export const PUBLIC_PAGES = {
           },
           {
             q: "Is there a free trial?",
-            a: "Yes. Eligible plans currently include a 3-day free trial.",
+            a: "Yes. Eligible plans currently include a 2-day free trial.",
           },
           {
             q: "Is my data secure?",

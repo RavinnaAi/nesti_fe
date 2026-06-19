@@ -61,8 +61,6 @@ function ReferralsPageContent() {
         page,
         limit: effectiveRowsPerPage,
       }),
-    staleTime: 30_000,
-    placeholderData: (prev) => prev,
   });
 
   const rows = useMemo(() => normalizeReferralRows(referralsQuery.data), [referralsQuery.data]);

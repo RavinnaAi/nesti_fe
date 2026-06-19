@@ -34,7 +34,6 @@ export default function PublicProfilePage() {
     mutationFn: (data) => updatePublicProfile(token, data),
     onSuccess: () => {
       queryClient.invalidateQueries(['own-public-profile']);
-      toast.success('Profile updated successfully!');
     },
     onError: (error) => {
       toast.error(error.message || 'Failed to update profile');
@@ -74,13 +73,24 @@ export default function PublicProfilePage() {
 
   const handleSave = () => {
     if (Object.keys(formData).length > 0) {
-      updateMutation.mutate(formData);
+      updateMutation.mutate(formData, {
+        onSuccess: () => {
+          toast.success('Profile changes saved');
+        },
+      });
       setFormData({});
     }
   };
 
   const handlePublish = () => {
-    updateMutation.mutate({ enabled: true });
+    updateMutation.mutate(
+      { enabled: true },
+      {
+        onSuccess: () => {
+          toast.success('Public page published');
+        },
+      },
+    );
   };
 
   const handleDeleteWebPage = () => {

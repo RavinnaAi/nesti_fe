@@ -276,6 +276,24 @@ export async function apiClient({ url, method = "GET", data, token, rawToken = f
       const error = new Error(message);
       error.status = response.status;
       if (json?.code) error.code = json.code;
+      if (json?.limit) error.limit = json.limit;
+      if (json?.limits) error.limits = json.limits;
+      if (
+        typeof window !== "undefined" &&
+        token &&
+        json?.code === "TRIAL_QUOTA_EXHAUSTED"
+      ) {
+        window.dispatchEvent(
+          new CustomEvent("nesti:subscription-quota-required", {
+            detail: {
+              code: json.code,
+              limit: json.limit,
+              limits: json.limits,
+              message,
+            },
+          })
+        );
+      }
       throw error;
     }
 

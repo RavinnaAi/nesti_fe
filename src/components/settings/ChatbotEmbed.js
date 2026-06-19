@@ -117,6 +117,32 @@ export default function ChatbotEmbed() {
     }
   };
 
+  const renderStripedSnippetRow = (label, value, copyKey, tone = "light") => (
+    <div className={`border-t border-border px-4 py-3 ${tone === "muted" ? "bg-background-light/45" : "bg-white"}`}>
+      <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">{label}</div>
+        <button
+          type="button"
+          onClick={() => handleCopy(value, copyKey)}
+          className="inline-flex h-7 w-7 items-center justify-center rounded-md border border-border bg-white text-text-muted transition hover:border-primary/35 hover:text-primary"
+          title={`Copy ${label}`}
+          aria-label={`Copy ${label}`}
+        >
+          {copiedKey === copyKey ? (
+            <Check className="h-4 w-4 text-green-600" />
+          ) : (
+            <Copy className="h-4 w-4" />
+          )}
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <code className="font-mono text-[11px] leading-relaxed text-text-body whitespace-nowrap">
+          {value}
+        </code>
+      </div>
+    </div>
+  );
+
   const renderEmbedSnippet = (embed) => {
     const tokenValue = embed?.unique_token || embed?.token || embed?._id;
     const origin = getSiteOrigin() || API_BASE;
@@ -138,11 +164,15 @@ export default function ChatbotEmbed() {
   return (
     <div className="space-y-5">
       {!embeds.length ? (
-        <div className="rounded bg-white p-4 shadow-sm flex flex-col md:flex-row md:items-end gap-3">
+        <div className="rounded-2xl border border-border bg-white p-4 shadow-sm md:p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-end">
           <div className="flex-1">
-            <div className="text-sm font-semibold text-text-heading mb-1">
+            <div className="mb-1 text-sm font-semibold text-text-heading">
               Generate New Embed Link
             </div>
+              <p className="mb-2 text-xs text-text-muted">
+                Create a shareable chatbot URL and ready-to-use code snippets.
+              </p>
             <input
               type="text"
               value={newName}
@@ -165,16 +195,20 @@ export default function ChatbotEmbed() {
               "Generate Link"
             )}
           </button>
+          </div>
         </div>
       ) : null}
 
-      <div className="rounded bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between mb-3">
-          <div className="text-sm font-semibold text-text-heading">Your Embed Links</div>
+      <div className="space-y-4">
+        <div className="flex items-center justify-between rounded-2xl border border-border bg-white px-4 py-3 shadow-sm">
+          <div>
+            <div className="text-base font-semibold text-text-heading">Your Embed Links</div>
+            <p className="mt-0.5 text-xs text-text-muted">Manage status, preview link, and copy integration snippets.</p>
+          </div>
           <button
             type="button"
             onClick={() => refetch()}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-primary hover:text-primary-dark"
+            className="inline-flex items-center gap-1 rounded-md border border-primary/20 px-2.5 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/5"
           >
             <RefreshCw className="h-4 w-4" /> Refresh
           </button>
@@ -191,7 +225,7 @@ export default function ChatbotEmbed() {
             <code className="text-xs">node-backend/</code>.
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
             {embeds.map((embed) => {
               const embedDocId = embed?._id || embed?.id;
               const tokenValue = embed?.unique_token || embed?.token;
@@ -201,29 +235,52 @@ export default function ChatbotEmbed() {
               const iframeSnippet = `<iframe src="${publicUrl}" style="width:100%;height:100%;border:none;"></iframe>`;
               const providedSnippet = embed?.embed_code || "";
               const active = embed?.is_active !== false;
+              const createdAtValue = embed?.created_at || embed?.createdAt || null;
 
               return (
                 <div
                   key={`embed-${embedDocId || tokenValue}`}
-                  className=" flex flex-col gap-3"
+                  className="overflow-hidden rounded-2xl border border-border bg-white shadow-sm"
                 >
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                  <div className="flex flex-col gap-3 px-4 py-4 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <div className="text-sm font-semibold text-text-heading">
-                        {embed?.widget_settings?.display_name || "Website Chatbot"}
+                      <div className="flex items-center gap-2">
+                        <div className="text-sm font-semibold text-text-heading">
+                          {embed?.widget_settings?.display_name || "Website Chatbot"}
+                        </div>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            active ? "bg-green-50 text-green-700" : "bg-slate-100 text-slate-600"
+                          }`}
+                        >
+                          {active ? "Active" : "Paused"}
+                        </span>
                       </div>
-                      <div className="text-xs text-text-muted">
-                        Token: {tokenValue} • Widget:{" "}
-                        <span className="font-medium text-text-body">
-                          {embed?.widget_role || "agent"}
-                        </span>{" "}
-                        • Created:{" "}
-                        {embed?.created_at
-                          ? new Date(embed.created_at).toLocaleString()
-                          : "—"}
+                      <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                        <div
+                          className="inline-flex max-w-full items-center gap-1 rounded-lg border border-border bg-background-light/50 px-2.5 py-1"
+                          title={tokenValue}
+                        >
+                          <span className="font-semibold text-text-muted">Token</span>
+                          <span className="max-w-[22rem] truncate font-mono text-[11px] text-text-body">
+                            {tokenValue}
+                          </span>
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background-light/50 px-2.5 py-1">
+                          <span className="font-semibold text-text-muted">Widget</span>
+                          <span className="font-medium capitalize text-text-body">
+                            {embed?.widget_role || "agent"}
+                          </span>
+                        </div>
+                        <div className="inline-flex items-center gap-1 rounded-lg border border-border bg-background-light/50 px-2.5 py-1">
+                          <span className="font-semibold text-text-muted">Created</span>
+                          <span className="text-text-body">
+                            {createdAtValue ? new Date(createdAtValue).toLocaleString() : "—"}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 self-start">
                       <button
                         type="button"
                         onClick={() =>
@@ -232,7 +289,7 @@ export default function ChatbotEmbed() {
                             payload: { is_active: !active },
                           })
                         }
-                        className={`inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border transition ${active
+                        className={`inline-flex items-center gap-1 rounded-md border px-3 py-1.5 text-xs font-semibold transition ${active
                           ? "border-green-200 text-green-700 bg-green-50"
                           : "border-border text-text-heading bg-white"
                           }`}
@@ -243,20 +300,22 @@ export default function ChatbotEmbed() {
                       <button
                         type="button"
                         onClick={() => deleteMutation.mutate(embedDocId)}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 transition"
+                        className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100"
                       >
                         <Trash2 className="h-4 w-4" /> Delete
                       </button>
                     </div>
                   </div>
 
-                  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                    <div className="text-xs text-text-body break-all">{publicUrl}</div>
+                  <div className="flex flex-col gap-2 border-t border-border bg-background-light/45 px-4 py-3 md:flex-row md:items-center md:justify-between">
+                    <div className="truncate text-xs text-text-body md:max-w-[70%]" title={publicUrl}>
+                      {publicUrl}
+                    </div>
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleCopy(publicUrl, `url-${tokenValue}`)}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-border hover:bg-background-light transition"
+                        className="inline-flex items-center gap-1 rounded-md border border-border bg-white px-3 py-1.5 text-xs font-semibold transition hover:bg-background-light"
                       >
                         {copiedKey === `url-${tokenValue}` ? (
                           <Check className="h-4 w-4 text-green-600" />
@@ -268,81 +327,18 @@ export default function ChatbotEmbed() {
                       <button
                         type="button"
                         onClick={() => window.open(publicUrl, "_blank", "noopener,noreferrer")}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-primary/30 text-primary hover:bg-primary/5 transition"
+                        className="inline-flex items-center gap-1 rounded-md border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/5"
                       >
                         Preview
                       </button>
                     </div>
                   </div>
 
-                  <div>
-                    <div className="text-xs font-semibold text-text-heading mb-1">
-                      Embed snippet
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      <pre className="text-[11px] bg-white rounded-md p-3 border border-border overflow-x-auto flex-1">
-                        {codeSnippet}
-                      </pre>
-                      <button
-                        type="button"
-                        style={{ height: "-webkit-fill-available" }}
-                        onClick={() => handleCopy(codeSnippet, `code-${tokenValue}`)}
-                        className="inline-flex items-center h-full justify-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-border hover:bg-background-light transition self-start"
-                      >
-                        {copiedKey === `code-${tokenValue}` ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  {renderStripedSnippetRow("Embed snippet", codeSnippet, `code-${tokenValue}`, "light")}
                   {providedSnippet ? (
-                    <div>
-                      <div className="text-xs font-semibold text-text-heading mb-1">
-                        Provided embed code
-                      </div>
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                        <pre className="text-[11px] bg-white rounded-md p-3 border border-border overflow-x-auto flex-1">
-                          {providedSnippet}
-                        </pre>
-                        <button
-                          type="button"
-                          style={{ height: "-webkit-fill-available" }}
-                          onClick={() => handleCopy(providedSnippet, `provided-${tokenValue}`)}
-                          className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-border hover:bg-background-light transition self-start"
-                        >
-                          {copiedKey === `provided-${tokenValue}` ? (
-                            <Check className="h-4 w-4 text-green-600" />
-                          ) : (
-                            <Copy className="h-4 w-4" />
-                          )}
-                        </button>
-                      </div>
-                    </div>
+                    renderStripedSnippetRow("Provided embed code", providedSnippet, `provided-${tokenValue}`, "muted")
                   ) : null}
-                  <div>
-                    <div className="text-xs font-semibold text-text-heading mb-1">
-                      Iframe snippet
-                    </div>
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                      <pre className="text-[11px] bg-white rounded-md p-3 border border-border overflow-x-auto flex-1">
-                        {iframeSnippet}
-                      </pre>
-                      <button
-                        type="button"
-                        style={{ height: "-webkit-fill-available" }}
-                        onClick={() => handleCopy(iframeSnippet, `iframe-${tokenValue}`)}
-                        className="inline-flex items-center gap-1 px-3 py-1 rounded-md text-xs font-semibold border border-border hover:bg-background-light transition self-start"
-                      >
-                        {copiedKey === `iframe-${tokenValue}` ? (
-                          <Check className="h-4 w-4 text-green-600" />
-                        ) : (
-                          <Copy className="h-4 w-4" />
-                        )}
-                      </button>
-                    </div>
-                  </div>
+                  {renderStripedSnippetRow("Iframe snippet", iframeSnippet, `iframe-${tokenValue}`, "light")}
                 </div>
               );
             })}

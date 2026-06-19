@@ -6,7 +6,6 @@ import { Mail } from "lucide-react";
 import { toast } from "react-toastify";
 import { useGoogleLogin } from "@react-oauth/google";
 import AuthLayout from "@/components/auth/AuthLayout";
-import AuthBrandLink from "@/components/auth/AuthBrandLink";
 import AuthHeader from "@/components/auth/AuthHeader";
 import AuthVisualSection from "@/components/auth/AuthVisualSection";
 import FormField from "@/components/auth/FormField";
@@ -206,7 +205,6 @@ function SignUpPageContent() {
       {/* Left - Form Section */}
       <div className="flex w-full min-h-0 flex-1 items-center bg-background px-5 py-4 sm:px-8 md:w-[48%] md:py-5 lg:px-12">
         <div className="mx-auto w-full max-w-[24rem] space-y-3">
-          <AuthBrandLink />
           <AuthHeader
             title="Create your Nesti account"
             subtitle="Set up your workspace in minutes. No card required."

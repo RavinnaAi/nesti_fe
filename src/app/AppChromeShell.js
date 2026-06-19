@@ -1,23 +1,23 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import AppChrome from "./AppChrome";
 import WorkspaceLoader from "@/components/ui/WorkspaceLoader";
-import { isPublicMarketingRoute } from "@/lib/publicRoutes";
 
 export default function AppChromeShell({ children }) {
   const [mounted, setMounted] = useState(false);
-  const [pathname, setPathname] = useState("");
-  const isProfessionalPublicPage = pathname.startsWith("/p/") || pathname.startsWith("/professional/");
-  const isPublicLandingOrMarketing =
-    pathname === "/" || isPublicMarketingRoute(pathname) || isProfessionalPublicPage;
+  const pathname = usePathname() || "";
+  const isChatbotEmbedRoute = pathname === "/chatbot" || pathname.startsWith("/chatbot/");
 
   useEffect(() => {
-    setPathname(window.location.pathname || "");
     setMounted(true);
   }, []);
 
   if (!mounted) {
+    if (isChatbotEmbedRoute) {
+      return <>{children}</>;
+    }
     return (
       <>
         <main
@@ -27,12 +27,8 @@ export default function AppChromeShell({ children }) {
           <WorkspaceLoader
             fullHeight={false}
             className="max-w-none px-4"
-            label={isPublicLandingOrMarketing ? "Loading Nesti AI..." : "Loading workspace..."}
-            sublabel={
-              isPublicLandingOrMarketing
-                ? "Preparing your experience"
-                : "Preparing your tools and data"
-            }
+            label="Loading workspace..."
+            sublabel="Preparing your tools and data"
           />
         </main>
         {children}

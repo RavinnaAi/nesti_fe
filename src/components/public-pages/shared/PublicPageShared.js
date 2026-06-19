@@ -71,7 +71,7 @@ export function PageCta({
             </div>
 
             <div className="relative z-10 mx-auto mt-5 grid max-w-4xl gap-2 border-t border-border/70 pt-4 sm:grid-cols-3">
-              {["3-day free trial", "AI-powered workflows", "USA & Canada"].map((t) => (
+              {["2-day free trial", "AI-powered workflows", "USA & Canada"].map((t) => (
                 <span
                   key={t}
                   className="flex items-center justify-center gap-2 rounded-xl bg-white/70 px-3 py-2 text-xs font-medium text-text-body"

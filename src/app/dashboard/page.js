@@ -26,6 +26,7 @@ import { FEATURES } from "@/constants/features";
 import DashboardKpiStrip from "@/components/dashboard/DashboardKpiStrip";
 import DashboardTopTables from "@/components/dashboard/DashboardTopTables";
 import DashboardCalendlyButton from "@/components/dashboard/DashboardCalendlyButton";
+import DashboardStartGuide from "@/components/dashboard/DashboardStartGuide";
 import WorkspaceLoader from "@/components/ui/WorkspaceLoader";
 
 const DashboardAnalyticsPanels = dynamic(
@@ -67,6 +68,7 @@ export default function DashboardPage() {
   const { isAuthenticated, profile } = useAuthGuard();
   const { hasFeature } = useFeatureAccess();
   const canUseReferralInviteLinks = hasFeature(FEATURES.REFERRALS_INVITES);
+  const canUseCalendarIntegration = hasFeature(FEATURES.CALENDAR_INTEGRATION);
   const activeUser = profile?.user || profile?.data || user;
 
   const apiUser = profile?.user;
@@ -150,10 +152,27 @@ export default function DashboardPage() {
   const [avatarBroken, setAvatarBroken] = useState(false);
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [generatedInviteLink, setGeneratedInviteLink] = useState("");
+  const [guideDismissed, setGuideDismissed] = useState(false);
+  const guideStorageKey = useMemo(() => {
+    const id =
+      activeUser?.id ||
+      activeUser?._id ||
+      user?.id ||
+      user?._id ||
+      activeUser?.email ||
+      "workspace";
+    return `nesti_dashboard_user_guide_${String(id)}`;
+  }, [activeUser, user]);
 
   useEffect(() => {
     setAvatarBroken(false);
   }, [profileImageUrl]);
+
+  useEffect(() => {
+    if (!isMounted || typeof window === "undefined") return;
+    const status = window.localStorage.getItem(guideStorageKey);
+    setGuideDismissed(status === "dismissed" || status === "completed");
+  }, [guideStorageKey, isMounted]);
 
   // Fix #9 — removed artificial 180ms delay that was blocking 3 queries on every dashboard load.
 
@@ -197,7 +216,7 @@ export default function DashboardPage() {
 
   const calendarBookingsQuery = useQuery({
     queryKey: ["calendar-bookings", token],
-    enabled: Boolean(token),
+    enabled: Boolean(token) && canUseCalendarIntegration,
     queryFn: () => fetchCalendarBookings({ token }),
     staleTime: 60_000,
   });
@@ -280,6 +299,13 @@ export default function DashboardPage() {
       toast.success("Invite link copied.");
     } catch {
       toast.error("Could not copy invite link.");
+    }
+  };
+
+  const handleGuideDismiss = (status = "dismissed") => {
+    setGuideDismissed(true);
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(guideStorageKey, status);
     }
   };
 
@@ -396,6 +422,13 @@ export default function DashboardPage() {
       })
       .slice(0, 5);
   }, [profilesTopQuery.data]);
+
+  const profileSetupState = profileQuery.data?.profile_setup || {};
+  const guideDataReady = !profileQuery.isPending;
+  const shouldShowStartGuide =
+    guideDataReady &&
+    Boolean(profileSetupState?.is_complete) &&
+    !guideDismissed;
 
   const chartSeries = useMemo(() => {
     const base = analyticsTimeseriesQuery.data?.series;
@@ -535,16 +568,25 @@ export default function DashboardPage() {
               </motion.div>
             </div>
 
-            <motion.div
-              className="flex w-full shrink-0 sm:w-auto sm:pb-1"
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.16, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <DashboardCalendlyButton surface="light" className="w-full sm:w-auto" />
-            </motion.div>
+            {canUseCalendarIntegration ? (
+              <motion.div
+                className="flex w-full shrink-0 sm:w-auto sm:pb-1"
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.16, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <DashboardCalendlyButton surface="light" className="w-full sm:w-auto" />
+              </motion.div>
+            ) : null}
           </div>
         </motion.section>
+
+        {shouldShowStartGuide ? (
+          <DashboardStartGuide
+            professionalRole={String(businessInfo?.professionalType || userRole || "").trim().toLowerCase()}
+            onDismiss={handleGuideDismiss}
+          />
+        ) : null}
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>

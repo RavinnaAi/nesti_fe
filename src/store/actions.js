@@ -7,6 +7,17 @@ const SESSION_KEYS = ["nesti_pricing_state", "nesti_selected_plan_state"];
 
 const LOCAL_KEYS = ["nesti_auth_state", "nesti_profile_state", "nesti_signup_data", "nesti_prochat_unread"];
 
+function clearStorageKeys(storageRef, keys) {
+  if (!storageRef || !Array.isArray(keys)) return;
+  keys.forEach((key) => {
+    try {
+      storageRef.removeItem(key);
+    } catch {
+      // ignore storage removal errors
+    }
+  });
+}
+
 export const logoutAndClearAll = () => (dispatch) => {
   dispatch(logout());
   dispatch(clearProfile());
@@ -14,15 +25,7 @@ export const logoutAndClearAll = () => (dispatch) => {
   dispatch(clearSelectedPlan());
 
   if (typeof window !== "undefined") {
-    try {
-      sessionStorage.clear();
-    } catch {
-      SESSION_KEYS.forEach((key) => sessionStorage.removeItem(key));
-    }
-    try {
-      localStorage.clear();
-    } catch {
-      LOCAL_KEYS.forEach((key) => localStorage.removeItem(key));
-    }
+    clearStorageKeys(window.sessionStorage, SESSION_KEYS);
+    clearStorageKeys(window.localStorage, LOCAL_KEYS);
   }
 };

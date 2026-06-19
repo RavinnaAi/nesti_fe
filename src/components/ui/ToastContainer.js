@@ -11,18 +11,20 @@ export default function CustomToastContainer() {
   return (
     <ToastContainer
       position="top-right"
-      autoClose={5000}
+      autoClose={4500}
       hideProgressBar={false}
       newestOnTop={true}
       closeOnClick
       rtl={false}
       pauseOnFocusLoss
-      draggable
+      draggable={false}
       pauseOnHover
       theme="light"
-      toastClassName="!rounded-md !shadow-lg !text-sm !py-2 !px-3 !min-h-0"
-      bodyClassName="!text-sm !leading-snug !p-0 !m-0"
+      limit={3}
+      toastClassName="nesti-toast"
+      bodyClassName="nesti-toast-body"
       progressClassName={"!bg-gradient-to-r !from-[#3EB87F] !to-[#2ea869]"}
+      closeButton={false}
       style={{
         "--toastify-color-success": "#3EB87F",
         "--toastify-color-error": "#ef4444",

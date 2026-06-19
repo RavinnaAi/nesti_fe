@@ -106,6 +106,27 @@ h6 {
   }
 }
 
+.nesti-toast {
+  width: fit-content !important;
+  max-width: min(88vw, 360px) !important;
+  border: 1px solid rgba(226, 232, 240, 0.95) !important;
+  border-radius: 0.85rem !important;
+  box-shadow:
+    0 10px 25px rgba(15, 23, 42, 0.12),
+    0 4px 10px rgba(15, 23, 42, 0.08) !important;
+  padding: 0.7rem 0.85rem !important;
+  min-height: 0 !important;
+}
+
+.nesti-toast-body {
+  margin: 0 !important;
+  padding: 0 !important;
+  font-size: 0.875rem !important;
+  line-height: 1.35rem !important;
+  font-weight: 500 !important;
+  word-break: break-word;
+}
+
 .nesti-phone-input {
   position: relative;
   display: flex;

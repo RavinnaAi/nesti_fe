@@ -28,7 +28,7 @@ export default function AuthVisualSection({ variant = "signup" }) {
         <div className="w-full max-w-[21rem] space-y-3 rounded-3xl border border-white/45 bg-slate-950/28 p-5 shadow-[0_22px_55px_rgba(15,23,42,0.28)] ring-1 ring-white/25 backdrop-blur-xl">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-white/25 bg-white/10 px-3 py-1.5 text-[10px] font-semibold text-white/90">
             <Sparkles size={12} className="text-primary-light" />
-            {isSignup ? "Start with a 3-day trial" : "Welcome back"}
+            {isSignup ? "Start with a 2-day trial" : "Welcome back"}
           </div>
 
           <div className="space-y-2">
