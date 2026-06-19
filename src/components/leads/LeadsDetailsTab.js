@@ -389,22 +389,6 @@ export default function LeadsDetailsTab({
       {closeSummaryBanner}
       {selectedConversation ? (
         <>
-          <div className="flex flex-wrap items-center gap-2 text-xs">
-            {!isLawyerLead && !isMortgageBrokerLead && getConversationMeta(selectedConversation).isMatched === true ? (
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-green-50 text-green-700 border border-green-200 font-semibold shadow-sm">
-                <CheckCircle2 size={14} />
-                Matched Lead
-              </span>
-            ) : !isLawyerLead &&
-              !isMortgageBrokerLead &&
-              getConversationMeta(selectedConversation).isMatched === false ? (
-              <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-md bg-red-200 text-red-700 border border-red-200 font-semibold shadow-sm">
-                <XCircle size={14} />
-                Mismatched Lead
-              </span>
-            ) : null}
-          </div>
-
           {formatMetaEntries(conversationMeta).length > 0 ? (
             <div className="flex items-center justify-between p-3 rounded-md bg-primary/5 border border-primary/10">
               <div className="text-xs font-bold text-text-heading flex items-center gap-2">

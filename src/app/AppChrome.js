@@ -259,6 +259,8 @@ export default function AppChrome({ children }) {
     pathname === "/conversations" ||
     pathname === "/referrals" ||
     pathname === "/clients";
+  const isMessageThreadRoute = pathname.startsWith("/messages/");
+  const isFullHeightWorkspaceRoute = isFixedTableListRoute || isMessageThreadRoute;
   const isPublicAuthPage = useMemo(
     () =>
       pathname === "/" ||
@@ -486,7 +488,7 @@ export default function AppChrome({ children }) {
         <BackgroundElements variant="default" />
         <div
           className={`relative z-10 flex w-full flex-1 ${
-            isFixedTableListRoute ? "h-screen min-h-0 overflow-hidden" : "min-h-screen"
+            isFullHeightWorkspaceRoute ? "h-screen min-h-0 overflow-hidden" : "min-h-screen"
           }`}
         >
           <AppSidebar
@@ -496,11 +498,11 @@ export default function AppChrome({ children }) {
           <div
             id="workspace-content"
             className={`flex w-full flex-1 flex-col lg:pl-60 ${
-              isFixedTableListRoute
+              isFullHeightWorkspaceRoute
                 ? "bg-transparent"
                 : "bg-gradient-to-br from-primary/5 via-white to-primary/10"
             } ${
-              isFixedTableListRoute ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
+              isFullHeightWorkspaceRoute ? "h-full min-h-0 overflow-hidden" : "min-h-screen"
             }`}
           >
             <header className="sticky top-0 z-40 flex h-14 shrink-0 items-center justify-between border-b border-border bg-white/95 px-3 sm:h-16 sm:bg-white/90 sm:px-6 sm:backdrop-blur">
@@ -628,14 +630,14 @@ export default function AppChrome({ children }) {
             <main
               id="workspace-main"
               className={`relative z-0 flex min-h-0 flex-1 flex-col ${
-                isFixedTableListRoute
+                isFullHeightWorkspaceRoute
                   ? "overflow-y-auto overflow-x-hidden [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
                   : "overflow-y-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               }`}
             >
               {children}
             </main>
-            {!isFixedTableListRoute ? (
+            {!isFullHeightWorkspaceRoute ? (
               <footer className="shrink-0 border-t border-primary/20 bg-gradient-to-r from-primary/[0.08] via-white/95 to-primary/[0.06] px-4 py-2.5 sm:px-6">
                 <div className="flex items-center justify-between gap-3 text-[11px] text-text-muted">
                   <div className="flex min-w-0 items-center gap-2">
