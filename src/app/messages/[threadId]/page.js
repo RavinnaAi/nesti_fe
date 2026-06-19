@@ -529,7 +529,7 @@ export default function ProMessagesThreadPage() {
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-gradient-to-br from-primary/5 via-white to-primary/10">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-transparent">
       <div className="fixed left-0 right-0 top-[calc(4rem+env(safe-area-inset-top))] z-40 border-b border-border/70 bg-white/95 shadow-sm backdrop-blur lg:left-60">
         <div className="flex items-center justify-between gap-3 px-3 py-2.5 sm:px-6">
           <button
