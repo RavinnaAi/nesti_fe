@@ -24,6 +24,17 @@ export function generateVisitorId() {
   return visitorId;
 }
 
+/** Preserve the first external referrer for the browser session (traffic attribution). */
+export function getEntryReferrer() {
+  if (typeof window === 'undefined') return '';
+  const key = 'nesti_entry_referrer';
+  const stored = sessionStorage.getItem(key);
+  if (stored !== null) return stored;
+  const referrer = document.referrer || '';
+  sessionStorage.setItem(key, referrer);
+  return referrer;
+}
+
 export function trackAnalyticsEvent(eventData) {
   const sessionId = generateSessionId();
   const visitorId = generateVisitorId();

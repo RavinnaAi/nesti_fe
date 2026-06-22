@@ -6,13 +6,13 @@ import { BudgetCell, getBudgetDisplay } from "@/components/clients/clientProfile
 import { SkeletonBlock } from "@/components/ui/ContentSkeletons";
 import { formatLeadIntakeSlug } from "@/lib/leadsPageUtils";
 
-const theadRow = "border-b border-border bg-background-lighter/90";
+const theadRow = "border-b border-slate-100 bg-slate-50/60";
 const th =
-  "whitespace-nowrap px-2 py-1.5 text-left text-[9px] font-semibold uppercase tracking-wide text-text-muted sm:px-2.5 sm:text-[10px]";
-const td = "px-2 py-1.5 align-middle text-[11px] text-text-body sm:px-2.5 sm:text-xs";
-const tdStrong = "px-2 py-1.5 align-middle text-[11px] font-semibold text-text-heading sm:px-2.5 sm:text-xs";
-const tdMuted = "px-2 py-1.5 align-middle text-[11px] text-text-muted sm:px-2.5 sm:text-xs";
-const trRow = "border-b border-border/50 transition-colors last:border-b-0 hover:bg-primary/[0.04]";
+  "whitespace-nowrap px-3 py-2 text-left text-[9px] font-semibold uppercase tracking-wider text-slate-500 sm:text-[10px]";
+const td = "px-3 py-2.5 align-middle text-[11px] text-text-body sm:text-xs";
+const tdStrong = "px-3 py-2.5 align-middle text-[11px] font-semibold text-text-heading sm:text-xs";
+const tdMuted = "px-3 py-2.5 align-middle text-[11px] text-slate-400 sm:text-xs";
+const trRow = "border-b border-slate-100/80 transition-colors last:border-b-0 hover:bg-slate-50/60";
 
 function humanize(value) {
   if (value == null || value === "") return "—";
@@ -75,7 +75,7 @@ function TopLeadsTableSkeleton({ variant = "agent" }) {
         : ["w-24", "w-28", "w-24", "w-28", "w-14", "w-10", "w-20"];
   return (
     <div className="overflow-x-auto -mx-1" aria-hidden>
-      <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
+      <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-slate-200/60">
         <thead>
           <tr className={theadRow}>
             {headers.map((h) => (
@@ -105,7 +105,7 @@ function TopProfilesTableSkeleton() {
   const widths = ["w-32", "w-28", "w-16", "w-20", "w-14", "w-8"];
   return (
     <div className="overflow-x-auto -mx-1" aria-hidden>
-      <table className="w-full min-w-[520px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
+      <table className="w-full min-w-[520px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-slate-200/60">
         <thead>
           <tr className={theadRow}>
             <th className={th}>Client</th>
@@ -150,10 +150,10 @@ export default function DashboardTopTables({
   const isMortgageBroker = role === "mortgage_broker";
   const topLeadsVariant = isMortgageBroker ? "mortgage_broker" : isLawyer ? "lawyer" : "agent";
   return (
-    <div className="flex flex-col gap-4 md:gap-6">
-      <section className="min-w-0 rounded-xl border border-border bg-white p-2.5 sm:p-3 shadow-sm">
-        <h2 className="text-[13px] font-semibold text-text-heading">Top 5 leads</h2>
-        <p className="mt-0.5 mb-2.5 text-[11px] leading-snug text-text-muted">
+    <div className="flex flex-col gap-4">
+      <section className="min-w-0 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+        <h2 className="text-xs font-semibold text-text-heading">Top 5 leads</h2>
+        <p className="mt-0.5 mb-3 text-[10px] text-slate-500">
           Highest lead score in your workspace (same list as charts).
         </p>
         {leadsLoading ? (
@@ -164,7 +164,7 @@ export default function DashboardTopTables({
           <p className="text-sm text-text-muted py-4">No leads to show yet.</p>
         ) : (
           <div className="overflow-x-auto -mx-1">
-            <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
+            <table className="w-full min-w-[640px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-slate-200/60">
               <thead>
                 <tr className={theadRow}>
                   <th className={th}>
@@ -213,7 +213,7 @@ export default function DashboardTopTables({
                     </td>
                     <td className={td}>
                       {row.email ? (
-                        <span className="block max-w-[140px] truncate text-text-body" title={row.email}>
+                        <span className="block text-text-body" title={row.email}>
                           {row.email}
                         </span>
                       ) : (
@@ -250,9 +250,9 @@ export default function DashboardTopTables({
         )}
       </section>
 
-      <section className="min-w-0 rounded-xl border border-border bg-white p-2.5 sm:p-3 shadow-sm">
-        <h2 className="text-[13px] font-semibold text-text-heading">Top 5 client profiles</h2>
-        <p className="mt-0.5 mb-2.5 text-[11px] leading-snug text-text-muted">
+      <section className="min-w-0 rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-shadow hover:shadow-md sm:p-5">
+        <h2 className="text-xs font-semibold text-text-heading">Top 5 client profiles</h2>
+        <p className="mt-0.5 mb-3 text-[10px] text-slate-500">
           Profiles with the most linked leads (from your client list).
         </p>
         {profilesLoading ? (
@@ -263,7 +263,7 @@ export default function DashboardTopTables({
           <p className="text-sm text-text-muted py-4">No client profiles yet.</p>
         ) : (
           <div className="overflow-x-auto -mx-1">
-            <table className="w-full min-w-[560px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-border/60">
+            <table className="w-full min-w-[560px] border-collapse overflow-hidden rounded-lg text-left ring-1 ring-slate-200/60">
               <thead>
                 <tr className={theadRow}>
                   <th className={th}>Client</th>
@@ -304,7 +304,7 @@ export default function DashboardTopTables({
                         {email ? (
                           <a
                             href={`mailto:${encodeURIComponent(email)}`}
-                            className="block max-w-[120px] truncate text-text-body transition hover:text-primary"
+                            className="block text-text-body transition hover:text-primary"
                             title={email}
                           >
                             {email}

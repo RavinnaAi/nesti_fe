@@ -8,35 +8,35 @@ const TILES = [
     label: "Leads",
     helper: "Total in leads list",
     Icon: Users,
-    accent: "text-emerald-600 bg-emerald-50",
+    accent: "bg-emerald-100 text-emerald-600",
   },
   {
     key: "lead_views",
     label: "Lead views",
     helper: "Profile opens",
     Icon: Eye,
-    accent: "text-sky-600 bg-sky-50",
+    accent: "bg-sky-100 text-sky-600",
   },
   {
     key: "appointments_booked",
     label: "Appointments",
     helper: "Booked meetings",
     Icon: CalendarCheck,
-    accent: "text-violet-600 bg-violet-50",
+    accent: "bg-violet-100 text-violet-600",
   },
   {
     key: "nurture_emails_sent",
     label: "Nurture emails",
     helper: "Successful sends",
     Icon: Mail,
-    accent: "text-amber-600 bg-amber-50",
+    accent: "bg-amber-100 text-amber-700",
   },
   {
     key: "leads_closed_won",
     label: "Deals",
     helper: "",
     Icon: Trophy,
-    accent: "text-rose-600 bg-rose-50",
+    accent: "bg-rose-100 text-rose-600",
     dealsMeta: true,
   },
 ];
@@ -56,7 +56,6 @@ function formatInt(n) {
 
 export default function DashboardKpiStrip({ summary, isLoading }) {
   const totals = summary?.totals || {};
-  const rates = summary?.conversion_rates || {};
   const values = {
     leads_created: totals.leads_created ?? 0,
     lead_views: totals.lead_views ?? 0,
@@ -66,7 +65,7 @@ export default function DashboardKpiStrip({ summary, isLoading }) {
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 md:gap-4">
+    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-5">
       {TILES.map(({ key, label, helper, Icon, accent, isPercent, dealsMeta }) => {
         const raw = values[key];
         const display = isLoading ? null : isPercent ? formatPercent(raw) : formatInt(raw);
@@ -81,36 +80,40 @@ export default function DashboardKpiStrip({ summary, isLoading }) {
         return (
           <div
             key={key}
-            className={`rounded-xl border border-border bg-white p-4 shadow-sm transition-shadow ${
-              isLoading ? "" : "hover:shadow-md"
-            }`}
+            className="group rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-all hover:shadow-md"
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0 flex-1">
                 {isLoading ? (
                   <>
-                    <div className="h-3 w-20 rounded-md bg-primary/10 animate-pulse" />
-                    <div className="mt-2 h-8 w-16 rounded-md bg-primary/15 animate-pulse" />
+                    <div className="h-3 w-20 rounded bg-slate-100 animate-pulse" />
+                    <div className="mt-3 h-7 w-14 rounded bg-slate-100 animate-pulse" />
                   </>
                 ) : (
                   <>
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">
                       {label}
                     </p>
-                    <p className="mt-1 text-2xl font-bold tabular-nums text-text-heading">{display}</p>
+                    <p className="mt-1.5 text-2xl font-bold tabular-nums leading-none text-text-heading">{display}</p>
                   </>
                 )}
               </div>
               <span
-                className={`rounded-lg p-2 shrink-0 ${isLoading ? "bg-primary/10 animate-pulse" : accent}`}
+                className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-transform group-hover:scale-105 ${
+                  isLoading ? "bg-slate-100 animate-pulse" : accent
+                }`}
               >
-                {isLoading ? <span className="block size-4" aria-hidden /> : <Icon size={16} strokeWidth={2.2} />}
+                {isLoading ? (
+                  <span className="block size-4" aria-hidden />
+                ) : (
+                  <Icon size={15} strokeWidth={2.2} />
+                )}
               </span>
             </div>
             {isLoading ? (
-              <div className="mt-2 h-3 w-28 rounded-md bg-primary/10 animate-pulse" />
+              <div className="mt-3 h-3 w-28 rounded bg-slate-100 animate-pulse" />
             ) : (
-              <p className="mt-2 text-[11px] text-text-muted leading-snug">{helperText}</p>
+              <p className="mt-2.5 text-[10px] leading-snug text-slate-500">{helperText}</p>
             )}
           </div>
         );

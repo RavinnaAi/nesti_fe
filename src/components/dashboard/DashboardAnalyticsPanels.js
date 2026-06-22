@@ -31,13 +31,16 @@ const gridStroke = "#e2e8f0";
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
   return (
-    <div className="rounded-lg border border-border bg-white px-3 py-2 text-xs shadow-lg">
+    <div className="rounded-lg border border-slate-200 bg-white/95 px-3 py-2 text-[11px] shadow-xl backdrop-blur-sm">
       <p className="font-semibold text-text-heading mb-1">{label}</p>
-      <ul className="space-y-0.5 text-text-muted">
+      <ul className="space-y-0.5 text-slate-500">
         {payload.map((p) => (
           <li key={p.dataKey} className="flex justify-between gap-4">
-            <span>{p.name}</span>
-            <span className="font-mono font-medium text-text-heading">{p.value}</span>
+            <span className="flex items-center gap-1.5">
+              <span className="inline-block h-2 w-2 rounded-full" style={{ backgroundColor: p.color }} />
+              {p.name}
+            </span>
+            <span className="font-mono font-semibold text-text-heading">{p.value}</span>
           </li>
         ))}
       </ul>
@@ -85,7 +88,7 @@ export default function DashboardAnalyticsPanels({
 
   if (isError) {
     return (
-      <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+      <div className="rounded-xl border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-xs text-amber-700">
         Analytics could not be loaded. Charts may be incomplete.
       </div>
     );
@@ -93,33 +96,28 @@ export default function DashboardAnalyticsPanels({
 
   if (isLoading) {
     return (
-      <div className="space-y-6" aria-busy="true" aria-label="Loading charts">
-        <div className="grid grid-cols-1 gap-4">
-          <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="h-4 w-40 rounded-md bg-primary/10 animate-pulse" />
-              <div className="h-3 w-20 rounded-md bg-primary/10 animate-pulse" />
-            </div>
-            <div className="h-3 w-56 rounded-md bg-primary/10 animate-pulse mb-3" />
-            <div className="h-[280px] rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
+      <div className="space-y-4" aria-busy="true" aria-label="Loading charts">
+        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <div className="h-4 w-40 rounded bg-slate-100 animate-pulse" />
+            <div className="h-3 w-20 rounded bg-slate-100 animate-pulse" />
+          </div>
+          <div className="h-[280px] flex items-center justify-center">
+            <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-primary" />
           </div>
         </div>
         <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-          <div className="min-w-0 flex-1 rounded-xl border border-border bg-white p-4 shadow-sm">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="h-4 w-44 rounded-md bg-primary/10 animate-pulse" />
-              <div className="h-3 w-28 rounded-md bg-primary/10 animate-pulse" />
+          <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div className="h-4 w-44 rounded bg-slate-100 animate-pulse mb-4" />
+            <div className="h-[220px] flex items-center justify-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-primary" />
             </div>
-            <div className="h-3 w-full max-w-sm rounded-md bg-primary/10 animate-pulse mb-3" />
-            <div className="h-[220px] rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
           </div>
-          <div className="min-w-0 flex-1 rounded-xl border border-border bg-white p-4 shadow-sm">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-              <div className="h-4 w-40 rounded-md bg-primary/10 animate-pulse" />
-              <div className="h-3 w-20 rounded-md bg-primary/10 animate-pulse" />
+          <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <div className="h-4 w-40 rounded bg-slate-100 animate-pulse mb-4" />
+            <div className="h-[220px] flex items-center justify-center">
+              <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-primary" />
             </div>
-            <div className="h-3 w-full max-w-md rounded-md bg-primary/10 animate-pulse mb-3" />
-            <div className="h-[220px] rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
           </div>
         </div>
       </div>
@@ -127,19 +125,21 @@ export default function DashboardAnalyticsPanels({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="grid grid-cols-1 gap-4">
-        <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <BarChart3 size={16} className="text-primary shrink-0" />
-              <h3 className="text-sm font-bold text-text-heading">Activity over time</h3>
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-slate-500">
+                <BarChart3 size={12} strokeWidth={2.5} />
+              </span>
+              <h3 className="text-xs font-semibold text-text-heading">Activity over time</h3>
             </div>
-            <Link href="/leads" className="text-xs font-semibold text-primary hover:text-primary-dark hover:underline shrink-0">
+            <Link href="/leads" className="text-[11px] font-semibold text-primary hover:text-primary-dark shrink-0">
               Open leads →
             </Link>
           </div>
-          <p className="text-xs text-text-muted mb-3">New leads and lead views (daily)</p>
+          <p className="text-[10px] text-slate-500 mb-3">New leads and lead views (daily)</p>
           <div className="h-[280px] w-full min-w-0">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
@@ -174,22 +174,24 @@ export default function DashboardAnalyticsPanels({
 
       {showInviteSignups ? (
       <div className="grid grid-cols-1 gap-4">
-        <div className="rounded-xl border border-border bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <div className="rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2 min-w-0">
-              <Users size={16} className="text-primary shrink-0" />
-              <h3 className="text-sm font-bold text-text-heading">Invite signups by role</h3>
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-slate-500">
+                <Users size={12} strokeWidth={2.5} />
+              </span>
+              <h3 className="text-xs font-semibold text-text-heading">Invite signups by role</h3>
             </div>
-            <span className="text-xs font-semibold tabular-nums text-text-muted">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-slate-600">
               {inviteSignupChart.total} joined
             </span>
           </div>
-          <p className="text-xs text-text-muted mb-3">
+          <p className="text-[10px] text-slate-500 mb-3">
             Users who joined through invite links or referrals, grouped by their role.
           </p>
           <div className="h-[240px] w-full min-w-0">
             {inviteSignupChart.roles.length === 0 ? (
-              <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-border/80 bg-background-light/40 text-xs text-text-muted">
+              <div className="flex h-full items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50/40 text-[11px] text-slate-400">
                 No invite or referral signups in this window.
               </div>
             ) : (
@@ -227,17 +229,19 @@ export default function DashboardAnalyticsPanels({
       ) : null}
 
       <div className="flex flex-col gap-4 lg:flex-row lg:items-stretch">
-        <div className="min-w-0 flex-1 rounded-xl border border-border bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <CalendarCheck size={16} className="text-primary" />
-              <h3 className="text-sm font-bold text-text-heading">Appointments trend</h3>
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-slate-500">
+                <CalendarCheck size={12} strokeWidth={2.5} />
+              </span>
+              <h3 className="text-xs font-semibold text-text-heading">Appointments trend</h3>
             </div>
-            <span className="text-xs font-semibold tabular-nums text-text-muted">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-slate-600">
               {appointmentsTotals.booked} booked · {appointmentsTotals.canceled} canceled
             </span>
           </div>
-          <p className="text-xs text-text-muted mb-3">
+          <p className="text-[10px] text-slate-500 mb-3">
             Daily booked vs canceled appointments over the last {windowDays} days.
           </p>
           <div className="h-[220px] w-full min-w-0">
@@ -291,17 +295,19 @@ export default function DashboardAnalyticsPanels({
           </div>
         </div>
 
-        <div className="min-w-0 flex-1 rounded-xl border border-border bg-white p-4 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <div className="min-w-0 flex-1 rounded-xl border border-slate-200/80 bg-white p-5 shadow-sm transition-shadow hover:shadow-md">
+          <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
-              <Mail size={16} className="text-primary" />
-              <h3 className="text-sm font-bold text-text-heading">Nurture emails sent</h3>
+              <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-slate-500">
+                <Mail size={12} strokeWidth={2.5} />
+              </span>
+              <h3 className="text-xs font-semibold text-text-heading">Nurture emails sent</h3>
             </div>
-            <span className="text-xs font-semibold tabular-nums text-text-muted">
+            <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-bold tabular-nums text-slate-600">
               {nurtureEmailsTotal} in period
             </span>
           </div>
-          <p className="text-xs text-text-muted mb-3">
+          <p className="text-[10px] text-slate-500 mb-3">
             Daily successful sends (last {windowDays} days), from activity events and your nurture send log (up to 100
             recent sends merged by day).
           </p>

@@ -238,6 +238,12 @@ function SettingsPageContent() {
         socialMedia: apiProfessional?.social_media || "",
         transactionVolume: apiProfessional?.transaction_volume || "",
         avgSalePrice: apiProfessional?.avg_sale_price || "",
+        avgHomePrice:
+          apiProfessional?.avg_home_price != null ? String(apiProfessional.avg_home_price) : "",
+        commissionRatePercent:
+          apiProfessional?.commission_rate_percent != null
+            ? String(apiProfessional.commission_rate_percent)
+            : "",
         responseTime: apiProfessional?.response_time || "",
         availability: apiProfessional?.availability || "",
         supportLevel: apiProfessional?.support_level || "",

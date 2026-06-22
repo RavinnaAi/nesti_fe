@@ -43,6 +43,9 @@ function mapBackendProfileToStore(data) {
       socialMedia: profile?.social_media || "",
       transactionVolume: profile?.transaction_volume || "",
       avgSalePrice: profile?.avg_sale_price || "",
+      avgHomePrice: profile?.avg_home_price != null ? String(profile.avg_home_price) : "",
+      commissionRatePercent:
+        profile?.commission_rate_percent != null ? String(profile.commission_rate_percent) : "",
       responseTime: profile?.response_time || "",
       availability: profile?.availability || "",
       supportLevel: profile?.support_level || "",

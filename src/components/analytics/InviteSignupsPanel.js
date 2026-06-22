@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Copy, RefreshCw, Users } from "lucide-react";
 import { toast } from "react-toastify";
 import { fetchInviteConversions, fetchInviteLinks, fetchInviteMetrics } from "@/lib/inviteClient";
@@ -80,21 +80,31 @@ function ProfileCell({ user }) {
   );
 }
 
-export default function InviteSignupsPanel({ token, days = 30, showMetrics = true, showHeader = true, externalMetrics = null }) {
+export default function InviteSignupsPanel({
+  token,
+  days = 30,
+  showMetrics = true,
+  showHeader = true,
+  externalMetrics = undefined,
+  externalMetricsLoading = false,
+  skipMetricsFetch = false,
+}) {
   const [page, setPage] = useState(1);
   const rowsPerPage = 5;
 
-  // Fix #7 — skip the metrics fetch when the parent already provides the data
-  // (e.g. analytics/page.js already fetches inviteMetrics and passes it as externalMetrics)
+  useEffect(() => {
+    setPage(1);
+  }, [days]);
+
   const metricsQuery = useQuery({
     queryKey: ["invite-metrics", token, days],
-    enabled: Boolean(token) && externalMetrics === null,
+    enabled: Boolean(token) && !skipMetricsFetch,
     queryFn: () => fetchInviteMetrics({ token, days }),
     staleTime: 30_000,
   });
 
-  // Use parent-supplied data if available, otherwise fall back to own query
-  const metricsData = externalMetrics !== null ? externalMetrics : metricsQuery.data?.metrics;
+  const metricsData = skipMetricsFetch ? externalMetrics : metricsQuery.data?.metrics;
+  const metricsLoading = skipMetricsFetch ? externalMetricsLoading : metricsQuery.isLoading;
 
   const linksQuery = useQuery({
     queryKey: ["invite-links", token],
@@ -166,7 +176,7 @@ export default function InviteSignupsPanel({ token, days = 30, showMetrics = tru
   const hasPrev = Boolean(pagination.has_prev_page) || page > 1;
   const hasNext = Boolean(pagination.has_next_page) || (totalPages > 0 && page < totalPages);
 
-  const isLoading = (externalMetrics === null && metricsQuery.isLoading) || linksQuery.isLoading || conversionsQuery.isLoading;
+  const isLoading = metricsLoading || linksQuery.isLoading || conversionsQuery.isLoading;
   const tableRows = useMemo(() => {
     if (!Array.isArray(items)) return [];
     if (items.length >= rowsPerPage) return items;
@@ -191,7 +201,7 @@ export default function InviteSignupsPanel({ token, days = 30, showMetrics = tru
             <button
               type="button"
               onClick={() => {
-                if (externalMetrics === null) metricsQuery.refetch();
+                if (!skipMetricsFetch) metricsQuery.refetch();
                 linksQuery.refetch();
                 conversionsQuery.refetch();
               }}
@@ -212,7 +222,22 @@ export default function InviteSignupsPanel({ token, days = 30, showMetrics = tru
             </button>
           </div>
         </div>
-      ) : null}
+      ) : (
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              if (!skipMetricsFetch) metricsQuery.refetch();
+              linksQuery.refetch();
+              conversionsQuery.refetch();
+            }}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border bg-white px-2.5 py-1 text-[11px] font-semibold text-text-heading hover:bg-primary/5"
+          >
+            <RefreshCw size={12} />
+            Refresh
+          </button>
+        </div>
+      )}
       {showMetrics ? <p className="mt-2 text-[11px] text-text-muted">{copyButtonHelp}</p> : null}
 
       {showMetrics ? (

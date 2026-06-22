@@ -114,6 +114,31 @@ export default function ExperienceStep({
         />
       </div>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <FormField
+          label="Average home price (USD)"
+          name="avgHomePrice"
+          type="number"
+          value={form.avgHomePrice}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("avgHomePrice")}
+          onBlur={() => setFocusedField("")}
+          placeholder="e.g. 800000"
+          focusedField={focusedField}
+        />
+        <FormField
+          label="Commission rate (%)"
+          name="commissionRatePercent"
+          type="number"
+          value={form.commissionRatePercent}
+          onChange={handleChange}
+          onFocus={() => setFocusedField("commissionRatePercent")}
+          onBlur={() => setFocusedField("")}
+          placeholder="e.g. 2.5"
+          focusedField={focusedField}
+        />
+      </div>
+
       {/* Text inputs */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-5 gap-y-4">
         <FormField

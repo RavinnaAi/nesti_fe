@@ -1,11 +1,12 @@
 import { useEffect, useCallback, useMemo } from 'react';
 import { trackAnalyticsEvent } from '@/lib/publicProfileClient';
-import { generateSessionId, generateVisitorId } from '@/utils/sessionHelpers';
+import { generateSessionId, generateVisitorId, getEntryReferrer } from '@/utils/sessionHelpers';
 
 export function useProfileAnalytics(profileSlug) {
   // Fix #10 — memoize so IDs are stable across re-renders, not re-read from storage every time
   const sessionId = useMemo(() => generateSessionId(), []);
   const visitorId = useMemo(() => generateVisitorId(), []);
+  const entryReferrer = useMemo(() => getEntryReferrer(), []);
 
   const trackEvent = useCallback(
     async (eventType, eventData = {}) => {
@@ -18,13 +19,14 @@ export function useProfileAnalytics(profileSlug) {
           event_data: eventData,
           session_id: sessionId,
           visitor_id: visitorId,
+          referrer: entryReferrer,
           ...eventData,
         });
       } catch (error) {
         console.error(`Failed to track ${eventType}:`, error);
       }
     },
-    [profileSlug, sessionId, visitorId]
+    [profileSlug, sessionId, visitorId, entryReferrer]
   );
 
   const trackProfileView = useCallback(() => {
@@ -74,6 +76,7 @@ export function useProfileAnalytics(profileSlug) {
 
 export function usePageViewTracking(profileSlug) {
   const { trackProfileView } = useProfileAnalytics(profileSlug);
+  const entryReferrer = useMemo(() => getEntryReferrer(), []);
 
   useEffect(() => {
     if (!profileSlug) return;
@@ -88,8 +91,9 @@ export function usePageViewTracking(profileSlug) {
         event_type: 'profile_view',
         session_id: generateSessionId(),
         visitor_id: generateVisitorId(),
+        referrer: entryReferrer,
         duration_seconds: duration,
       }).catch(() => {});
     };
-  }, [profileSlug, trackProfileView]);
+  }, [profileSlug, trackProfileView, entryReferrer]);
 }

@@ -33,7 +33,13 @@ function ChartTooltip({ active, payload, label }) {
   );
 }
 
-export default function ReferralAnalyticsPanel({ series = [], windowDays = 30, isLoading = false, isError = false }) {
+export default function ReferralAnalyticsPanel({
+  series = [],
+  windowDays = 30,
+  isLoading = false,
+  isError = false,
+  compact = false,
+}) {
   const totals = useMemo(
     () =>
       series.reduce(
@@ -48,31 +54,45 @@ export default function ReferralAnalyticsPanel({ series = [], windowDays = 30, i
 
   if (isError) {
     return (
-      <section className="rounded-xl border border-amber-200 bg-amber-50/80 px-4 py-3 text-sm text-amber-900">
+      <section className="rounded-xl border border-amber-200/60 bg-amber-50/50 px-4 py-3 text-xs text-amber-700">
         Referral analytics could not be loaded.
       </section>
     );
   }
 
   return (
-    <section className="h-full rounded-lg border border-border bg-white p-3 shadow-sm">
-      <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <GitBranch size={16} className="text-primary" />
-          <h2 className="text-sm font-bold text-text-heading">Referral flow</h2>
+    <section className="rounded-xl border border-slate-200/80 bg-white p-4 shadow-sm transition-shadow hover:shadow-md">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        {!compact ? (
+          <div className="flex items-center gap-2">
+            <span className="grid h-6 w-6 place-items-center rounded-md bg-slate-100 text-slate-500">
+              <GitBranch size={12} strokeWidth={2.5} />
+            </span>
+            <h2 className="text-xs font-semibold text-text-heading">Referral flow</h2>
+          </div>
+        ) : (
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Inbound vs outbound
+          </span>
+        )}
+        <div className="flex items-center gap-3">
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-sky-500" />
+            {totals.inbound} in
+          </span>
+          <span className="flex items-center gap-1.5 text-[11px] font-medium text-slate-500">
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
+            {totals.outbound} out
+          </span>
         </div>
-        <span className="text-xs font-semibold tabular-nums text-text-muted">
-          {totals.inbound} inbound · {totals.outbound} outbound
-        </span>
       </div>
-      <p className="mb-2 text-xs text-text-muted">
-        Inbound and outbound referral activity over the last {Number(windowDays) || 30} days.
-      </p>
 
       {isLoading ? (
-        <div className="h-[230px] rounded-lg bg-gradient-to-b from-primary/5 to-primary/[0.02] animate-pulse" />
+        <div className="flex h-[200px] items-center justify-center">
+          <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-primary" />
+        </div>
       ) : (
-        <div className="h-[230px] w-full min-w-0">
+        <div className="h-[200px] w-full min-w-0">
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
               <defs>

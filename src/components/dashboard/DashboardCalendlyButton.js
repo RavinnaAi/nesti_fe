@@ -32,7 +32,7 @@ export default function DashboardCalendlyButton({ className = "", surface = "dar
   const light = surface === "light";
 
   const base =
-    "inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-semibold shadow-sm transition disabled:opacity-55 " +
+    "inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border px-3.5 py-2 text-xs font-semibold shadow-sm transition disabled:opacity-50 " +
     (light
       ? "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       : "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white");

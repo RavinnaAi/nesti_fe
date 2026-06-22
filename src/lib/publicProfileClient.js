@@ -1,3 +1,5 @@
+import { getEntryReferrer } from '@/utils/sessionHelpers';
+
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
 const PUBLIC_PROFILE_CACHE_MS = 10_000;
@@ -51,7 +53,7 @@ export async function submitPublicLead(slug, payload = {}) {
   return res.json();
 }
 
-export async function trackAnalyticsEvent({ slug, event_type, event_data = {}, session_id, visitor_id, cta_type, listing_id, service_id, duration_seconds }) {
+export async function trackAnalyticsEvent({ slug, event_type, event_data = {}, session_id, visitor_id, referrer, cta_type, listing_id, service_id, duration_seconds }) {
   try {
     const analyticsKey = [
       slug,
@@ -78,6 +80,7 @@ export async function trackAnalyticsEvent({ slug, event_type, event_data = {}, s
         event_data,
         session_id,
         visitor_id,
+        referrer: referrer ?? getEntryReferrer(),
         cta_type,
         listing_id,
         service_id,

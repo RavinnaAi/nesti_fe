@@ -138,14 +138,6 @@ export default function DashboardPage() {
     return raw.replace(/_/g, " ").toUpperCase();
   }, [businessInfo?.professionalType, userRole]);
 
-  const heroBio = useMemo(() => {
-    const t =
-      businessInfo?.testimonial ||
-      businessInfo?.bio ||
-      profileQuery.data?.professionalProfile?.bio;
-    return typeof t === "string" ? t.trim() : "";
-  }, [businessInfo?.testimonial, businessInfo?.bio, profileQuery.data?.professionalProfile?.bio]);
-
   const [isMounted, setIsMounted] = useState(false);
   const [selectedLeadId, setSelectedLeadId] = useState("");
   const [windowDays, setWindowDays] = useState(DEFAULT_WINDOW_DAYS);
@@ -466,27 +458,27 @@ export default function DashboardPage() {
   const avatarAlt = displayFullName || "Profile";
 
   return (
-    <div className="relative z-[1] min-h-screen bg-white">
-      <div className="w-full space-y-8 px-4 pb-10 pt-5 sm:px-6 sm:pt-6">
+    <div className="relative z-[1] min-h-screen bg-slate-50/50">
+      <div className="mx-auto w-full max-w-screen-2xl space-y-6 px-4 pb-12 pt-5 sm:px-6 sm:pt-6">
         <PlanLimitBanner />
-        {/* Hero — same two-part card as Settings → Personal information (cover strip + white footer row) */}
+        {/* Hero */}
         <motion.section
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
-          className="overflow-hidden rounded-2xl border border-border/60 bg-white shadow-sm"
+          className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-[0_1px_3px_rgba(0,0,0,0.04),0_8px_24px_rgba(0,0,0,0.04)]"
         >
-          <div className="relative aspect-[16/6] w-full min-h-[8.5rem] sm:aspect-[16/5] sm:min-h-[11rem] md:min-h-[12rem]">
+          <div className="relative w-full h-48 sm:h-60 md:h-72">
             {hasCover ? (
               <>
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={coverImageUrl}
                   alt=""
-                  className="absolute inset-0 h-full w-full object-cover"
+                  className="absolute inset-0 h-full w-full object-cover object-center"
                 />
                 <div
-                  className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"
+                  className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/25"
                   aria-hidden
                 />
               </>
@@ -499,34 +491,34 @@ export default function DashboardPage() {
             {!hasCover ? (
               <>
                 <div
-                  className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/20 blur-3xl motion-safe:animate-[pulse_5s_ease-in-out_infinite]"
+                  className="pointer-events-none absolute -right-12 -top-16 h-48 w-48 rounded-full bg-white/15 blur-3xl motion-safe:animate-[pulse_5s_ease-in-out_infinite]"
                   aria-hidden
                 />
                 <div
-                  className="pointer-events-none absolute -bottom-20 left-1/4 h-36 w-36 rounded-full bg-emerald-400/25 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite_1s]"
+                  className="pointer-events-none absolute -bottom-20 left-1/4 h-36 w-36 rounded-full bg-emerald-400/20 blur-3xl motion-safe:animate-[pulse_6s_ease-in-out_infinite_1s]"
                   aria-hidden
                 />
               </>
             ) : null}
           </div>
 
-          <div className="relative flex flex-col gap-3 px-4 pb-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between sm:gap-4 sm:px-7 sm:pb-7">
-            <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-end sm:gap-7">
+          <div className="relative px-5 pb-5 sm:px-8 sm:pb-6">
+            <div className="flex flex-col items-center sm:flex-row sm:items-start sm:gap-5">
               <motion.div
-                className="relative z-[1] -mt-10 shrink-0 sm:-mt-24"
+                className="relative z-[1] -mt-14 shrink-0"
                 initial={{ opacity: 0, scale: 0.96 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="relative h-20 w-20 overflow-hidden rounded-2xl border-4 border-white bg-slate-50 shadow-[0_14px_30px_rgba(15,23,42,0.2)] ring-1 ring-black/5 sm:h-[10.5rem] sm:w-[10.5rem] sm:rounded-[1.75rem] sm:border-[5px] sm:shadow-[0_20px_48px_rgba(15,23,42,0.25)]">
+                <div className="relative h-28 w-28 overflow-hidden rounded-full border-[4px] border-white bg-slate-50 shadow-[0_4px_20px_rgba(15,23,42,0.12)] ring-1 ring-black/[0.03]">
                   {profileImageUrl && !avatarBroken ? (
                     <Image
                       src={profileImageUrl}
                       alt={avatarAlt}
-                      width={240}
-                      height={240}
+                      width={224}
+                      height={224}
                       className="h-full w-full object-cover object-center"
-                      sizes="(max-width: 640px) 80px, (max-width: 768px) 144px, 168px"
+                      sizes="112px"
                       priority
                       unoptimized={
                         profileImageUrl.startsWith("data:") || profileImageUrl.startsWith("blob:")
@@ -534,50 +526,42 @@ export default function DashboardPage() {
                       onError={() => setAvatarBroken(true)}
                     />
                   ) : (
-                    <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-primary-dark select-none sm:text-4xl" aria-hidden>
+                    <span className="flex h-full w-full items-center justify-center text-2xl font-bold text-primary-dark select-none" aria-hidden>
                       {avatarInitials}
                     </span>
                   )}
                 </div>
-                <span className="absolute -bottom-1 -right-1 rounded-md border-2 border-white bg-emerald-500 px-2 py-0.5 text-[8px] font-bold uppercase tracking-wide text-white shadow-md sm:-bottom-1.5 sm:-right-1.5 sm:rounded-lg sm:px-2.5 sm:py-1 sm:text-[9px]">
-                  Active
-                </span>
               </motion.div>
 
               <motion.div
-                className="min-w-0 flex-1 pt-1 sm:pb-2 sm:pt-0"
+                className="mt-3 flex min-w-0 flex-1 flex-col items-center text-center sm:mt-3 sm:items-start sm:text-left"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.1, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
               >
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-sm font-semibold tracking-tight text-text-heading sm:text-lg">
+                <div className="flex flex-wrap items-center justify-center gap-2.5 sm:justify-start">
+                  <h1 className="text-lg font-bold tracking-tight text-text-heading sm:text-xl">
                     {displayFullName || "Your workspace"}
                   </h1>
                   {roleBadgeText ? (
-                    <span className="rounded-full border border-border/80 bg-slate-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-text-heading sm:px-2.5 sm:text-[10px]">
+                    <span className="inline-flex items-center rounded-full border border-primary/20 bg-primary/[0.06] px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary-dark sm:text-[10px]">
                       {roleBadgeText}
                     </span>
                   ) : null}
                 </div>
-                {heroBio ? (
-                  <p className="mt-1 max-w-xl text-[13px] leading-relaxed text-text-muted sm:mt-1.5 sm:text-sm">{heroBio}</p>
-                ) : (
-                  <p className="mt-1 text-[13px] text-text-muted/80 italic sm:mt-1.5 sm:text-sm">No bio added yet.</p>
-                )}
               </motion.div>
-            </div>
 
-            {canUseCalendarIntegration ? (
-              <motion.div
-                className="flex w-full shrink-0 sm:w-auto sm:pb-1"
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.16, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
-              >
-                <DashboardCalendlyButton surface="light" className="w-full sm:w-auto" />
-              </motion.div>
-            ) : null}
+              {canUseCalendarIntegration ? (
+                <motion.div
+                  className="mt-3 shrink-0 sm:mt-3"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.16, duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+                >
+                  <DashboardCalendlyButton surface="light" className="w-full sm:w-auto" />
+                </motion.div>
+              ) : null}
+            </div>
           </div>
         </motion.section>
 
@@ -588,29 +572,29 @@ export default function DashboardPage() {
           />
         ) : null}
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-slate-200/70 bg-white px-5 py-4 shadow-sm">
           <div>
-            <h2 className="text-lg font-bold text-text-heading">Performance overview</h2>
-            <p className="text-xs text-text-muted mt-0.5">
+            <h2 className="text-base font-bold tracking-tight text-text-heading">Performance overview</h2>
+            <p className="mt-0.5 text-[11px] text-slate-500">
               Everything tracked in the last {windowDays} days.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2.5">
             {canUseReferralInviteLinks ? (
               <button
                 type="button"
                 onClick={() => setShowInviteModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/25 bg-primary/10 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm transition-colors hover:bg-primary/15"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-primary/20 bg-primary/[0.06] px-3.5 py-2 text-[11px] font-semibold text-primary transition-colors hover:bg-primary/10"
                 title="Create invite link"
               >
-                <Link2 size={13} />
+                <Link2 size={13} strokeWidth={2.5} />
                 Create invite
               </button>
             ) : null}
             <div
               role="tablist"
               aria-label="Analytics window"
-              className="inline-flex items-center rounded-lg border border-border bg-white p-0.5 shadow-sm"
+              className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50/80 p-0.5"
             >
               {WINDOW_OPTIONS.map((opt) => {
                 const active = opt.value === windowDays;
@@ -621,10 +605,10 @@ export default function DashboardPage() {
                     role="tab"
                     aria-selected={active}
                     onClick={() => setWindowDays(opt.value)}
-                    className={`px-3 py-1 text-xs font-semibold rounded-md transition-colors ${
+                    className={`rounded-md px-3 py-1.5 text-[11px] font-semibold transition-all ${
                       active
                         ? "bg-primary text-white shadow-sm"
-                        : "text-text-muted hover:text-text-heading"
+                        : "text-slate-500 hover:bg-white hover:text-text-heading hover:shadow-sm"
                     }`}
                   >
                     {opt.label}
@@ -636,10 +620,10 @@ export default function DashboardPage() {
               type="button"
               onClick={refreshAll}
               disabled={isRefreshing}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-white px-3 py-1.5 text-xs font-semibold text-text-heading shadow-sm transition-colors hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[11px] font-semibold text-text-heading shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
               title="Refresh dashboard"
             >
-              <RefreshCw size={13} className={isRefreshing ? "animate-spin" : ""} />
+              <RefreshCw size={12} className={isRefreshing ? "animate-spin" : ""} />
               Refresh
             </button>
           </div>
@@ -694,7 +678,7 @@ export default function DashboardPage() {
             exit={{ opacity: 0 }}
           >
             <motion.div
-              className="w-full max-w-md rounded-2xl border border-border bg-white p-5 shadow-2xl"
+              className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl"
               initial={{ opacity: 0, y: 16, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.98 }}
